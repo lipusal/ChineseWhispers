@@ -2,10 +2,7 @@ package ar.edu.itba.chinese_whispers.application.model;
 
 import ar.edu.itba.chinese_whispers.application.model.enumTypeAttribute.MessageTypeAttribute;
 
-/**
- * Created by Estela on 25/10/2016.
- */
-public class MessageStanza extends basicXMPPStanza {
+public class MessageStanza extends BasicXMPPStanza {
 
     private MessageTypeAttribute messageTypeAttribute;
 

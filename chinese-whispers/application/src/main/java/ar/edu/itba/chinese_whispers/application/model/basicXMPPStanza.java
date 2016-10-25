@@ -1,16 +1,13 @@
 package ar.edu.itba.chinese_whispers.application.model;
 
-/**
- * Created by Estela on 25/10/2016.
- */
-public abstract class basicXMPPStanza {
+public abstract class BasicXMPPStanza {
 
     private String to;
     private String from;
     private long id;
     private String xml_lang;
 
-    public basicXMPPStanza(String to, String from, long id, String xml_lang) {
+    public BasicXMPPStanza(String to, String from, long id, String xml_lang) {
         this.to = to;
         this.from = from;
         this.id = id;

@@ -6,8 +6,4 @@ public class IQStanza extends BasicXMPPStanza {
 
     private IQTypeAttribute iqTypeAttribute;
 
-    public IQStanza(String to, String from, long id, String xml_lang, IQTypeAttribute iqTypeAttribute) {
-        super(to, from, id, xml_lang);
-        this.iqTypeAttribute = iqTypeAttribute;
-    }
 }

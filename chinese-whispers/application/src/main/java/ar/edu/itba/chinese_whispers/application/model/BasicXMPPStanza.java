@@ -9,8 +9,5 @@ public abstract class BasicXMPPStanza {
     private String from;
     private String id;
     private String xml_lang;
-    private Map<String, String> extraAttributes;
-    private List<Content> contents;
-    private List<ExtendedContent> extendedContents; //TODO can non-extended content have childs? If not, differentiate.
 
 }

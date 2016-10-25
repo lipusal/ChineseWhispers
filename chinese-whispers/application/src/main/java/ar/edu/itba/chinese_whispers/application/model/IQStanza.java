@@ -2,10 +2,7 @@ package ar.edu.itba.chinese_whispers.application.model;
 
 import ar.edu.itba.chinese_whispers.application.model.enumTypeAttribute.IQTypeAttribute;
 
-/**
- * Created by Estela on 25/10/2016.
- */
-public class IQStanza extends basicXMPPStanza {
+public class IQStanza extends BasicXMPPStanza {
 
     private IQTypeAttribute iqTypeAttribute;
 

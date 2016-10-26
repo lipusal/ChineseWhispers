@@ -10,4 +10,5 @@ public abstract class BasicXMPPStanza {
     private String id;
     private String xml_lang;
 
+
 }

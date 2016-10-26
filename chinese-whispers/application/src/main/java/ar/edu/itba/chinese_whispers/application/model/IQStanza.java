@@ -6,4 +6,5 @@ public class IQStanza extends NonErrorXMPPStanza {
 
     private IQTypeAttribute iqTypeAttribute;
 
+
 }

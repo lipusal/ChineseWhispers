@@ -6,10 +6,12 @@ import java.util.Map;
 /**
  * Created by dgrimau on 25/10/16.
  */
-public class ExtendedContent extends  Content{
+public class ExtendedContent {
 
-    private List<ExtendedContent> extendedContents;
-
+    private  String name;
+    //private List<ExtendedContent> extendedContents;
+    private Map<String, String> attributes;
+    private String content;
 
 
 }

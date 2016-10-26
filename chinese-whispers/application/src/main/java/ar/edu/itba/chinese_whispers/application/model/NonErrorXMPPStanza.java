@@ -10,6 +10,6 @@ import java.util.Map;
  */
 public abstract class NonErrorXMPPStanza extends BasicXMPPStanza {
     private Map<String, String> extraAttributes;
-    private List<Content> contents;
+    //private List<Content> contents; //Borrar
     private List<ExtendedContent> extendedContents; //TODO can non-extended content have childs? If not, differentiate.
 }

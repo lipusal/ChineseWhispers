@@ -13,5 +13,5 @@ public interface TCPClientHandler extends TCPHandler {
 	 * @param key The {@link SelectionKey} that contains the socket channel to be connected.
 	 * @return {@code true} if the connection was stablished, or {@code false} otherwise.
 	 */
-	boolean handleConnect(SelectionKey key);
+	void handleConnect(SelectionKey key);
 }

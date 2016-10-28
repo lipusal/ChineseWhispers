@@ -16,17 +16,26 @@ import java.util.Set;
  * <p>
  * This class handles all IO operations.
  * Implements the singleton pattern to have only one selector in all the project.
+ * To register a channel, a {@link TCPHandler} must be registered with it
+ * as the select operation uses it to perform operations.
  */
 public final class TCPSelector {
 
 	/**
 	 * The byte buffer size.
 	 */
-    /* package */ static final int BUFFER_SIZE = 512;
+	/* package */ static final int BUFFER_SIZE = 512;
 	/**
 	 * Timeout for the select operation.
 	 */
 	private static final int TIMEOUT = 3000;
+
+
+	/**
+	 * Amount of connection tries till key is cancelled.
+	 */
+	private static final int MAX_CONNECTION_TRIES = 10;
+
 	/**
 	 * The selector to perform IO operations.
 	 */
@@ -36,13 +45,9 @@ public final class TCPSelector {
 	 */
 	private final Set<Runnable> tasks;
 	/**
-	 * Maps a {@link SelectionKey} with its corresponding {@link TCPHandler}.
+	 * Contains connectable keys that didn't connect yet, saving how many tries were done.
 	 */
-	private final Map<SelectionKey, TCPHandler> handlers;
-	/**
-	 * Contains keys that had errors when selecting.
-	 */
-	private final Set<SelectionKey> errorKeys;
+	private final Map<SelectionKey, Integer> connectionTries;
 
 
 	/**
@@ -54,8 +59,7 @@ public final class TCPSelector {
 	private TCPSelector() throws IOException {
 		this.selector = Selector.open();
 		this.tasks = new HashSet<>();
-		this.handlers = new HashMap<>();
-		this.errorKeys = new HashSet<>();
+		this.connectionTries = new HashMap<>();
 	}
 
 
@@ -88,8 +92,7 @@ public final class TCPSelector {
 			channel = ServerSocketChannel.open();
 			channel.socket().bind(new InetSocketAddress(port));
 			channel.configureBlocking(false);
-			SelectionKey key = channel.register(selector, SelectionKey.OP_ACCEPT);
-			handlers.put(key, handler);
+			channel.register(selector, SelectionKey.OP_ACCEPT, handler);
 		} catch (IOException e) {
 			return false;
 		}
@@ -105,8 +108,7 @@ public final class TCPSelector {
 			SocketChannel channel = SocketChannel.open();
 			channel.configureBlocking(false);
 			channel.connect(new InetSocketAddress(host, port));
-			SelectionKey key = channel.register(selector, SelectionKey.OP_CONNECT);
-			handlers.put(key, handler);
+			channel.register(selector, SelectionKey.OP_CONNECT, handler);
 		} catch (IOException e) {
 			return false;
 		}
@@ -127,28 +129,25 @@ public final class TCPSelector {
 
 		// If control reached here, there are IO Operations pending to be handled
 		for (SelectionKey key : selector.selectedKeys()) {
-			TCPHandler handler = handlers.get(key);
-
-			// Shouldn't be null, but in case ...
-			if (handler == null) {
-				errorKeys.add(key);
-				continue;
-			}
 			try {
+
+				TCPHandler handler = (TCPHandler) key.attachment();
+
+				// Shouldn't be null, but in case ...
+				if (handler == null) {
+					key.cancel();
+					continue;
+				}
 				if (key.isAcceptable()) {
 					// Key only can be acceptable if it's channel is a server socket channel
-					SelectionKey newKey = ((TCPServerHandler) handler).handleAccept(key);
-					if (newKey != null) {
-						handlers.put(newKey, handler);
-					}
+					((TCPServerHandler) handler).handleAccept(key);
 				}
 
 				if (key.isConnectable()) {
 					// Key only can be connectable if it's channel is a client socket channel
-					Boolean connected = ((TCPClientHandler) handler).handleConnect(key);
-					if (connected) {
-						handlers.put(key, handler);
-					}
+					((TCPClientHandler) handler).handleConnect(key);
+					// Connection wasn't established
+					checkConnectionTries(key);
 				}
 
 				if (key.isReadable()) {
@@ -158,16 +157,37 @@ public final class TCPSelector {
 				if (key.isValid() && key.isWritable()) {
 					handler.handleWrite(key);
 				}
-			} catch (Throwable ignored) {
+			} catch (Throwable e) {
 				// If any error occurred, don't crash ...
-				errorKeys.add(key);
+				e.printStackTrace();
+
+				// If the attachment is null, the attachment is not a subclass of TCPHandler,
+				// or the handleError method returned true, the key is cancelled.
+				if (key.attachment() == null || !(key.attachment() instanceof TCPHandler)
+						|| ((TCPHandler) key.attachment()).handleError(key)) {
+					key.cancel();
+				}
+
+
 			}
 		}
 		selector.selectedKeys().clear();
-		// TODO: close error keys? Cancel them?
-		errorKeys.clear(); // Clears the set in order to leave it empty for the next iteration.
 		return true;
 	}
 
+
+	private void checkConnectionTries(SelectionKey key) {
+		if (((SocketChannel) key.channel()).isConnectionPending()) {
+			Integer tries = connectionTries.get(key);
+			if (tries == null) {
+				tries = 1;
+			}
+			if (tries >= MAX_CONNECTION_TRIES) {
+				key.cancel();
+			} else {
+				connectionTries.put(key, tries++);
+			}
+		}
+	}
 
 }

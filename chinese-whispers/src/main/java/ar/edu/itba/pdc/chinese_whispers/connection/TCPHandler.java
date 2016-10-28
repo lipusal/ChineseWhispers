@@ -20,4 +20,12 @@ public interface TCPHandler {
 	 * @param key The {@link SelectionKey} that contains the channel to be written.
 	 */
 	void handleWrite(SelectionKey key);
+
+	/**
+	 * Handles error situations.
+	 *
+	 * @param key The {@link SelectionKey} that fell into error.
+	 * @return {@code true} if the key must be closed, or {@code false} otherwise.
+	 */
+	boolean handleError(SelectionKey key);
 }

@@ -1,9 +1,8 @@
 package ar.edu.itba.chinese_whispers.application;
 
-import ar.edu.itba.chinese_whispers.connection.TCPHandler;
-import ar.edu.itba.chinese_whispers.connection.TCPServerSelector;
+import ar.edu.itba.chinese_whispers.connection.TCPSelector;
+import ar.edu.itba.chinese_whispers.xmpp.XMPPProcessor;
 import ar.edu.itba.chinese_whispers.xmpp.XMPPServerHandler;
-import ar.edu.itba.chinese_whispers.xmpp.XMPPServerSelector;
 
 import java.io.IOException;
 
@@ -14,12 +13,16 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
 
-        XMPPServerSelector xmppServerSelector = new XMPPServerSelector();
+        XMPPServerHandler handler = new XMPPServerHandler();
 
-        xmppServerSelector.addServerChannel(9000);
+        TCPSelector selector = TCPSelector.getInstance();
+        selector.addServerSocketChannel(9000, handler);
+        selector.addServerSocketChannel(4000, handler);
+        XMPPProcessor processor = new XMPPProcessor(handler);
+
         while (true) {
-            xmppServerSelector.doSelect();
-            xmppServerSelector.performOperatons();
+            selector.doSelect();
+            processor.processWork();
         }
 
     }

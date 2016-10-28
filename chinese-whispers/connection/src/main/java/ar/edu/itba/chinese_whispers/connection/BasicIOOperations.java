@@ -113,12 +113,10 @@ public class BasicIOOperations {
 
     /**
      * Cleans the buffer contained in the given {@code key}, leaving it empty of the next one to use it.
-     * Also, takes off the "writable" bit from the interest operations bit mask.
      *
      * @param key The {@link SelectionKey} that holds the written channel.
      */
     public static void afterWrite(SelectionKey key) {
-        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
         ((ByteBuffer) key.attachment()).clear();
     }
 

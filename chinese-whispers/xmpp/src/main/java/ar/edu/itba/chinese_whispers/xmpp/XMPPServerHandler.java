@@ -3,16 +3,11 @@ package ar.edu.itba.chinese_whispers.xmpp;
 import ar.edu.itba.chinese_whispers.connection.BasicIOOperations;
 import ar.edu.itba.chinese_whispers.connection.TCPServerHandler;
 
-import java.io.IOException;
 import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
+import java.sql.Connection;
+import java.util.*;
 
 /**
  * Created by jbellini on 27/10/16.
@@ -50,37 +45,78 @@ public class XMPPServerHandler implements TCPServerHandler {
     }
 
 
-    public void performOperations() {
-        for (Integer each : readMessages.keySet()) {
-            Deque<byte[]> deque = readMessages.get(each);
-            if (deque != null) {
-                byte[] message = deque.poll();
-                if (message != null) {
-                    for (int i = 0; i < message.length; i++) {
-                        if (message[i] == 'A') {
-                            message[i] = '4';
-                        } else if (message[i] == 'E') {
-                            message[i] = '3';
-                        } else if (message[i] == 'I') {
-                            message[i] = '1';
-                        } else if (message[i] == '0') {
-                            message[i] = '0';
-                        } else if (message[i] == 'C') {
-                            message[i] = '<';
-                        }
-                    }
-                    deque = writeMessages.get(each);
-                    if (deque == null) {
-                        deque = new LinkedList<>();
-                        writeMessages.put(each, deque);
-                    }
-                    deque.offer(message);
-                    SelectionKey key = connections.get(each);
-                    key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-                }
-            }
+    /**
+     * Returns the next message in the read message queue for the given {@code connectionIds}.
+     *
+     * @param connectionIds The connection id.
+     * @return The next read message for the given {@code connectionId}, or {@code null} if there is no message.
+     */
+    public byte[] getReadMessage(int connectionIds) {
+
+        Deque<byte[]> deque = readMessages.get(connectionIds);
+        if (deque == null) {
+            deque = new LinkedList<>();
+            readMessages.put(connectionIds, deque);
+        }
+        return deque.poll();
+    }
+
+    /**
+     * Adds a message to be written in the channel corresponding to the given {@code connectionIds}.
+     *
+     * @param connectionIds The connection id.
+     * @param message       The message to be written.
+     */
+    public void addWriteMessage(int connectionIds, byte[] message) {
+        Deque<byte[]> deque = writeMessages.get(connectionIds);
+        if (deque == null) {
+            deque = new LinkedList<>();
+            writeMessages.put(connectionIds, deque);
+        }
+        SelectionKey key = connections.get(connectionIds);
+        // Just in case...
+        if (key != null) {
+            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+            deque.offer(message);
         }
     }
+
+    public Set<Integer> getConnections() {
+        return connections.keySet();
+    }
+
+
+//    public void performOperations() {
+//        for (Integer each : readMessages.keySet()) {
+//            Deque<byte[]> deque = readMessages.get(each);
+//            if (deque != null) {
+//                byte[] message = deque.poll();
+//                if (message != null) {
+//                    for (int i = 0; i < message.length; i++) {
+//                        if (message[i] == 'A') {
+//                            message[i] = '4';
+//                        } else if (message[i] == 'E') {
+//                            message[i] = '3';
+//                        } else if (message[i] == 'I') {
+//                            message[i] = '1';
+//                        } else if (message[i] == '0') {
+//                            message[i] = '0';
+//                        } else if (message[i] == 'C') {
+//                            message[i] = '<';
+//                        }
+//                    }
+//                    deque = writeMessages.get(each);
+//                    if (deque == null) {
+//                        deque = new LinkedList<>();
+//                        writeMessages.put(each, deque);
+//                    }
+//                    deque.offer(message);
+//                    SelectionKey key = connections.get(each);
+//                    key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+//                }
+//            }
+//        }
+//    }
 
 
     @Override
@@ -93,12 +129,12 @@ public class XMPPServerHandler implements TCPServerHandler {
         if (connectionId == null) {
             throw new IllegalStateException();
         }
-        Deque<byte[]> deque = readMessages.get(connectionId);
-        if (deque == null) {
-            deque = new LinkedList<>();
-            readMessages.put(connectionId, deque);
+        Deque<byte[]> readDeque = readMessages.get(connectionId);
+        if (readDeque == null) {
+            readDeque = new LinkedList<>();
+            readMessages.put(connectionId, readDeque);
         }
-        deque.offer(message);
+        readDeque.offer(message);
     }
 
     @Override
@@ -135,12 +171,16 @@ public class XMPPServerHandler implements TCPServerHandler {
                 deque.push(restOfMessage);
             }
             BasicIOOperations.afterWrite(key);
+            if (writeMessages.isEmpty()) {
+                // Turns off the write bit if there are no more messages to write
+                key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+            }
         }
 
     }
 
     @Override
-    public void handleAccept(SelectionKey key) {
+    public SelectionKey handleAccept(SelectionKey key) {
 
         BasicIOOperations.beforeAccept(key);
         SelectionKey newKey = BasicIOOperations.doAccept(key);
@@ -148,5 +188,7 @@ public class XMPPServerHandler implements TCPServerHandler {
         connections.put(connectionIds, newKey);
         reverseConnections.put(newKey, connectionIds);
         connectionIds++;
+        printConnections();
+        return newKey;
     }
 }

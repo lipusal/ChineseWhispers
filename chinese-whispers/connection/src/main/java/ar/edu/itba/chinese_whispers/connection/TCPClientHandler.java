@@ -7,5 +7,11 @@ import java.nio.channels.SelectionKey;
  */
 public interface TCPClientHandler extends TCPHandler {
 
-    void handleConnect(SelectionKey key);
+    /**
+     * Handles the connect operation.
+     *
+     * @param key The {@link SelectionKey} that contains the socket channel to be connected.
+     * @return {@code true} if the connection was stablished, or {@code false} otherwise.
+     */
+    boolean handleConnect(SelectionKey key);
 }

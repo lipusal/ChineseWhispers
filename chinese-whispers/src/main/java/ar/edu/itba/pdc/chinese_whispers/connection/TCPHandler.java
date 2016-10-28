@@ -15,7 +15,7 @@ public interface TCPHandler {
 	void handleRead(SelectionKey key);
 
 	/**
-	 * Handles the read operation.
+	 * Handles the write operation.
 	 *
 	 * @param key The {@link SelectionKey} that contains the channel to be written.
 	 */

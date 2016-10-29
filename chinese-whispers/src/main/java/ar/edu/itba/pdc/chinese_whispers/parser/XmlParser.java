@@ -1,4 +1,4 @@
-package ar.edu.itba.chinese_whispers.xmpp.parser;
+package ar.edu.itba.pdc.chinese_whispers.parser;
 
 import com.fasterxml.aalto.AsyncByteArrayFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
@@ -7,7 +7,6 @@ import com.fasterxml.aalto.stax.InputFactoryImpl;
 
 import javax.xml.stream.XMLStreamException;
 import java.io.UnsupportedEncodingException;
-import java.util.Arrays;
 
 /**
  * Basic XML parser that interprets start and end of elements, and recognizes when more bytes are needed to complete
@@ -115,6 +114,7 @@ public class XmlParser /*implements Consumer<Byte[]>, Supplier<String>*/ {
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     return;
                 case -1:
+                    //TODO set error state
                     System.out.println("EXPLOTAR POR LOS AIRES!");
                     return;
             }

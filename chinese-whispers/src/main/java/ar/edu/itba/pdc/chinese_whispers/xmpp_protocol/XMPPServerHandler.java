@@ -2,6 +2,7 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPServerHandler;
+import ar.edu.itba.pdc.chinese_whispers.xml.XmlInterpreter;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
@@ -33,12 +34,14 @@ public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
 	 * @param newConnectionsConsumer The new connections connsumer that will be notified when new connections arrive.
 	 *                               Can be {@code null}.
 	 */
-	public XMPPServerHandler(SelectionKey key, ApplicationProcessor applicationProcessor,
+	public XMPPServerHandler(ApplicationProcessor applicationProcessor,
 	                         NewConnectionsConsumer newConnectionsConsumer) {
-
-		super(key);
+		super();
 		this.applicationProcessor = applicationProcessor;
 		this.newConnectionsConsumer = newConnectionsConsumer;
+		otherEndHandler = new XMPPClientHandler(this);
+		xmlInterpreter = new XmlInterpreter(otherEndHandler.writeMessages);
+		otherEndHandler.xmlInterpreter=new XmlInterpreter(writeMessages);
 	}
 
 
@@ -58,12 +61,12 @@ public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
 			SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
 			channel.configureBlocking(false);
 			// The handler assigned to accepted sockets won't accept new connections
-			XMPPHandler xmppHandler= new XMPPServerHandler(null,applicationProcessor, null);
+			XMPPHandler xmppHandler= new XMPPServerHandler(applicationProcessor, null);
 			SelectionKey key2 = channel.register(key.selector(), SelectionKey.OP_READ,xmppHandler);
 			//TODO this should be done in a TCPCOnnecter or something.
 			xmppHandler.setKey(key2);
-			//key2.interestOps(SelectionKey.OP_READ);
-			//TODO delete this and do it better. Only for testing now.
+
+			//TODO delete this. Only for testing now.
 			xmppHandler.setOtherEndHandler(this.otherEndHandler);
 			otherEndHandler.setOtherEndHandler(xmppHandler);
 

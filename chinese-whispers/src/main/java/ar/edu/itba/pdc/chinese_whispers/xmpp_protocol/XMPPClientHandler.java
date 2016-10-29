@@ -13,8 +13,9 @@ import java.nio.channels.SocketChannel;
 public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 
 
-	public XMPPClientHandler(SelectionKey key) {
-		super(key);
+	public XMPPClientHandler(XMPPServerHandler xmppServerHandler) {
+		super();
+		otherEndHandler= xmppServerHandler;
 	}
 
 	@Override

@@ -2,6 +2,7 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
+import ar.edu.itba.pdc.chinese_whispers.xml.XmlInterpreter;
 import com.sun.deploy.xml.XMLParser;
 
 import java.io.IOException;
@@ -21,12 +22,6 @@ public abstract class XMPPHandler implements TCPHandler {
 	 * The buffers size.
 	 */
 	protected static final int BUFFER_SIZE = 1024;
-
-
-	/**
-	 * Contains read messages
-	 */
-	protected final Deque<byte[]> readMessages;
 	/**
 	 * Contains messges to be written
 	 */
@@ -46,7 +41,7 @@ public abstract class XMPPHandler implements TCPHandler {
 	/**
 	 * XML Parser
 	 */
-	protected XMLParser xmlParser; //TODO change this to OUR xmlParser.
+	protected XmlInterpreter xmlInterpreter; //TODO change this to OUR xmlParser.
 	/**
 	 * Client JID
 	 */
@@ -65,15 +60,12 @@ public abstract class XMPPHandler implements TCPHandler {
 	 */
 	protected SelectionKey key;
 
-	protected XMPPHandler(SelectionKey key) {
+	protected XMPPHandler() {
 		connexionState = ConnexionState.XMPP_STANZA_STREAM;
-		this.readMessages = new LinkedList<>(); //TODO destroy this and create bytebuffer for parser.
 		this.writeMessages = new ArrayDeque<>();
 		this.inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
 		this.outputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
 		configurationsManager = Configurations.getConfigurations();
-		this.key = key;
-//		xmlParser = new XMLParser(writeMessages);
 	}
 
 	public void setOtherEndHandler(XMPPHandler otherEndHandler) {
@@ -84,14 +76,6 @@ public abstract class XMPPHandler implements TCPHandler {
 		this.key = key;
 	}
 
-	/**
-	 * Returns the next message in the read message queue.
-	 *
-	 * @return The next read message, or {@code null} if there is no message.
-	 */
-	public byte[] getReadMessage() {
-		return readMessages.poll();
-	}
 
 	@Override
 	public void handleRead() {
@@ -117,18 +101,26 @@ public abstract class XMPPHandler implements TCPHandler {
 			}
 			inputBuffer.clear();
 			if (message != null && message.length > 0) {
-				for(byte b : message){
-					otherEndHandler.writeMessages.offer(b);
-					System.out.print(b);
-				}
-				System.out.println();
+				//writeMessage(message);
+
+				xmlInterpreter.feed(message);
 				otherEndHandler.key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+
+
 //				ParserResponse parserResponse = xmlParser.parse(message,configurationsManager.isSilenced(clientJID), configurationsManager.isL337());
 //				handleResponse(parserResponse);
-				//readMessages.offer(message); //TODO change this to a call to parser.
+//				readMessages.offer(message); //TODO change this to a call to parser.
 			}
 		}
 
+	}
+
+	private void writeMessage(byte[] message) {
+		for(byte b : message){
+			otherEndHandler.writeMessages.offer(b);
+			System.out.print(b);
+		}
+		System.out.println();
 	}
 
 	protected void handleResponse(ParserResponse parserResponse){
@@ -141,7 +133,8 @@ public abstract class XMPPHandler implements TCPHandler {
 					"      </stream:error>\n" +
 					"      </stream:stream>");
 			byte[] message = errorResponse.toString().getBytes();//TODO check.
-			readMessages.offer(message); //TODO change this to send to Q.
+
+			writeMessage(message); //TODO change this to send to Q.
 		}
 		if (parserResponse==ParserResponse.STREAM_CLOSED){
 			//TODO setBooleanSomething to closed. Wait for closure on other end.
@@ -173,11 +166,12 @@ public abstract class XMPPHandler implements TCPHandler {
 				byte[] restOfMessage = new byte[message.length - bytesSent];
 				System.arraycopy(message, bytesSent, restOfMessage, 0, restOfMessage.length);
 			}
-			if (writeMessages.isEmpty()) {
-				// Turns off the write bit if there are no more messages to write
-				key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE); // TODO: check how we turn on and off
-			}
-			outputBuffer.clear();
+
 		}
+		if (writeMessages.isEmpty()) {
+			// Turns off the write bit if there are no more messages to write
+			key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE); // TODO: check how we turn on and off
+		}
+		outputBuffer.clear();
 	}
 }

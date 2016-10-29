@@ -18,7 +18,7 @@ public class Main {
 
 		System.out.println(new String(Base64.getDecoder().decode("AGRpZWdvAGRpZWdv")));
 		TCPSelector selector = TCPSelector.getInstance();
-		XMPPServerHandler xmppServerHandler = new XMPPServerHandler(null,new L337Processor(),
+		XMPPServerHandler xmppServerHandler = new XMPPServerHandler(new L337Processor(),
 				new ApplicationNewConnectionsConsumer());
         XMPPClientHandler xmppClientHandler = new XMPPClientHandler(null);
         xmppClientHandler.setOtherEndHandler(xmppServerHandler);

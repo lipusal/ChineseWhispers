@@ -30,16 +30,16 @@ public class XmlInterpreter {
     private Deque<Byte> output;
 
     //Example usage. TODO remove.
-    public static void main(String[] args) throws XMLStreamException {
-        Deque<Byte> deque = new ArrayDeque<>();
-        XmlInterpreter i = new XmlInterpreter(deque);
-        i.setL337ed(true);
-        i.feed("<?xml version=\"1.0\" encoding=\"UTF-8\" ?><message><body>hola ke ase me gusta mucho la papa y comer todos los días es sano l0l0l0lolololol</body></message>".getBytes());
-        System.out.println("Processed " + i.process() + " bytes");
-        while(!deque.isEmpty()) {
-            System.out.print((char)(byte)deque.poll());
-        }
-    }
+//    public static void main(String[] args) throws XMLStreamException {
+//        Deque<Byte> deque = new ArrayDeque<>();
+//        XmlInterpreter i = new XmlInterpreter(deque);
+//        i.setL337ed(true);
+//        i.feed("<?xml version=\"1.0\" encoding=\"UTF-8\" ?><message><body>hola ke ase me gusta mucho la papa y comer todos los días es sano l0l0l0lolololol</body></message>".getBytes());
+//        System.out.println("Processed " + i.process() + " bytes");
+//        while(!deque.isEmpty()) {
+//            System.out.print((char)(byte)deque.poll());
+//        }
+//    }
 
     /**
      * Constructs a new interpreter.
@@ -73,8 +73,14 @@ public class XmlInterpreter {
      * @throws XMLStreamException If this interpreter has unprocessed data. Be sure to call {@link #process()} between
      * calls to this method, which ensures that all data is consumed.
      */
-    public void feed(byte[] data) throws XMLStreamException {
-        parser.getInputFeeder().feedInput(data, 0, data.length);
+    public void feed(byte[] data) {
+        try {
+            parser.getInputFeeder().feedInput(data, 0, data.length);
+            process();
+        }catch (XMLStreamException e){
+            //TODO catch
+        }
+
     }
 
     /**
@@ -96,7 +102,7 @@ public class XmlInterpreter {
      *
      * @return The number of bytes offered to the output Deque, or -1 if the interpreter is in error state.
      */
-    public int process() {
+    private int process() {
         if (!hasData()) {
             return 0;
         }
@@ -194,7 +200,11 @@ public class XmlInterpreter {
                     return -1;
             }
         }
-        return 0;
+        byte[] bytes = readXML.toString().getBytes();
+        for (byte b : bytes) {
+            output.offer(b);
+        }
+        return bytes.length;
     }
 
     /**

@@ -2,6 +2,9 @@ package ar.edu.itba.pdc.chinese_whispers.application;
 
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.ApplicationProcessor;
 
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+
 /**
  * Created by jbellini on 29/10/16.
  *
@@ -11,44 +14,41 @@ public class L337Processor implements ApplicationProcessor {
 
 
 	@Override
-	public void processMessageBody(byte[] message) {
-
-		if (message != null) {
-			for (int i = 0; i < message.length; i++) {
-				switch (message[i]) {
-					case 'A':
-					case 'a':
-						message[i] = '4';
-						break;
-					case 'E':
-					case 'e':
-						message[i] = '3';
-						break;
-					case 'I':
-					case 'i':
-						message[i] = '1';
-						break;
-					case 'O':
-					case 'o':
-						message[i] = '0';
-						break;
-					case 'C':
-					case 'c':
-						message[i] = '<';
-						break;
-				}
-			}
+	public byte[] processMessageBody(byte[] message) {
+		ByteBuffer buff = ByteBuffer.allocate(message.length*4);
+		for(byte b : message) {
+			buff.put(transform(b));
 		}
-
+		return buff.array();
 	}
 
-	@Override
-	public void processMessageBody(String message) {
-		message.replace('A', '4').replace('a', '4')
-				.replace('E', '3').replace('e', '3')
-				.replace('I', '1').replace('i', '1')
-				.replace('O', '0').replace('o', '0')
-				.replace('C', '<').replace('c', '<');
-
+	/**
+	 * Transforms a single-byte character into a specified leet character. Note that 1 character may be transformed into
+	 * multiple characters.
+	 *
+	 * @param character The single-byte character to transform.
+	 * @return The transformed character(s).
+	 */
+	private byte[] transform(byte character) {
+		switch (character) {
+			case 'A':
+			case 'a':
+				return new byte[] {'4'};
+			case 'E':
+			case 'e':
+				return new byte[] {'3'};
+			case 'I':
+			case 'i':
+				return new byte[] {'1'};
+			case 'O':
+			case 'o':
+				return new byte[] {'0'};
+			case 'C':
+			case 'c':
+				//XML-escape the Byte
+				return new byte[] {'&', 'l', 't', ';'};
+			default:
+				return new byte[] {character};
+		}
 	}
 }

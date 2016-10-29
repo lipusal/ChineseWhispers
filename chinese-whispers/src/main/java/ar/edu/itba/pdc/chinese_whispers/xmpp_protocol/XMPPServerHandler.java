@@ -67,8 +67,10 @@ public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
 			xmppHandler.setKey(key2);
 
 			//TODO delete this. Only for testing now.
-			xmppHandler.setOtherEndHandler(this.otherEndHandler);
+			xmppHandler.setOtherEndHandler(otherEndHandler);
 			otherEndHandler.setOtherEndHandler(xmppHandler);
+			xmppHandler.xmlInterpreter = new XmlInterpreter(otherEndHandler.writeMessages);
+			otherEndHandler.xmlInterpreter=new XmlInterpreter(xmppHandler.writeMessages);
 
 			// TODO: Add this new key into some set in some future class to have tracking of connections
 

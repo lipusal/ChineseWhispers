@@ -123,7 +123,7 @@ public abstract class XMPPHandler implements TCPHandler {
 		System.out.println();
 	}
 
-	protected void handleResponse(ParserResponse parserResponse){
+	protected void handleResponse(ParserResponse parserResponse){ //TODO mandarme ERROR al que lo envio, no al que recibe.
 		if(parserResponse==ParserResponse.EVERYTHING_NORMAL) return;
 		if(parserResponse==ParserResponse.XML_ERROR){
 			StringBuffer errorResponse = new StringBuffer();

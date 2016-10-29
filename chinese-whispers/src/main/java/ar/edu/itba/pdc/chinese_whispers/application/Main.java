@@ -14,43 +14,13 @@ public class Main {
 
 
 		TCPSelector selector = TCPSelector.getInstance();
-		XMPPServerHandler xmppServerHandler = new XMPPServerHandler();
+		XMPPServerHandler xmppServerHandler = new XMPPServerHandler(new L337Processor(),
+				new ApplicationNewConnectionsConsumer());
 		System.out.print("Trying to bind port 9000... ");
 		try {
 			selector.addServerSocketChannel(9000, xmppServerHandler);
 		} catch (Throwable e) {
 			System.err.println("ERROR! Couldn't bind!");
-			return;
-		}
-		System.out.println("\t[Done]");
-		try {
-			selector.addClientSocketChannel("localhost", 4000, new XMPPClientHandler());
-		} catch (Throwable e) {
-			System.err.println("ERROR! Couldn't connect to localhost:4000!");
-			return;
-		}
-		System.out.println("\t[Done]");
-
-		try {
-			selector.addClientSocketChannel("localhost", 4001, new XMPPClientHandler());
-		} catch (Throwable e) {
-			System.err.println("ERROR! Couldn't connect to localhost:4001!");
-			return;
-		}
-		System.out.println("\t[Done]");
-
-		try {
-			selector.addClientSocketChannel("localhost", 4002, new XMPPClientHandler());
-		} catch (Throwable e) {
-			System.err.println("ERROR! Couldn't connect to localhost:4002!");
-			return;
-		}
-		System.out.println("\t[Done]");
-
-		try {
-			selector.addClientSocketChannel("localhost", 4003, new XMPPClientHandler());
-		} catch (Throwable e) {
-			System.err.println("ERROR! Couldn't connect to localhost:4003!");
 			return;
 		}
 		System.out.println("\t[Done]");

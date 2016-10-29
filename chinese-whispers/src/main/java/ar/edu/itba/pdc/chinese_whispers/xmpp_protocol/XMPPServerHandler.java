@@ -14,6 +14,33 @@ import java.nio.channels.SocketChannel;
 public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
 
 
+	// TODO: move it to super class???
+	/**
+	 * The application processor that processes incoming data.
+	 */
+	private final ApplicationProcessor applicationProcessor;
+
+	/**
+	 * The new connections consumer that will be notified when new connections arrive.
+	 */
+	private final NewConnectionsConsumer newConnectionsConsumer;
+
+
+	/**
+	 * Constructor. All parameters can be {@code null}. When any parameter is {@code null}, that object win't be used.
+	 *
+	 * @param applicationProcessor   The application processor that processes incoming data. Can be {@code null}.
+	 * @param newConnectionsConsumer The new connections connsumer that will be notified when new connections arrive.
+	 *                               Can be {@code null}.
+	 */
+	public XMPPServerHandler(ApplicationProcessor applicationProcessor,
+	                         NewConnectionsConsumer newConnectionsConsumer) {
+
+		this.applicationProcessor = applicationProcessor;
+		this.newConnectionsConsumer = newConnectionsConsumer;
+	}
+
+
 	@Override
 	public void handleRead(SelectionKey key) {
 		SocketChannel channel = (SocketChannel) key.channel();
@@ -81,7 +108,8 @@ public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
 		try {
 			SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
 			channel.configureBlocking(false);
-			SelectionKey newKey = channel.register(key.selector(), SelectionKey.OP_READ, new XMPPServerHandler());
+			// The handler assigned to accepted sockets won't accept new connections
+			channel.register(key.selector(), SelectionKey.OP_READ, new XMPPServerHandler(applicationProcessor, null));
 
 			// TODO: Add this new key into some set in some future class to have tracking of connections
 

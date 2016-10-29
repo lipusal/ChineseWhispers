@@ -107,7 +107,7 @@ public final class TCPSelector {
 	 * @param handler A {@link TCPServerHandler} to handle selected IO operations.
 	 * @return {@code true} if the channel was bound and is ready to accept new connections.
 	 */
-	public boolean addServerSocketChannel(int port, TCPServerHandler handler) {
+	public SelectionKey addServerSocketChannel(int port, TCPServerHandler handler) {
 		if (port < 0 || port > 0xFFFF || handler == null) {
 			throw new IllegalArgumentException();
 		}
@@ -119,11 +119,12 @@ public final class TCPSelector {
 			// Will throw exception is the channel was closed (can't happen this)
 			channel.configureBlocking(false);
 			// Will throw exception if the channel was closed (can't happen this)
-			channel.register(selector, SelectionKey.OP_ACCEPT, handler);
+			SelectionKey key = channel.register(selector, SelectionKey.OP_ACCEPT, handler);
+			return key;
 		} catch (IOException e) {
-			return false;
+			return null;
 		}
-		return true;
+
 	}
 
 
@@ -135,7 +136,7 @@ public final class TCPSelector {
 	 * @param handler A {@link TCPClientHandler} to handle selected IO operations.
 	 * @return {@code true} if the channel started connecting, or {@code false} otherwise.
 	 */
-	public boolean addClientSocketChannel(String host, int port, TCPClientHandler handler) {
+	public SelectionKey addClientSocketChannel(String host, int port, TCPClientHandler handler) {
 		if (host == null || host.isEmpty() || port < 0 || port > 0xFFFF || handler == null) {
 			throw new IllegalArgumentException();
 		}
@@ -147,11 +148,12 @@ public final class TCPSelector {
 			// Will throw exception if connection couldn't start
 			channel.connect(new InetSocketAddress(host, port));
 			// Will throw exception if the channel was closed (can't happen this)
-			channel.register(selector, SelectionKey.OP_CONNECT, handler);
+			SelectionKey key = channel.register(selector, SelectionKey.OP_CONNECT, handler);
+			return key;
 		} catch (IOException e) {
-			return false;
+			return null;
 		}
-		return true;
+
 	}
 
 
@@ -176,6 +178,7 @@ public final class TCPSelector {
 			try {
 				TCPHandler handler = (TCPHandler) key.attachment();
 
+
 				// Shouldn't be null, but in case ...
 				if (handler == null) {
 					key.cancel();
@@ -193,11 +196,11 @@ public final class TCPSelector {
 				}
 
 				if (key.isReadable()) {
-					handler.handleRead(key);
+					handler.handleRead(); //TODO explota aca si el servidor destino está apagado.
 				}
 
 				if (key.isValid() && key.isWritable()) { //TODO diego: No deberiamos ademas checkear que haya algo para escribir? Onda, vamos a checkear siempre?
-					handler.handleWrite(key);
+					handler.handleWrite();
 				}
 			} catch (Throwable e) {
 				// If any error occurred, don't crash ...

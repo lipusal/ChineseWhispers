@@ -51,21 +51,37 @@ public abstract class XMPPHandler implements TCPHandler {
 	 * Client JID
 	 */
 	protected String clientJID;
-
 	/**
 	 * Configurations Manager
 	 */
-	Configurations configurationsManager;
+	protected Configurations configurationsManager;
+	/**
+	 * The handler of the other end of the connexion
+	 */
+	protected XMPPHandler otherEndHandler;
 
+	/**
+	 * Selection Key
+	 */
+	protected SelectionKey key;
 
-	protected XMPPHandler() {
+	protected XMPPHandler(SelectionKey key) {
 		connexionState = ConnexionState.XMPP_STANZA_STREAM;
 		this.readMessages = new LinkedList<>(); //TODO destroy this and create bytebuffer for parser.
 		this.writeMessages = new ArrayDeque<>();
 		this.inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
 		this.outputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
 		configurationsManager = Configurations.getConfigurations();
+		this.key = key;
 //		xmlParser = new XMLParser(writeMessages);
+	}
+
+	public void setOtherEndHandler(XMPPHandler otherEndHandler) {
+		this.otherEndHandler = otherEndHandler;
+	}
+
+	public void setKey(SelectionKey key) {
+		this.key = key;
 	}
 
 	/**
@@ -78,7 +94,7 @@ public abstract class XMPPHandler implements TCPHandler {
 	}
 
 	@Override
-	public void handleRead(SelectionKey key) {
+	public void handleRead() {
 		if(connexionState == ConnexionState.XMPP_STANZA_STREAM){
 			SocketChannel channel = (SocketChannel) key.channel();
 			byte[] message = null;
@@ -102,10 +118,11 @@ public abstract class XMPPHandler implements TCPHandler {
 			inputBuffer.clear();
 			if (message != null && message.length > 0) {
 				for(byte b : message){
-					writeMessages.offer(b);
+					otherEndHandler.writeMessages.offer(b);
 					System.out.print(b);
 				}
 				System.out.println();
+				otherEndHandler.key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
 //				ParserResponse parserResponse = xmlParser.parse(message,configurationsManager.isSilenced(clientJID), configurationsManager.isL337());
 //				handleResponse(parserResponse);
 				//readMessages.offer(message); //TODO change this to a call to parser.
@@ -132,7 +149,7 @@ public abstract class XMPPHandler implements TCPHandler {
 	}
 
 	@Override
-	public void handleWrite(SelectionKey key) {
+	public void handleWrite() {
 		byte[] message;
 		if(writeMessages.size()>BUFFER_SIZE){
 			message = new byte[BUFFER_SIZE];

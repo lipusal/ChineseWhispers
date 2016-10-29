@@ -4,6 +4,7 @@ import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.XMPPClientHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.XMPPServerHandler;
 
+import java.nio.channels.SelectionKey;
 import java.util.Base64;
 
 /**
@@ -17,18 +18,23 @@ public class Main {
 
 		System.out.println(new String(Base64.getDecoder().decode("AGRpZWdvAGRpZWdv")));
 		TCPSelector selector = TCPSelector.getInstance();
-		XMPPServerHandler xmppServerHandler = new XMPPServerHandler(new L337Processor(),
+		XMPPServerHandler xmppServerHandler = new XMPPServerHandler(null,new L337Processor(),
 				new ApplicationNewConnectionsConsumer());
-		System.out.print("Trying to bind port 3333... ");
+        XMPPClientHandler xmppClientHandler = new XMPPClientHandler(null);
+        xmppClientHandler.setOtherEndHandler(xmppServerHandler);
+        xmppServerHandler.setOtherEndHandler(xmppClientHandler);
+		System.out.print("Trying to bind port 3333... "); //TODO deberia haber 1 solo handler que es el connexionsHandler. No deberian llegarle conexiones a los otros.
 		try {
-			selector.addServerSocketChannel(3333, xmppServerHandler);
+            SelectionKey key = selector.addServerSocketChannel(3333, xmppServerHandler);
+            xmppServerHandler.setKey(key);
 		} catch (Throwable e) {
 			System.err.println("ERROR! Couldn't bind!");
 			return;
 		}
 		System.out.print("Trying to bind clientSocket port 5222... ");
 		try {
-			selector.addClientSocketChannel("localhost",5222, new XMPPClientHandler());
+			SelectionKey key = selector.addClientSocketChannel("localhost",5222, xmppClientHandler);
+            xmppClientHandler.setKey(key);
 		} catch (Throwable e) {
 			e.printStackTrace();
 			System.err.println("ERROR! Couldn't bind!");

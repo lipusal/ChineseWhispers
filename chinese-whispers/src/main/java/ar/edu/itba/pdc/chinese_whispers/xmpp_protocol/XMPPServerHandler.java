@@ -33,22 +33,23 @@ public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
 	 * @param newConnectionsConsumer The new connections connsumer that will be notified when new connections arrive.
 	 *                               Can be {@code null}.
 	 */
-	public XMPPServerHandler(ApplicationProcessor applicationProcessor,
+	public XMPPServerHandler(SelectionKey key, ApplicationProcessor applicationProcessor,
 	                         NewConnectionsConsumer newConnectionsConsumer) {
 
+		super(key);
 		this.applicationProcessor = applicationProcessor;
 		this.newConnectionsConsumer = newConnectionsConsumer;
 	}
 
 
 	@Override
-	public void handleRead(SelectionKey key) {
-		super.handleRead(key);
+	public void handleRead() {
+		super.handleRead();
 	}
 
 	@Override
-	public void handleWrite(SelectionKey key) {
-		super.handleWrite(key);
+	public void handleWrite() {
+		super.handleWrite();
 	}
 
 	@Override
@@ -57,7 +58,14 @@ public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
 			SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
 			channel.configureBlocking(false);
 			// The handler assigned to accepted sockets won't accept new connections
-			channel.register(key.selector(), SelectionKey.OP_READ, new XMPPServerHandler(applicationProcessor, null));
+			XMPPHandler xmppHandler= new XMPPServerHandler(null,applicationProcessor, null);
+			SelectionKey key2 = channel.register(key.selector(), SelectionKey.OP_READ,xmppHandler);
+			//TODO this should be done in a TCPCOnnecter or something.
+			xmppHandler.setKey(key2);
+			//key2.interestOps(SelectionKey.OP_READ);
+			//TODO delete this and do it better. Only for testing now.
+			xmppHandler.setOtherEndHandler(this.otherEndHandler);
+			otherEndHandler.setOtherEndHandler(xmppHandler);
 
 			// TODO: Add this new key into some set in some future class to have tracking of connections
 

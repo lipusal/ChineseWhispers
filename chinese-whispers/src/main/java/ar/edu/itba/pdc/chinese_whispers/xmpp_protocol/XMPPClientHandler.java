@@ -13,14 +13,18 @@ import java.nio.channels.SocketChannel;
 public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 
 
-	@Override
-	public void handleRead(SelectionKey key) {
-		super.handleRead(key);
+	public XMPPClientHandler(SelectionKey key) {
+		super(key);
 	}
 
 	@Override
-	public void handleWrite(SelectionKey key) {
-		super.handleWrite(key);
+	public void handleRead() {
+		super.handleRead();
+	}
+
+	@Override
+	public void handleWrite() {
+		super.handleWrite();
 	}
 
 

@@ -10,16 +10,16 @@ public interface TCPHandler {
 	/**
 	 * Handles the read operation.
 	 *
-	 * @param key The {@link SelectionKey} that contains the channel to be read.
+	 *
 	 */
-	void handleRead(SelectionKey key);
+	void handleRead();
 
 	/**
 	 * Handles the write operation.
 	 *
-	 * @param key The {@link SelectionKey} that contains the channel to be written.
+	 *
 	 */
-	void handleWrite(SelectionKey key);
+	void handleWrite();
 
 	/**
 	 * Handles error situations.

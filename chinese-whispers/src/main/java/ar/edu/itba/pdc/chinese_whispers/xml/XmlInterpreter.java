@@ -63,15 +63,13 @@ public class XmlInterpreter {
         inputFactory = new InputFactoryImpl();
         parser = inputFactory.createAsyncFor(initialData);
         this.output = output;
-        next();
+        process();
     }
 
     /**
      * Adds bytes to be processed by the interpreter.
      *
      * @param data The data to process.
-     * @throws XMLStreamException If this interpreter has unprocessed data. Be sure to call {@link #process()} between
-     * calls to this method, which ensures that all data is consumed.
      */
     public void feed(byte[] data) {
         try {
@@ -125,15 +123,43 @@ public class XmlInterpreter {
                     //Only process content if NOT message tag or NOT silenced
                     if (!(isInMessageTag && isSilenced)) {
                         readXML.append("<");
+                        //Name (and namespace prefix if necessary)
                         if (!parser.getName().getPrefix().isEmpty()) {
                             readXML.append(parser.getPrefix()).append(":");
                         }
                         readXML.append(parser.getLocalName());
+
+                        //Namespaces
+                        int namespaceCount = parser.getNamespaceCount();
+                        if(namespaceCount > 0) {
+                            readXML.append(" ");
+                            for (int i = 0; i < namespaceCount; i++) {
+                                readXML.append("xlmns");
+                                if(!parser.getNamespacePrefix(i).isEmpty()) {
+                                    readXML.append(":")
+                                            .append(parser.getNamespacePrefix(i));
+                                }
+                                readXML.append("=\"")
+                                        .append(parser.getNamespaceURI(i))
+                                        .append("\"")
+                                        .append(i < namespaceCount - 1 ? " " : "");
+                            }
+                        }
+
+                        //Attributes (with namespace prefixes if necessary)
                         int attrCount = parser.getAttributeCount();
                         if (attrCount > 0) {
                             readXML.append(" ");
                             for (int i = 0; i < attrCount; i++) {
-                                readXML.append(parser.getAttributeName(i)).append("=\"").append(parser.getAttributeValue(i)).append(i < attrCount - 1 ? "\" " : "\"");
+                                if(!parser.getAttributePrefix(i).isEmpty()) {
+                                    readXML.append(parser.getAttributePrefix(i))
+                                            .append(":");
+                                }
+                                readXML.append(parser.getAttributeLocalName(i))
+                                        .append("=\"")
+                                        .append(parser.getAttributeValue(i))
+                                        .append("\"")
+                                        .append(i < attrCount - 1 ? " " : "");
                             }
                         }
                         readXML.append(">");

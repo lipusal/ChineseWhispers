@@ -196,7 +196,7 @@ public final class TCPSelector {
 					handler.handleRead(key);
 				}
 
-				if (key.isValid() && key.isWritable()) {
+				if (key.isValid() && key.isWritable()) { //TODO diego: No deberiamos ademas checkear que haya algo para escribir? Onda, vamos a checkear siempre?
 					handler.handleWrite(key);
 				}
 			} catch (Throwable e) {

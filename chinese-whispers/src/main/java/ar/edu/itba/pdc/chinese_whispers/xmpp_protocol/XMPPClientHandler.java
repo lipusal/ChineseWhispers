@@ -15,12 +15,12 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 
 	@Override
 	public void handleRead(SelectionKey key) {
-
+		super.handleRead(key);
 	}
 
 	@Override
 	public void handleWrite(SelectionKey key) {
-
+		super.handleWrite(key);
 	}
 
 

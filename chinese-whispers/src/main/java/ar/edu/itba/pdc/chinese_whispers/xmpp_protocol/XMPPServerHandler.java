@@ -43,64 +43,12 @@ public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
 
 	@Override
 	public void handleRead(SelectionKey key) {
-		SocketChannel channel = (SocketChannel) key.channel();
-		byte[] message = null;
-		inputBuffer.clear();
-		try {
-			int readBytes = channel.read(inputBuffer);
-			if (readBytes >= 0) {
-				message = new byte[readBytes];
-				if (readBytes > 0) { // If a message was actually read ...
-					System.arraycopy(inputBuffer.array(), 0, message, 0, readBytes);
-				}
-				// TODO: if readBytes is smaller than BUFFER_SIZE, should we retry reading?
-				// TODO: we can read again to see if a new message arrived till total amount of read bytes == BUFFER_SIZE
-			} else if (readBytes == -1) {
-				channel.close(); // Channel reached end of stream
-			}
-		} catch (IOException ignored) {
-			// I/O error (for example, connection reset by peer)
-		}
-		inputBuffer.clear();
-		if (message != null && message.length > 0) {
-			readMessages.offer(message);
-		}
-
-
+		super.handleRead(key);
 	}
 
 	@Override
 	public void handleWrite(SelectionKey key) {
-		byte[] message = writeMessages.poll();
-		if (message != null) {
-			if (message.length > BUFFER_SIZE) {
-				byte[] actualMessage = new byte[BUFFER_SIZE];
-				System.arraycopy(message, 0, actualMessage, 0, actualMessage.length);
-				byte[] wontBeSentMessage = new byte[message.length - actualMessage.length];
-				System.arraycopy(message, actualMessage.length, wontBeSentMessage, 0, wontBeSentMessage.length);
-				writeMessages.push(wontBeSentMessage);
-				message = actualMessage;
-			}
-			SocketChannel channel = (SocketChannel) key.channel();
-			outputBuffer.clear();
-			outputBuffer.put(message);
-			outputBuffer.flip();
-			try {
-				do {
-					channel.write(outputBuffer);
-				} while (outputBuffer.hasRemaining()); // Continue writing if message wasn't totally written
-			} catch (IOException e) {
-				int bytesSent = outputBuffer.limit() - outputBuffer.position();
-				byte[] restOfMessage = new byte[message.length - bytesSent];
-				System.arraycopy(message, bytesSent, restOfMessage, 0, restOfMessage.length);
-				writeMessages.push(restOfMessage);
-			}
-			if (writeMessages.isEmpty()) {
-				// Turns off the write bit if there are no more messages to write
-				key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE); // TODO: check how we turn on and off
-			}
-			outputBuffer.clear();
-		}
+		super.handleWrite(key);
 	}
 
 	@Override

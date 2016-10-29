@@ -5,9 +5,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Created by Estela on 29/10/2016.
- */
+//TODO DIEGO NO BORRAR DIEGO DIEGO TODO DIEGO TODO TODO DIEGO
+
 public class Configurations {
 
     private static Configurations configurationsInstance;

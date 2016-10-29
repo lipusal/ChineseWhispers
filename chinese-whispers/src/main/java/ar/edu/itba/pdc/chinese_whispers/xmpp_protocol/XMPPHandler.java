@@ -101,15 +101,14 @@ public abstract class XMPPHandler implements TCPHandler {
 			}
 			inputBuffer.clear();
 			if (message != null && message.length > 0) {
-				//writeMessage(message);
 
+				xmlInterpreter.setL337ed(configurationsManager.isL337());
+				xmlInterpreter.setSilenced(configurationsManager.isSilenced(clientJID));
 				xmlInterpreter.feed(message);
 				otherEndHandler.key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
 
 
-//				ParserResponse parserResponse = xmlParser.parse(message,configurationsManager.isSilenced(clientJID), configurationsManager.isL337());
-//				handleResponse(parserResponse);
-//				readMessages.offer(message); //TODO change this to a call to parser.
+
 			}
 		}
 

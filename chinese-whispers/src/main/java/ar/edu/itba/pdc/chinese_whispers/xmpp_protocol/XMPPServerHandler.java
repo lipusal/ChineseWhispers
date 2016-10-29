@@ -1,6 +1,8 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 
+import ar.edu.itba.pdc.chinese_whispers.connection.TCPClientHandler;
+import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPServerHandler;
 import ar.edu.itba.pdc.chinese_whispers.xml.XmlInterpreter;
 
@@ -61,16 +63,23 @@ public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
 			SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
 			channel.configureBlocking(false);
 			// The handler assigned to accepted sockets won't accept new connections
-			XMPPHandler xmppHandler= new XMPPServerHandler(applicationProcessor, null);
-			SelectionKey key2 = channel.register(key.selector(), SelectionKey.OP_READ,xmppHandler);
+			XMPPHandler xmppServerHandler= new XMPPServerHandler(applicationProcessor, null);
+			SelectionKey serverHandlerKey = channel.register(key.selector(), SelectionKey.OP_READ,xmppServerHandler);
 			//TODO this should be done in a TCPCOnnecter or something.
-			xmppHandler.setKey(key2);
+			xmppServerHandler.setKey(serverHandlerKey);
 
-			//TODO delete this. Only for testing now.
-			xmppHandler.setOtherEndHandler(otherEndHandler);
-			otherEndHandler.setOtherEndHandler(xmppHandler);
-			xmppHandler.xmlInterpreter = new XmlInterpreter(otherEndHandler.writeMessages);
-			otherEndHandler.xmlInterpreter=new XmlInterpreter(xmppHandler.writeMessages);
+			//TODO set this in other place
+			System.out.print("Trying to bind clientSocket port 5222... ");
+			try {
+				SelectionKey clientHandlerKey = (TCPSelector.getInstance()).addClientSocketChannel("localhost",5222, (TCPClientHandler)xmppServerHandler.otherEndHandler);
+				xmppServerHandler.otherEndHandler.setKey(clientHandlerKey);
+			} catch (Throwable e) {
+				e.printStackTrace();
+				System.err.println("ERROR! Couldn't bind!");
+				return;
+			}
+
+
 
 			// TODO: Add this new key into some set in some future class to have tracking of connections
 

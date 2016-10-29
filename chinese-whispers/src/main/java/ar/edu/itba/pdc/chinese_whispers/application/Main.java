@@ -20,10 +20,7 @@ public class Main {
 		TCPSelector selector = TCPSelector.getInstance();
 		XMPPServerHandler xmppServerHandler = new XMPPServerHandler(new L337Processor(),
 				new ApplicationNewConnectionsConsumer());
-        XMPPClientHandler xmppClientHandler = new XMPPClientHandler(null);
-        xmppClientHandler.setOtherEndHandler(xmppServerHandler);
-        xmppServerHandler.setOtherEndHandler(xmppClientHandler);
-		System.out.print("Trying to bind port 3333... "); //TODO deberia haber 1 solo handler que es el connexionsHandler. No deberian llegarle conexiones a los otros.
+       System.out.print("Trying to bind port 3333... "); //TODO deberia haber 1 solo handler que es el connexionsHandler. No deberian llegarle conexiones a los otros.
 		try {
             SelectionKey key = selector.addServerSocketChannel(3333, xmppServerHandler);
             xmppServerHandler.setKey(key);
@@ -31,15 +28,7 @@ public class Main {
 			System.err.println("ERROR! Couldn't bind!");
 			return;
 		}
-		System.out.print("Trying to bind clientSocket port 5222... ");
-		try {
-			SelectionKey key = selector.addClientSocketChannel("localhost",5222, xmppClientHandler);
-            xmppClientHandler.setKey(key);
-		} catch (Throwable e) {
-			e.printStackTrace();
-			System.err.println("ERROR! Couldn't bind!");
-			return;
-		}
+
 		System.out.println("\t[Done]");
 
 

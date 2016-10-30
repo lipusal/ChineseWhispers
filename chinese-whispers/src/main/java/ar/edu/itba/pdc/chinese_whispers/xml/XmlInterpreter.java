@@ -134,7 +134,7 @@ public class XmlInterpreter {
                         if(namespaceCount > 0) {
                             readXML.append(" ");
                             for (int i = 0; i < namespaceCount; i++) {
-                                readXML.append("xlmns");
+                                readXML.append("xmlns");
                                 if(!parser.getNamespacePrefix(i).isEmpty()) {
                                     readXML.append(":")
                                             .append(parser.getNamespacePrefix(i));
@@ -215,17 +215,20 @@ public class XmlInterpreter {
                     }
                     break;
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
+                    System.out.println(readXML);
                     byte[] bytes = readXML.toString().getBytes();
                     for (byte b : bytes) {
                         output.offer(b);
                     }
                     return bytes.length;
+
                 case -1:
                     //TODO throw exception? Remove sout
                     System.out.println("XML interpreter entered error state (invalid XML)");
                     return -1;
             }
         }
+        System.out.println(readXML);
         byte[] bytes = readXML.toString().getBytes();
         for (byte b : bytes) {
             output.offer(b);

@@ -102,6 +102,7 @@ public abstract class XMPPHandler implements TCPHandler {
 			inputBuffer.clear();
 			if (message != null && message.length > 0) {
 
+			//	System.out.println(message);
 				xmlInterpreter.setL337ed(configurationsManager.isL337());
 				xmlInterpreter.setSilenced(configurationsManager.isSilenced(clientJID));
 				xmlInterpreter.feed(message);

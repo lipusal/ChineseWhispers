@@ -18,7 +18,7 @@ public class Configurations {
 
     private Configurations(){
         silencedUsers=new HashSet<>();
-        isL337=false;
+        isL337=true;
         multiplexedUsers=new HashMap<>();
     }
 
@@ -36,7 +36,7 @@ public class Configurations {
     public void setIsL337(boolean isL337) {
         isL337 = isL337;
     }
-
+    //TODO wat if default server == null?
     public String getServerDestination(String clientJID){
         if(multiplexedUsers.containsKey(clientJID)) return multiplexedUsers.get(clientJID);
         else return defaultServer;

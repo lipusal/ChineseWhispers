@@ -1,6 +1,7 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPClientHandler;
+import ar.edu.itba.pdc.chinese_whispers.xml.XMPPClientNegotiator;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -16,11 +17,28 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 	public XMPPClientHandler(XMPPServerHandler xmppServerHandler) {
 		super();
 		otherEndHandler= xmppServerHandler;
+		xmppNegotiator = new XMPPClientNegotiator(negotiatorWriteMessages);
 	}
 
 	@Override
 	public void handleRead() {
-		super.handleRead();
+		byte[] message = readInputMessage();
+		if (message != null && message.length > 0) {
+			if(connexionState == ConnexionState.XMPP_STANZA_STREAM){
+				sendProcesedStanza(message);
+			}else if(connexionState==ConnexionState.XMPP_NEGOTIATION) {
+
+				ParserResponse parserResponse = xmppNegotiator.feed(message);
+
+				if(parserResponse==ParserResponse.NEGOTIATION_END){
+					connexionState=ConnexionState.XMPP_STANZA_STREAM;
+					otherEndHandler.connexionState=ConnexionState.XMPP_STANZA_STREAM;
+				}
+
+				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+			}
+
+		}
 	}
 
 	@Override

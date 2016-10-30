@@ -2,8 +2,8 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
+import ar.edu.itba.pdc.chinese_whispers.xml.XMPPNegotiator;
 import ar.edu.itba.pdc.chinese_whispers.xml.XmlInterpreter;
-import com.sun.deploy.xml.XMLParser;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -11,7 +11,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.LinkedList;
 
 /**
  * Created by jbellini on 28/10/16.
@@ -26,6 +25,10 @@ public abstract class XMPPHandler implements TCPHandler {
 	 * Contains messges to be written
 	 */
 	protected final Deque<Byte> writeMessages;
+	/**
+	 * Contains messges to be written by negotiator
+	 */
+	protected final Deque<Byte> negotiatorWriteMessages;
 	/**
 	 * Buffer from to fill when reading
 	 */
@@ -54,15 +57,19 @@ public abstract class XMPPHandler implements TCPHandler {
 	 * The handler of the other end of the connexion
 	 */
 	protected XMPPHandler otherEndHandler;
-
+	/**
+	 * The XMPPNegotiator that handle the xmpp negotiation at the start of the xmpp connexion
+	 */
+	protected XMPPNegotiator xmppNegotiator;
 	/**
 	 * Selection Key
 	 */
 	protected SelectionKey key;
 
 	protected XMPPHandler() {
-		connexionState = ConnexionState.XMPP_STANZA_STREAM;
+		connexionState = ConnexionState.XMPP_NEGOTIATION;
 		this.writeMessages = new ArrayDeque<>();
+		this.negotiatorWriteMessages = new ArrayDeque<>();
 		this.inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
 		this.outputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
 		configurationsManager = Configurations.getConfigurations();
@@ -76,43 +83,36 @@ public abstract class XMPPHandler implements TCPHandler {
 		this.key = key;
 	}
 
+	protected void sendProcesedStanza(byte[] message){
+		xmlInterpreter.setL337ed(configurationsManager.isL337());
+		xmlInterpreter.setSilenced(configurationsManager.isSilenced(clientJID));
+		xmlInterpreter.feed(message);
+		otherEndHandler.key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+	}
 
-	@Override
-	public void handleRead() {
-		if(connexionState == ConnexionState.XMPP_STANZA_STREAM){
-			SocketChannel channel = (SocketChannel) key.channel();
-			byte[] message = null;
-			inputBuffer.clear();
-			try {
-				int readBytes = channel.read(inputBuffer);
-				if (readBytes >= 0) {
-					message = new byte[readBytes];
-					if (readBytes > 0) { // If a message was actually read ...
-						System.arraycopy(inputBuffer.array(), 0, message, 0, readBytes);
-					}
-					// TODO: if readBytes is smaller than BUFFER_SIZE, should we retry reading?
-					// TODO: we can read again to see if a new message arrived till total amount of read bytes == BUFFER_SIZE
-					// TODO: "Diego": Para mi NO, lee lo que hay y listo. Despues volves si hay más en el otro ciclo.
-				} else if (readBytes == -1) {
-					channel.close(); // Channel reached end of stream
+	protected byte[] readInputMessage(){
+		SocketChannel channel = (SocketChannel) key.channel();
+		byte[] message = null;
+		inputBuffer.clear();
+		try {
+			int readBytes = channel.read(inputBuffer);
+			if (readBytes >= 0) {
+				message = new byte[readBytes];
+				if (readBytes > 0) { // If a message was actually read ...
+					System.arraycopy(inputBuffer.array(), 0, message, 0, readBytes);
 				}
-			} catch (IOException ignored) {
-				// I/O error (for example, connection reset by peer)
+				// TODO: if readBytes is smaller than BUFFER_SIZE, should we retry reading?
+				// TODO: we can read again to see if a new message arrived till total amount of read bytes == BUFFER_SIZE
+				// TODO: "Diego": Para mi NO, lee lo que hay y listo. Despues volves si hay más en el otro ciclo.
+			} else if (readBytes == -1) {
+				channel.close(); // Channel reached end of stream
 			}
-			inputBuffer.clear();
-			if (message != null && message.length > 0) {
-
-			//	System.out.println(message);
-				xmlInterpreter.setL337ed(configurationsManager.isL337());
-				xmlInterpreter.setSilenced(configurationsManager.isSilenced(clientJID));
-				xmlInterpreter.feed(message);
-				otherEndHandler.key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-
-
-
-			}
+		} catch (IOException ignored) {
+			// I/O error (for example, connection reset by peer)
 		}
+		inputBuffer.clear();
 
+		return message;
 	}
 
 	private void writeMessage(byte[] message) {
@@ -142,7 +142,23 @@ public abstract class XMPPHandler implements TCPHandler {
 	}
 
 	@Override
-	public void handleWrite() {
+	public void handleWrite() {// TODO: check how we turn on and off
+		if(connexionState==ConnexionState.XMPP_STANZA_STREAM){
+			if(writeQ(writeMessages)){
+				key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+			}
+		}
+		//Needs to always happen to send the succes msg.
+		if(writeQ(negotiatorWriteMessages)){
+			key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+		}
+
+
+
+	}
+
+	private boolean writeQ(Deque<Byte> writeMessages) {
+
 		byte[] message;
 		if(writeMessages.size()>BUFFER_SIZE){
 			message = new byte[BUFFER_SIZE];
@@ -168,10 +184,8 @@ public abstract class XMPPHandler implements TCPHandler {
 			}
 
 		}
-		if (writeMessages.isEmpty()) {
-			// Turns off the write bit if there are no more messages to write
-			key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE); // TODO: check how we turn on and off
-		}
+
 		outputBuffer.clear();
+		return writeMessages.isEmpty();
 	}
 }

@@ -4,6 +4,7 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPClientHandler;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPServerHandler;
+import ar.edu.itba.pdc.chinese_whispers.xml.XMPPServerNegotitator;
 import ar.edu.itba.pdc.chinese_whispers.xml.XmlInterpreter;
 
 import java.io.IOException;
@@ -44,12 +45,46 @@ public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
 		otherEndHandler = new XMPPClientHandler(this);
 		xmlInterpreter = new XmlInterpreter(otherEndHandler.writeMessages);
 		otherEndHandler.xmlInterpreter=new XmlInterpreter(writeMessages);
+		xmppNegotiator = new XMPPServerNegotitator(negotiatorWriteMessages);
 	}
 
 
 	@Override
 	public void handleRead() {
-		super.handleRead();
+		byte[] message = readInputMessage();
+		if (message != null && message.length > 0) {
+
+			if(connexionState == ConnexionState.XMPP_STANZA_STREAM){
+				sendProcesedStanza(message);
+			}else if(connexionState==ConnexionState.XMPP_NEGOTIATION){
+
+				ParserResponse parserResponse = xmppNegotiator.feed(message);
+				if(parserResponse==ParserResponse.NEGOTIATION_END){
+					connexionState=ConnexionState.XMPP_STANZA_STREAM;
+					otherEndHandler.xmppNegotiator.setAuthorization(xmppNegotiator.getAuthorization());
+					otherEndHandler.xmppNegotiator.setInitialParameters(xmppNegotiator.getInitialParameters());
+					StringBuilder startStream = new StringBuilder();
+					startStream.append("<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" xmlns=\"jabber:client\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\" ");
+					for(String attributeKey : xmppNegotiator.getInitialParameters().keySet()){
+						startStream.append(attributeKey)
+								.append("=\"")
+								.append(xmppNegotiator.getInitialParameters().get(attributeKey))
+								.append("\" ");
+					}
+					startStream.append("> ");
+					System.out.println("Proxy to Server:" + startStream);
+					byte[] bytes = startStream.toString().getBytes();
+					for (byte b : bytes) {
+						otherEndHandler.negotiatorWriteMessages.offer(b);
+					}
+					otherEndHandler.key.interestOps(otherEndHandler.key.interestOps() | SelectionKey.OP_WRITE);
+				}
+
+				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+			}
+
+
+		}
 	}
 
 	@Override

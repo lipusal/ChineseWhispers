@@ -26,11 +26,9 @@ public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler
 	private final ProxyConfigurationProvider proxyConfigurationProvider;
 
 
-
-
 	public XMPPAcceptorHandler(ApplicationProcessor applicationProcessor,
-	                              NewConnectionsConsumer newConnectionsConsumer,
-	                              ProxyConfigurationProvider proxyConfigurationProvider) {
+	                           NewConnectionsConsumer newConnectionsConsumer,
+	                           ProxyConfigurationProvider proxyConfigurationProvider) {
 		super(applicationProcessor);
 		this.proxyConfigurationProvider = proxyConfigurationProvider;
 		this.newConnectionsConsumer = newConnectionsConsumer;
@@ -59,16 +57,15 @@ public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler
 		try {
 			SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
 			channel.configureBlocking(false);
-			// The handler assigned to accepted sockets won't accept new connections
-
 			XMPPServerHandler handler = new XMPPServerHandler(applicationProcessor,
 					newConnectionsConsumer,
 					proxyConfigurationProvider);
+			// The handler assigned to accepted sockets won't accept new connections
 			SelectionKey newKey = channel.register(key.selector(), SelectionKey.OP_READ, handler);
-			// TODO: Add this new key into some set in some future class to have tracking of connections
 			handler.setKey(newKey);
 
-			//TODO this should be done in a TCPCOnnecter or something.
+			// TODO: Add this new key into some set in some future class to have tracking of connections
+			// TODO this should be done in a TCPCOnnecter or something.
 		} catch (IOException ignored) {
 		}
 	}

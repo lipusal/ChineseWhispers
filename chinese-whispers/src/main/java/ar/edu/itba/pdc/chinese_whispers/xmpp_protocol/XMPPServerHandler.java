@@ -3,7 +3,7 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
-import ar.edu.itba.pdc.chinese_whispers.xml.XmlInterpreter;
+import ar.edu.itba.pdc.chinese_whispers.xml.XMLInterpreter;
 
 import java.nio.channels.SelectionKey;
 
@@ -17,37 +17,27 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 	 * A proxy connection configurator to get server and port to which a user should establish a connection.
 	 */
 	private final ProxyConfigurationProvider proxyConfigurationProvider;
-
-
-	// TODO: move it to super class???
-	/**
-	 * The application processor that processes incoming data.
-	 */
-	private final ApplicationProcessor applicationProcessor;
-
 	/**
 	 * The new connections consumer that will be notified when new connections arrive.
 	 */
 	private final NewConnectionsConsumer newConnectionsConsumer;
 
 
-
 	/**
 	 * Constructor.
 	 * This constructor will create it's {@link XMPPClientHandler} peer.
 	 *
-	 * @param applicationProcessor        The application processor.
-	 * @param newConnectionsConsumer      The object to be notified when new XMPP connections are established.
+	 * @param applicationProcessor       The application processor.
+	 * @param newConnectionsConsumer     The object to be notified when new XMPP connections are established.
 	 * @param proxyConfigurationProvider The object to be queried for proxy configurations.
 	 */
 	/* package */ XMPPServerHandler(ApplicationProcessor applicationProcessor,
-	                         NewConnectionsConsumer newConnectionsConsumer,
-	                         ProxyConfigurationProvider proxyConfigurationProvider) {
+	                                NewConnectionsConsumer newConnectionsConsumer,
+	                                ProxyConfigurationProvider proxyConfigurationProvider) {
 		super(applicationProcessor);
-		this.applicationProcessor = applicationProcessor;
 		this.newConnectionsConsumer = newConnectionsConsumer;
 		this.peerHandler = new XMPPClientHandler(applicationProcessor, this);
-		this.xmlInterpreter = new XmlInterpreter(peerHandler);
+		this.XMLInterpreter = new XMLInterpreter(peerHandler);
 		this.proxyConfigurationProvider = proxyConfigurationProvider;
 	}
 

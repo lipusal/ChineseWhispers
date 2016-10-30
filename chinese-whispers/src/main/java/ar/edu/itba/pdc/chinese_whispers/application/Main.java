@@ -24,14 +24,14 @@ public class Main {
 		XMPPAcceptorHandler acceptorHandler = new XMPPAcceptorHandler(L337Processor.getInstance(),
 				ApplicationNewConnectionsConsumer.getInstance(), ProxyConfigurator.getInstance());
 
-		System.out.print("Trying to bind port 3333... "); //TODO deberia haber 1 solo handler que es el connexionsHandler. No deberian llegarle conexiones a los otros.
+		System.out.print("Trying to bind port 3333... ");
 		try {
             selector.addServerSocketChannel(3333, acceptorHandler);
 		} catch (Throwable e) {
 			System.err.println("ERROR! Couldn't bind!");
 			return;
 		}
-
+		System.out.println("\t[Done]");
 		while (true) {
 			// Before select tasks...
 			selector.doSelect(); // Perform select operations...

@@ -1,7 +1,7 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPClientHandler;
-import ar.edu.itba.pdc.chinese_whispers.xml.XmlInterpreter;
+import ar.edu.itba.pdc.chinese_whispers.xml.XMLInterpreter;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -27,7 +27,7 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 			throw new IllegalArgumentException();
 		}
 		this.peerHandler = peerHandler;
-		this.xmlInterpreter = new XmlInterpreter(peerHandler);
+		this.XMLInterpreter = new XMLInterpreter(peerHandler);
 	}
 
 

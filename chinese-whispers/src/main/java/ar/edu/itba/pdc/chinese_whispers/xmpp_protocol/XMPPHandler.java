@@ -1,7 +1,7 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
-import ar.edu.itba.pdc.chinese_whispers.xml.XmlInterpreter;
+import ar.edu.itba.pdc.chinese_whispers.xml.XMLInterpreter;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -23,7 +23,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 	/**
 	 * String to be sent when detecting error.
 	 */
-	private final static String errorResponse = "<stream:error>\n<bad-format\n" +
+	private final static String ERROR_RESPONSE = "<stream:error>\n<bad-format\n" +
 			"xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>\n</stream:error>\n</stream:stream>\n";
 
 
@@ -58,11 +58,11 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 	/**
 	 * XML Parser
 	 */
-	protected XmlInterpreter xmlInterpreter; //TODO change this to OUR xmlParser.
+	protected XMLInterpreter XMLInterpreter; // Should be initialized by subclass.
 	/**
 	 * Client JID
 	 */
-	protected String clientJid;
+	protected String clientJid; // Will be initialized when XMPP client sends "Auth" tag.
 
 
 	/**
@@ -77,6 +77,11 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 	}
 
 
+	/**
+	 * Sets the {@link SelectionKey} for this handler.
+	 *
+	 * @param key
+	 */
 	/* package */ void setKey(SelectionKey key) {
 		this.key = key;
 	}
@@ -96,12 +101,27 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 		key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
 	}
 
+	/**
+	 * // TODO: Fill this javadoc.
+	 *
+	 * @param parserResponse The parser's response.
+	 */
+	protected void handleResponse(ParserResponse parserResponse) { //TODO mandarme ERROR al que lo envio, no al que recibe.
+		if (parserResponse == ParserResponse.EVERYTHING_NORMAL) return;
+		if (parserResponse == ParserResponse.XML_ERROR) {
+			byte[] message = ERROR_RESPONSE.getBytes(); //TODO check.
+			writeMessage(message); //TODO change this to send to Q.
+		}
+		if (parserResponse == ParserResponse.STREAM_CLOSED) {
+			//TODO setBooleanSomething to closed. Wait for closure on other end.
+		}
+	}
+
 
 	@Override
 	public void consumeMessage(byte[] message) {
 		writeMessage(message);
 	}
-
 
 	@Override
 	public void handleRead(SelectionKey key) {
@@ -134,31 +154,11 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 			// I/O error (for example, connection reset by peer)
 		}
 		if (message != null && message.length > 0) {
-			xmlInterpreter.feed(message);
-			// TODO: xmlInterpreter should have something to get parsed messages, in order to give them to the peerHandler
-//			peerHandler.key.interestOps(this.key.interestOps() | SelectionKey.OP_WRITE);
+			XMLInterpreter.feed(message);
 		}
 
 	}
 
-
-	protected void handleResponse(ParserResponse parserResponse) {
-		if (parserResponse == ParserResponse.EVERYTHING_NORMAL) return;
-		if (parserResponse == ParserResponse.XML_ERROR) {
-			StringBuffer errorResponse = new StringBuffer();
-			errorResponse.append("<stream:error>\n" +
-					"        <bad-format\n" +
-					"            xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>\n" +
-					"      </stream:error>\n" +
-					"      </stream:stream>");
-			byte[] message = errorResponse.toString().getBytes();//TODO check.
-
-			writeMessage(message); //TODO change this to send to Q.
-		}
-		if (parserResponse == ParserResponse.STREAM_CLOSED) {
-			//TODO setBooleanSomething to closed. Wait for closure on other end.
-		}
-	}
 
 	@Override
 	public void handleWrite(SelectionKey key) {

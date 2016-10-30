@@ -120,8 +120,7 @@ public final class TCPSelector {
 			// Will throw exception is the channel was closed (can't happen this)
 			channel.configureBlocking(false);
 			// Will throw exception if the channel was closed (can't happen this)
-			SelectionKey key = channel.register(selector, SelectionKey.OP_ACCEPT, handler);
-			return key;
+			return channel.register(selector, SelectionKey.OP_ACCEPT, handler);
 		} catch (IOException e) {
 			return null;
 		}
@@ -150,8 +149,7 @@ public final class TCPSelector {
 			// Will throw exception if connection couldn't start
 			channel.connect(new InetSocketAddress(host, port));
 			// Will throw exception if the channel was closed (can't happen this)
-			SelectionKey key = channel.register(selector, SelectionKey.OP_CONNECT, handler);
-			return key;
+			return channel.register(selector, SelectionKey.OP_CONNECT, handler);
 		} catch (IOException e) {
 			return null;
 		}

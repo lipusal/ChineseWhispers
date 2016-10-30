@@ -11,6 +11,7 @@ import java.util.Set;
  * Class that manages system configurations.
  * This class implements the singleton pattern.
  */
+// TODO DIEGO NO BORRAR DIEGO DIEGO TODO DIEGO TODO TODO DIEGO
 public class Configurations {
 
 

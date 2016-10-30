@@ -10,7 +10,7 @@ public interface TCPServerHandler extends TCPHandler {
 	/**
 	 * Handles the accept operation.
 	 *
-	 * @param key The key that contains the socket channel that has a pending accept.
+	 * @param key The {@link SelectionKey} that contains the socket channel that has a pending accept.
 	 */
 	void handleAccept(SelectionKey key);
 }

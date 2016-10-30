@@ -105,7 +105,8 @@ public final class TCPSelector {
 	 *
 	 * @param port    The port in which the server socket channel will be bound and listen for incoming connections.
 	 * @param handler A {@link TCPServerHandler} to handle selected IO operations.
-	 * @return {@code true} if the channel was bound and is ready to accept new connections.
+	 * @return The {@link SelectionKey} representing the new connection if the socket channel was bound,
+	 * or {@code null} otherwise.
 	 */
 	public SelectionKey addServerSocketChannel(int port, TCPServerHandler handler) {
 		if (port < 0 || port > 0xFFFF || handler == null) {
@@ -119,8 +120,7 @@ public final class TCPSelector {
 			// Will throw exception is the channel was closed (can't happen this)
 			channel.configureBlocking(false);
 			// Will throw exception if the channel was closed (can't happen this)
-			SelectionKey key = channel.register(selector, SelectionKey.OP_ACCEPT, handler);
-			return key;
+			return channel.register(selector, SelectionKey.OP_ACCEPT, handler);
 		} catch (IOException e) {
 			return null;
 		}
@@ -134,7 +134,8 @@ public final class TCPSelector {
 	 * @param host    The host to be connected with.
 	 * @param port    The port in which the host is listening.
 	 * @param handler A {@link TCPClientHandler} to handle selected IO operations.
-	 * @return {@code true} if the channel started connecting, or {@code false} otherwise.
+	 * @return The {@link SelectionKey} representing the new connection, if the socket could start connecting,
+	 * or {@code null} otherwise.
 	 */
 	public SelectionKey addClientSocketChannel(String host, int port, TCPClientHandler handler) {
 		if (host == null || host.isEmpty() || port < 0 || port > 0xFFFF || handler == null) {
@@ -148,8 +149,7 @@ public final class TCPSelector {
 			// Will throw exception if connection couldn't start
 			channel.connect(new InetSocketAddress(host, port));
 			// Will throw exception if the channel was closed (can't happen this)
-			SelectionKey key = channel.register(selector, SelectionKey.OP_CONNECT, handler);
-			return key;
+			return channel.register(selector, SelectionKey.OP_CONNECT, handler);
 		} catch (IOException e) {
 			return null;
 		}
@@ -178,32 +178,35 @@ public final class TCPSelector {
 			try {
 				TCPHandler handler = (TCPHandler) key.attachment();
 
-
 				// Shouldn't be null, but in case ...
 				if (handler == null) {
 					key.cancel();
+					System.err.println("HEY MAN!!"); // TODO: remove this!
 					continue;
 				}
+
+				// Only valid keys with a TCPHandler as an attachment will reach this point...
 				if (key.isAcceptable()) {
 					// Key can only be acceptable if it's channel is a server socket channel
 					((TCPServerHandler) handler).handleAccept(key);
-				}
-
-				if (key.isConnectable()) {
+				} else if (key.isConnectable()) {
 					// Key can only be connectable if it's channel is a client socket channel
 					((TCPClientHandler) handler).handleConnect(key);
-					afterTryingConnection(key); // Check if connection was established ...
-				}
-
-				if (key.isReadable()) {
-					handler.handleRead(); //TODO explota aca si el servidor destino está apagado.
-				}
-
-				if (key.isValid() && key.isWritable()) { //TODO diego: No deberiamos ademas checkear que haya algo para escribir? Onda, vamos a checkear siempre?
-					handler.handleWrite();
+					if (key.isValid()) {
+						// Key could have been invalidated if connection was refused
+						afterTryingConnection(key); // Check if connection was established
+					}
+				} else {
+					// If key is acceptable or connectable, it mustn't reach this point...
+					if (key.isReadable()) {
+						handler.handleRead(key);
+					}
+					if (key.isValid() && key.isWritable()) {
+						handler.handleWrite(key);
+					}
 				}
 			} catch (Throwable e) {
-				// If any error occurred, don't crash ...
+				// If any error occurred, don't crash
 				e.printStackTrace();
 
 				// If the attachment is null, the attachment is not a subclass of TCPHandler,

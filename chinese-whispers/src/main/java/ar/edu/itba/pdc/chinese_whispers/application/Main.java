@@ -22,7 +22,7 @@ public class Main {
 
 
 		XMPPAcceptorHandler acceptorHandler = new XMPPAcceptorHandler(L337Processor.getInstance(),
-				ApplicationNewConnectionsConsumer.getInstance(), ProxyConfigurator.getInstance());
+				ApplicationNewConnectionsConsumer.getInstance(), Configurations.getInstance());
 
 		System.out.print("Trying to bind port 3333... ");
 		try {

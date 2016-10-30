@@ -185,25 +185,28 @@ public final class TCPSelector {
 					continue;
 				}
 
-				// From now on, only valid keys are here...
-				// One operation per select for any given key
+				// Only valid keys with a TCPHandler as an attachment will reach this point...
 				if (key.isAcceptable()) {
 					// Key can only be acceptable if it's channel is a server socket channel
 					((TCPServerHandler) handler).handleAccept(key);
 				} else if (key.isConnectable()) {
 					// Key can only be connectable if it's channel is a client socket channel
 					((TCPClientHandler) handler).handleConnect(key);
-					// Key could have been invalidated if connection was refused...
 					if (key.isValid()) {
-						afterTryingConnection(key); // Check if connection was established ...
+						// Key could have been invalidated if connection was refused
+						afterTryingConnection(key); // Check if connection was established
 					}
-				} else if (key.isReadable()) {
-					handler.handleRead(key);
-				} else if (key.isWritable()) {
-					handler.handleWrite(key);
+				} else {
+					// If key is acceptable or connectable, it mustn't reach this point...
+					if (key.isReadable()) {
+						handler.handleRead(key);
+					}
+					if (key.isValid() && key.isWritable()) {
+						handler.handleWrite(key);
+					}
 				}
 			} catch (Throwable e) {
-				// If any error occurred, don't crash ...
+				// If any error occurred, don't crash
 				e.printStackTrace();
 
 				// If the attachment is null, the attachment is not a subclass of TCPHandler,

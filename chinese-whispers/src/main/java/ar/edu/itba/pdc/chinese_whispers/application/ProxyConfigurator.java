@@ -5,6 +5,7 @@ import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.ProxyConfigurationProvider
 /**
  * Created by jbellini on 29/10/16.
  */
+@Deprecated
 public class ProxyConfigurator implements ProxyConfigurationProvider {
 
 
@@ -18,8 +19,6 @@ public class ProxyConfigurator implements ProxyConfigurationProvider {
 	 */
 	private static ProxyConfigurator instance;
 
-
-	private int actualPort = 4000;
 
 	/**
 	 * Private constructor to implement singleton instance.
@@ -40,17 +39,13 @@ public class ProxyConfigurator implements ProxyConfigurationProvider {
 		return instance;
 	}
 
-	// TODO: remember fix these two.
-
 	@Override
 	public String getServer(String clientJid) {
-		return "localhost";
-//		return configurations.getMultiplexedServerHost(clientJid);
+		return configurations.getMultiplexedServerHost(clientJid);
 	}
 
 	@Override
 	public int getServerPort(String clientJid) {
-		return actualPort++;
-//		return configurations.getMultiplexedServerPort(clientJid);
+		return configurations.getMultiplexedServerPort(clientJid);
 	}
 }

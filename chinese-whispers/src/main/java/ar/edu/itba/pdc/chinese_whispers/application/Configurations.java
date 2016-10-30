@@ -1,5 +1,7 @@
 package ar.edu.itba.pdc.chinese_whispers.application;
 
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.ProxyConfigurationProvider;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -12,7 +14,7 @@ import java.util.Set;
  * This class implements the singleton pattern.
  */
 // TODO DIEGO NO BORRAR DIEGO DIEGO TODO DIEGO TODO TODO DIEGO
-public class Configurations {
+public class Configurations implements ProxyConfigurationProvider {
 
 
 	/**
@@ -137,6 +139,26 @@ public class Configurations {
 		multiplexedUsers.put(clientJid, new HostAndPort(host, port));
 		return hap.host + ":" + hap.port;
 	}
+
+
+	// ProxyConfigurationProvider
+
+	private int actualPort = 4000; // TODO: for testing! Remove when everything works together
+
+	// TODO: remember fix these two (uncomment commented lines and remove magic results)
+
+	@Override
+	public String getServer(String clientJid) {
+		return "localhost";
+//		return configurations.getMultiplexedServerHost(clientJid);
+	}
+
+	@Override
+	public int getServerPort(String clientJid) {
+		return actualPort++;
+//		return configurations.getMultiplexedServerPort(clientJid);
+	}
+
 
 
 	/**

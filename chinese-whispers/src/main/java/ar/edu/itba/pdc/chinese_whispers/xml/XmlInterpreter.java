@@ -1,5 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.xml;
 
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.OutputConsumer;
 import com.fasterxml.aalto.AsyncByteArrayFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -17,240 +18,238 @@ import java.util.Deque;
  */
 public class XmlInterpreter {
 
-    private final AsyncXMLInputFactory inputFactory;
-    private final AsyncXMLStreamReader<AsyncByteArrayFeeder> parser;
+	private final AsyncXMLInputFactory inputFactory;
+	private final AsyncXMLStreamReader<AsyncByteArrayFeeder> parser;
 
-    private int status = 0;
-    private boolean isSilenced;
-    private boolean silenceRequested;
-    private boolean isL337ed;
-    private boolean l337Requested;
-    private boolean isInBodyTag;
-    private boolean isInMessageTag;
-    private Deque<Byte> output;
+	private int status = 0;
+	private boolean isSilenced;
+	private boolean silenceRequested;
+	private boolean isL337ed;
+	private boolean l337Requested;
+	private boolean isInBodyTag;
+	private boolean isInMessageTag;
 
-    //Example usage. TODO remove.
-//    public static void main(String[] args) throws XMLStreamException {
-//        Deque<Byte> deque = new ArrayDeque<>();
-//        XmlInterpreter i = new XmlInterpreter(deque);
-//        i.setL337ed(true);
-//        i.feed("<?xml version=\"1.0\" encoding=\"UTF-8\" ?><message><body>hola ke ase me gusta mucho la papa y comer todos los días es sano l0l0l0lolololol</body></message>".getBytes());
-//        System.out.println("Processed " + i.process() + " bytes");
-//        while(!deque.isEmpty()) {
-//            System.out.print((char)(byte)deque.poll());
+	// TODO: get configuration stuff from a configuration provider.
+
+	/**
+	 * Object that will output (i.e. parsed) messages.
+	 */
+	private final OutputConsumer outputConsumer;
+
+
+	/**
+	 * Constructs a new interpreter.
+	 *
+	 * @param outputConsumer The object that will consume output (i.e. parsed) data.
+	 */
+	public XmlInterpreter(OutputConsumer outputConsumer) {
+		inputFactory = new InputFactoryImpl();
+		parser = inputFactory.createAsyncForByteArray();
+		this.outputConsumer = outputConsumer;
+	}
+
+	/**
+	 * Constructs a new interpreter with initial data, and processes said initial data.
+	 *
+	 * @param initialData    The initial data to process.
+	 * @param outputConsumer The consumer that will consume output data.
+	 * @throws XMLStreamException When {@link AsyncXMLInputFactory#createAsyncFor(byte[])} does.
+	 */
+	public XmlInterpreter(byte[] initialData, OutputConsumer outputConsumer)
+			throws XMLStreamException {
+		inputFactory = new InputFactoryImpl();
+		parser = inputFactory.createAsyncFor(initialData);
+		this.outputConsumer = outputConsumer;
+		next();
+	}
+
+	/**
+	 * Adds bytes to be processed by the interpreter.
+	 *
+	 * @param data The data to process.
+	 * @throws XMLStreamException If this interpreter has unprocessed data. Be sure to call {@link #process()} between
+	 *                            calls to this method, which ensures that all data is consumed.
+	 */
+	public void feed(byte[] data) {
+		try {
+			parser.getInputFeeder().feedInput(data, 0, data.length);
+			process();
+		} catch (XMLStreamException e) {
+			//TODO catch
+		}
+
+	}
+
+	/**
+	 * @return Whether this interpreter has data left to read.
+	 */
+	private boolean hasData() {
+		try {
+			return parser.hasNext();
+		} catch (XMLStreamException e) {
+			//TODO log this or something
+			e.printStackTrace();
+			return false;
+		}
+	}
+
+	/**
+	 * Processes all fed data. Transforms messages if leeted, ignores messages if silenced, and sets an error state on
+	 * invalid XML. Sends all processed data to the Deque specified upon instantiation.
+	 *
+	 * @return The number of bytes offered to the output Deque, or -1 if the interpreter is in error state.
+	 */
+	private int process() {
+		if (!hasData()) {
+			return 0;
+		}
+		StringBuilder readXML = new StringBuilder();
+		while (hasData()) {
+			next();
+			switch (status) {
+				case AsyncXMLStreamReader.START_ELEMENT:
+					//Update status when starting a non-nested element
+					if (parser.getDepth() <= 1) {
+						isL337ed = l337Requested;
+						isSilenced = silenceRequested;
+					}
+					if (parser.getLocalName().equals("body")) {
+						isInBodyTag = true;
+					} else if (parser.getLocalName().equals("message")) {
+						isInMessageTag = true;
+					}
+
+					//Only process content if NOT message tag or NOT silenced
+					if (!(isInMessageTag && isSilenced)) {
+						readXML.append("<");
+						if (!parser.getName().getPrefix().isEmpty()) {
+							readXML.append(parser.getPrefix()).append(":");
+						}
+						readXML.append(parser.getLocalName());
+						int attrCount = parser.getAttributeCount();
+						if (attrCount > 0) {
+							readXML.append(" ");
+							for (int i = 0; i < attrCount; i++) {
+								readXML.append(parser.getAttributeName(i)).append("=\"").append(parser.getAttributeValue(i)).append(i < attrCount - 1 ? "\" " : "\"");
+							}
+						}
+						readXML.append(">");
+					}
+					break;
+				case AsyncXMLStreamReader.CHARACTERS:
+					//Only process content if NOT message tag or NOT silenced
+					if (!(isInMessageTag && isSilenced)) {
+						//Append leeted or normal characters as appropriate
+						if (isInBodyTag && isL337ed) {
+							for (char c : parser.getTextCharacters()) {
+								switch (c) {
+									case 'a':
+										readXML.append("4");
+										break;
+									case 'e':
+										readXML.append("3");
+										break;
+									case 'i':
+										readXML.append("1");
+									case 'o':
+										readXML.append("0");
+										break;
+									case 'c':
+										readXML.append("&lt;");
+										break;
+									default:
+										readXML.append(c);
+										break;
+								}
+							}
+						} else {
+							readXML.append(parser.getText());
+						}
+					}
+					break;
+				case AsyncXMLStreamReader.END_ELEMENT:
+					//Only process content if NOT message tag or NOT silenced
+					if (!(isInMessageTag && isSilenced)) {
+						readXML.append("</");
+						if (!parser.getName().getPrefix().isEmpty()) {
+							readXML.append(parser.getPrefix()).append(":");
+						}
+						readXML.append(parser.getLocalName());
+						readXML.append(">");
+					}
+
+					//Update status
+					if (parser.getLocalName().equals("body")) {
+						isInBodyTag = false;
+					} else if (parser.getLocalName().equals("message")) {
+						isInMessageTag = false;
+					}
+					break;
+				case AsyncXMLStreamReader.EVENT_INCOMPLETE:
+					byte[] bytes = readXML.toString().getBytes();
+//                    for (byte b : bytes) {
+//                        output.offer(b);
+//                    }
+					outputConsumer.consumeMessage(bytes);
+					return bytes.length;
+				case -1:
+					//TODO throw exception? Remove sout
+					System.out.println("XML interpreter entered error state (invalid XML)");
+					return -1;
+			}
+		}
+		byte[] bytes = readXML.toString().getBytes();
+//        for (byte b : bytes) {
+//            output.offer(b);
 //        }
-//    }
+		outputConsumer.consumeMessage(bytes);
+		return bytes.length;
+	}
 
-    /**
-     * Constructs a new interpreter.
-     *
-     * @param output Where to send processed output.
-     */
-    public XmlInterpreter(Deque<Byte> output) {
-        inputFactory = new InputFactoryImpl();
-        parser = inputFactory.createAsyncForByteArray();
-        this.output = output;
-    }
+	/**
+	 * Checks whether this interpreter is in error state. An error state is reached when reading invalid XML, at which
+	 * point the interpreter becomes invalid and stops processing the stream further. The stream may be considered
+	 * invalid and discarded.
+	 *
+	 * @return Whether this interpreter is in error state.
+	 */
+	public boolean isInErrorState() {
+		return status == -1;
+	}
 
-    /**
-     * Constructs a new interpreter with initial data, and processes said initial data.
-     *
-     * @param initialData The initial data to process.
-     * @param output Where to send processed output.
-     * @throws XMLStreamException When {@link AsyncXMLInputFactory#createAsyncFor(byte[])} does.
-     */
-    public XmlInterpreter(byte[] initialData, Deque<Byte> output) throws XMLStreamException {
-        inputFactory = new InputFactoryImpl();
-        parser = inputFactory.createAsyncFor(initialData);
-        this.output = output;
-        next();
-    }
+	/**
+	 * Sets whether this stream is silenced. Silenced streams discard all <message> stanzas.
+	 * <b>NOTE:</b> This setting takes effect upon reaching the next stanza.
+	 *
+	 * @param silenced Whether this stream is silenced.
+	 */
+	public void setSilenced(boolean silenced) {
+		silenceRequested = silenced;
+	}
 
-    /**
-     * Adds bytes to be processed by the interpreter.
-     *
-     * @param data The data to process.
-     * @throws XMLStreamException If this interpreter has unprocessed data. Be sure to call {@link #process()} between
-     * calls to this method, which ensures that all data is consumed.
-     */
-    public void feed(byte[] data) {
-        try {
-            parser.getInputFeeder().feedInput(data, 0, data.length);
-            process();
-        }catch (XMLStreamException e){
-            //TODO catch
-        }
+	/**
+	 * Sets whether this stream is "leeted." Leeted streams transform certain alphabetic characters inside <body>
+	 * stanzas into similar-looking numbers.
+	 * <b>NOTE:</b> This setting takes effect upon reaching the next <body> tag.
+	 *
+	 * @param l337ed Whether this stream is leeted.
+	 */
+	public void setL337ed(boolean l337ed) {
+		l337Requested = l337ed;
+	}
 
-    }
-
-    /**
-     * @return Whether this interpreter has data left to read.
-     */
-    private boolean hasData() {
-        try {
-            return parser.hasNext();
-        } catch (XMLStreamException e) {
-            //TODO log this or something
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    /**
-     * Processes all fed data. Transforms messages if leeted, ignores messages if silenced, and sets an error state on
-     * invalid XML. Sends all processed data to the Deque specified upon instantiation.
-     *
-     * @return The number of bytes offered to the output Deque, or -1 if the interpreter is in error state.
-     */
-    private int process() {
-        if (!hasData()) {
-            return 0;
-        }
-        StringBuilder readXML = new StringBuilder();
-        while (hasData()) {
-            next();
-            switch (status) {
-                case AsyncXMLStreamReader.START_ELEMENT:
-                    //Update status when starting a non-nested element
-                    if(parser.getDepth() <= 1) {
-                        isL337ed = l337Requested;
-                        isSilenced = silenceRequested;
-                    }
-                    if (parser.getLocalName().equals("body")) {
-                        isInBodyTag = true;
-                    } else if (parser.getLocalName().equals("message")) {
-                        isInMessageTag = true;
-                    }
-
-                    //Only process content if NOT message tag or NOT silenced
-                    if (!(isInMessageTag && isSilenced)) {
-                        readXML.append("<");
-                        if (!parser.getName().getPrefix().isEmpty()) {
-                            readXML.append(parser.getPrefix()).append(":");
-                        }
-                        readXML.append(parser.getLocalName());
-                        int attrCount = parser.getAttributeCount();
-                        if (attrCount > 0) {
-                            readXML.append(" ");
-                            for (int i = 0; i < attrCount; i++) {
-                                readXML.append(parser.getAttributeName(i)).append("=\"").append(parser.getAttributeValue(i)).append(i < attrCount - 1 ? "\" " : "\"");
-                            }
-                        }
-                        readXML.append(">");
-                    }
-                    break;
-                case AsyncXMLStreamReader.CHARACTERS:
-                    //Only process content if NOT message tag or NOT silenced
-                    if (!(isInMessageTag && isSilenced)) {
-                        //Append leeted or normal characters as appropriate
-                        if (isInBodyTag && isL337ed) {
-                            for (char c : parser.getTextCharacters()) {
-                                switch (c) {
-                                    case 'a':
-                                        readXML.append("4");
-                                        break;
-                                    case 'e':
-                                        readXML.append("3");
-                                        break;
-                                    case 'i':
-                                        readXML.append("1");
-                                    case 'o':
-                                        readXML.append("0");
-                                        break;
-                                    case 'c':
-                                        readXML.append("&lt;");
-                                        break;
-                                    default:
-                                        readXML.append(c);
-                                        break;
-                                }
-                            }
-                        } else {
-                            readXML.append(parser.getText());
-                        }
-                    }
-                    break;
-                case AsyncXMLStreamReader.END_ELEMENT:
-                    //Only process content if NOT message tag or NOT silenced
-                    if (!(isInMessageTag && isSilenced)) {
-                        readXML.append("</");
-                        if (!parser.getName().getPrefix().isEmpty()) {
-                            readXML.append(parser.getPrefix()).append(":");
-                        }
-                        readXML.append(parser.getLocalName());
-                        readXML.append(">");
-                    }
-
-                    //Update status
-                    if (parser.getLocalName().equals("body")) {
-                        isInBodyTag = false;
-                    } else if (parser.getLocalName().equals("message")) {
-                        isInMessageTag = false;
-                    }
-                    break;
-                case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                    byte[] bytes = readXML.toString().getBytes();
-                    for (byte b : bytes) {
-                        output.offer(b);
-                    }
-                    return bytes.length;
-                case -1:
-                    //TODO throw exception? Remove sout
-                    System.out.println("XML interpreter entered error state (invalid XML)");
-                    return -1;
-            }
-        }
-        byte[] bytes = readXML.toString().getBytes();
-        for (byte b : bytes) {
-            output.offer(b);
-        }
-        return bytes.length;
-    }
-
-    /**
-     * Checks whether this interpreter is in error state. An error state is reached when reading invalid XML, at which
-     * point the interpreter becomes invalid and stops processing the stream further. The stream may be considered
-     * invalid and discarded.
-     *
-     * @return Whether this interpreter is in error state.
-     */
-    public boolean isInErrorState() {
-        return status == -1;
-    }
-
-    /**
-     * Sets whether this stream is silenced. Silenced streams discard all <message> stanzas.
-     * <b>NOTE:</b> This setting takes effect upon reaching the next stanza.
-     *
-     * @param silenced Whether this stream is silenced.
-     */
-    public void setSilenced(boolean silenced) {
-        silenceRequested = silenced;
-    }
-
-    /**
-     * Sets whether this stream is "leeted." Leeted streams transform certain alphabetic characters inside <body>
-     * stanzas into similar-looking numbers.
-     * <b>NOTE:</b> This setting takes effect upon reaching the next <body> tag.
-     *
-     * @param l337ed Whether this stream is leeted.
-     */
-    public void setL337ed(boolean l337ed) {
-        l337Requested = l337ed;
-    }
-
-    /**
-     * Reads until the next XML event, as specified by {@link AsyncXMLStreamReader#next()}.
-     *
-     * @return The current event code.
-     */
-    private int next() {
-        try {
-            status = parser.next();
-        } catch (XMLStreamException e) {
-            e.printStackTrace();
-            status = -1;
-        }
-        return status;
-    }
+	/**
+	 * Reads until the next XML event, as specified by {@link AsyncXMLStreamReader#next()}.
+	 *
+	 * @return The current event code.
+	 */
+	private int next() {
+		try {
+			status = parser.next();
+		} catch (XMLStreamException e) {
+			e.printStackTrace();
+			status = -1;
+		}
+		return status;
+	}
 }

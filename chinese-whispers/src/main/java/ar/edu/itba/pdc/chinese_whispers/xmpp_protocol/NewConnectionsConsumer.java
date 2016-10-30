@@ -14,7 +14,8 @@ public interface NewConnectionsConsumer {
 	/**
 	 * Consumes new XMPP connections.
 	 *
-	 * @param jid The user's JID
+	 * @param clientJid The user's JID
 	 */
-	void consumeNewConnection(Object jid); // TODO: which object should represent a JID?
+	void consumeNewConnection(String clientJid);
+
 }

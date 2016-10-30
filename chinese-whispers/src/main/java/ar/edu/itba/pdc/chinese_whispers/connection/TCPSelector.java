@@ -105,7 +105,8 @@ public final class TCPSelector {
 	 *
 	 * @param port    The port in which the server socket channel will be bound and listen for incoming connections.
 	 * @param handler A {@link TCPServerHandler} to handle selected IO operations.
-	 * @return {@code true} if the channel was bound and is ready to accept new connections.
+	 * @return The {@link SelectionKey} representing the new connection if the socket channel was bound,
+	 * or {@code null} otherwise.
 	 */
 	public SelectionKey addServerSocketChannel(int port, TCPServerHandler handler) {
 		if (port < 0 || port > 0xFFFF || handler == null) {
@@ -134,7 +135,8 @@ public final class TCPSelector {
 	 * @param host    The host to be connected with.
 	 * @param port    The port in which the host is listening.
 	 * @param handler A {@link TCPClientHandler} to handle selected IO operations.
-	 * @return {@code true} if the channel started connecting, or {@code false} otherwise.
+	 * @return The {@link SelectionKey} representing the new connection, if the socket could start connecting,
+	 * or {@code null} otherwise.
 	 */
 	public SelectionKey addClientSocketChannel(String host, int port, TCPClientHandler handler) {
 		if (host == null || host.isEmpty() || port < 0 || port > 0xFFFF || handler == null) {
@@ -178,10 +180,10 @@ public final class TCPSelector {
 			try {
 				TCPHandler handler = (TCPHandler) key.attachment();
 
-
 				// Shouldn't be null, but in case ...
 				if (handler == null) {
 					key.cancel();
+					System.err.println("HEY MAN!!"); // TODO: remove this!
 					continue;
 				}
 				if (key.isAcceptable()) {
@@ -196,11 +198,11 @@ public final class TCPSelector {
 				}
 
 				if (key.isReadable()) {
-					handler.handleRead(); //TODO explota aca si el servidor destino está apagado.
+					handler.handleRead(key); //TODO explota aca si el servidor destino está apagado.
 				}
 
 				if (key.isValid() && key.isWritable()) { //TODO diego: No deberiamos ademas checkear que haya algo para escribir? Onda, vamos a checkear siempre?
-					handler.handleWrite();
+					handler.handleWrite(key);
 				}
 			} catch (Throwable e) {
 				// If any error occurred, don't crash ...

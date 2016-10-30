@@ -1,18 +1,22 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPServerHandler;
+import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
+import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.xml.XmlInterpreter;
 
-import java.io.IOException;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 
 /**
  * Created by jbellini on 27/10/16.
  */
-public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
+public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
+
+
+	/**
+	 * A proxy connection configurator to get server and port to which a user should establish a connection.
+	 */
+	private final ProxyConfigurationProvider proxyConfigurationProvider;
 
 
 	// TODO: move it to super class???
@@ -27,54 +31,46 @@ public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
 	private final NewConnectionsConsumer newConnectionsConsumer;
 
 
+
 	/**
-	 * Constructor. All parameters can be {@code null}. When any parameter is {@code null}, that object win't be used.
+	 * Constructor.
+	 * This constructor will create it's {@link XMPPClientHandler} peer.
 	 *
-	 * @param applicationProcessor   The application processor that processes incoming data. Can be {@code null}.
-	 * @param newConnectionsConsumer The new connections connsumer that will be notified when new connections arrive.
-	 *                               Can be {@code null}.
+	 * @param applicationProcessor        The application processor.
+	 * @param newConnectionsConsumer      The object to be notified when new XMPP connections are established.
+	 * @param proxyConfigurationProvider The object to be queried for proxy configurations.
 	 */
-	public XMPPServerHandler(ApplicationProcessor applicationProcessor,
-	                         NewConnectionsConsumer newConnectionsConsumer) {
-		super();
+	/* package */ XMPPServerHandler(ApplicationProcessor applicationProcessor,
+	                         NewConnectionsConsumer newConnectionsConsumer,
+	                         ProxyConfigurationProvider proxyConfigurationProvider) {
+		super(applicationProcessor);
 		this.applicationProcessor = applicationProcessor;
 		this.newConnectionsConsumer = newConnectionsConsumer;
-		otherEndHandler = new XMPPClientHandler(this);
-		xmlInterpreter = new XmlInterpreter(otherEndHandler.writeMessages);
-		otherEndHandler.xmlInterpreter=new XmlInterpreter(writeMessages);
+		this.peerHandler = new XMPPClientHandler(applicationProcessor, this);
+		this.xmlInterpreter = new XmlInterpreter(peerHandler);
+		this.proxyConfigurationProvider = proxyConfigurationProvider;
 	}
 
 
-	@Override
-	public void handleRead() {
-		super.handleRead();
-	}
-
-	@Override
-	public void handleWrite() {
-		super.handleWrite();
-	}
-
-	@Override
-	public void handleAccept(SelectionKey key) {
-		try {
-			SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
-			channel.configureBlocking(false);
-			// The handler assigned to accepted sockets won't accept new connections
-			XMPPHandler xmppHandler= new XMPPServerHandler(applicationProcessor, null);
-			SelectionKey key2 = channel.register(key.selector(), SelectionKey.OP_READ,xmppHandler);
-			//TODO this should be done in a TCPCOnnecter or something.
-			xmppHandler.setKey(key2);
-
-			//TODO delete this. Only for testing now.
-			xmppHandler.setOtherEndHandler(this.otherEndHandler);
-			otherEndHandler.setOtherEndHandler(xmppHandler);
-
-			// TODO: Add this new key into some set in some future class to have tracking of connections
-
-		} catch (IOException ignored) {
+	/**
+	 * Method to be executed to tunnel the client being connected to this server handler into the origin server.
+	 */
+	private void connectPeer() {
+		if (clientJid == null) {
+			throw new IllegalStateException();
 		}
+		SelectionKey peerKey = TCPSelector.getInstance().
+				addClientSocketChannel(proxyConfigurationProvider.getServer(clientJid),
+						proxyConfigurationProvider.getServerPort(clientJid),
+						(XMPPClientHandler) peerHandler);
+		if (peerKey == null) {
+			// Connection failed ...
+			handleError(key); // Our own key
+			return;
+		}
+		peerHandler.setKey(key);
 	}
+
 
 	@Override
 	public boolean handleError(SelectionKey key) {

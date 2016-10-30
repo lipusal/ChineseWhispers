@@ -1,6 +1,7 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPClientHandler;
+import ar.edu.itba.pdc.chinese_whispers.xml.XmlInterpreter;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -13,19 +14,20 @@ import java.nio.channels.SocketChannel;
 public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 
 
-	public XMPPClientHandler(XMPPServerHandler xmppServerHandler) {
-		super();
-		otherEndHandler= xmppServerHandler;
-	}
-
-	@Override
-	public void handleRead() {
-		super.handleRead();
-	}
-
-	@Override
-	public void handleWrite() {
-		super.handleWrite();
+	/**
+	 * Constructor.
+	 * Should only be called in {@link XMPPServerHandler}'s constructor.
+	 *
+	 * @param applicationProcessor The application processor.
+	 * @param peerHandler          The {@link XMPPServerHandler} that corresponds to this handler.
+	 */
+	/* package */ XMPPClientHandler(ApplicationProcessor applicationProcessor, XMPPServerHandler peerHandler) {
+		super(applicationProcessor);
+		if (peerHandler == null) {
+			throw new IllegalArgumentException();
+		}
+		this.peerHandler = peerHandler;
+		this.xmlInterpreter = new XmlInterpreter(peerHandler);
 	}
 
 

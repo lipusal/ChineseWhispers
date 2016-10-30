@@ -51,6 +51,11 @@ public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler
 		return true;
 	}
 
+	@Override
+	public boolean handleClose(SelectionKey key) {
+		// TODO: What should we do when clossing the acceptor? Close all connection? Let them finish when they want?
+		return true;
+	}
 
 	@Override
 	public void handleAccept(SelectionKey key) {
@@ -60,8 +65,10 @@ public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler
 			XMPPServerHandler handler = new XMPPServerHandler(applicationProcessor,
 					newConnectionsConsumer,
 					proxyConfigurationProvider);
-			// The handler assigned to accepted sockets won't accept new connections
-			SelectionKey newKey = channel.register(key.selector(), SelectionKey.OP_READ, handler);
+			// The handler assigned to accepted sockets won't accept new connections, it will read and write
+			// (it's writable upon creation because it might be created with data in its write messages queue)
+			SelectionKey newKey = channel.register(key.selector(),
+					SelectionKey.OP_READ | SelectionKey.OP_WRITE, handler);
 			handler.setKey(newKey);
 
 			// TODO: Add this new key into some set in some future class to have tracking of connections

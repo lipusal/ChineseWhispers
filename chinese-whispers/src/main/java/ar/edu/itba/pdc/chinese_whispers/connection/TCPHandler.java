@@ -28,4 +28,13 @@ public interface TCPHandler {
 	 * @return {@code true} if the key must be closed, or {@code false} otherwise.
 	 */
 	boolean handleError(SelectionKey key);
+
+
+	/**
+	 * Handles close event.
+	 *
+	 * @param key The {@link SelectionKey} whose channel will be closed.
+	 * @return {@code true} if the connection was succesfully closed, or {@code false} otherwise.
+	 */
+	boolean handleClose(SelectionKey key);
 }

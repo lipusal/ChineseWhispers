@@ -184,22 +184,22 @@ public final class TCPSelector {
 					System.err.println("HEY MAN!!"); // TODO: remove this!
 					continue;
 				}
+
+				// From now on, only valid keys are here...
+				// One operation per select for any given key
 				if (key.isAcceptable()) {
 					// Key can only be acceptable if it's channel is a server socket channel
 					((TCPServerHandler) handler).handleAccept(key);
-				}
-
-				if (key.isConnectable()) {
+				} else if (key.isConnectable()) {
 					// Key can only be connectable if it's channel is a client socket channel
 					((TCPClientHandler) handler).handleConnect(key);
-					afterTryingConnection(key); // Check if connection was established ...
-				}
-
-				if (key.isReadable()) {
-					handler.handleRead(key); //TODO explota aca si el servidor destino está apagado.
-				}
-
-				if (key.isValid() && key.isWritable()) { //TODO diego: No deberiamos ademas checkear que haya algo para escribir? Onda, vamos a checkear siempre?
+					// Key could have been invalidated if connection was refused...
+					if (key.isValid()) {
+						afterTryingConnection(key); // Check if connection was established ...
+					}
+				} else if (key.isReadable()) {
+					handler.handleRead(key);
+				} else if (key.isWritable()) {
 					handler.handleWrite(key);
 				}
 			} catch (Throwable e) {

@@ -33,6 +33,9 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 
 	@Override
 	public void handleConnect(SelectionKey key) {
+		if (key != this.key) {
+			throw new IllegalArgumentException();
+		}
 		SocketChannel channel = (SocketChannel) key.channel();
 		boolean connected = channel.isConnected();
 		if (!connected) {
@@ -46,12 +49,15 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 					}
 					connected = channel.connect(remote);
 				}
-			} catch (IOException ignored) {
+			} catch (IOException e) {
+				System.out.println("Connection refused");
+				((XMPPServerHandler) peerHandler).connectPeer(); // Ask peer handler to retry connection
+
 			}
 		}
 		if (connected) {
-			// If before this there was any other flag turned on, control shouldn't have reached here
-			key.interestOps(SelectionKey.OP_READ);
+			// Makes the key readalbe and writable (in case there where messages waiting for being delivered)
+			this.key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		}
 
 

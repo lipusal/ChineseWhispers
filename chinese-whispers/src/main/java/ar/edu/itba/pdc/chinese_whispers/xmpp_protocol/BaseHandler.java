@@ -1,6 +1,5 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
-import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 
 /**

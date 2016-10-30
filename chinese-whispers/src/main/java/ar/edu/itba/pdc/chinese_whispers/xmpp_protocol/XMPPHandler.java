@@ -26,6 +26,8 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 	private final static String ERROR_RESPONSE = "<stream:error>\n<bad-format\n" +
 			"xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>\n</stream:error>\n</stream:stream>\n";
 
+	private final static String CLOSE_MESSAGE = "</stream>\n";
+
 
 	// Communication stuff
 	/**
@@ -48,6 +50,10 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 	 * Selection Key that attaches this handler.
 	 */
 	protected SelectionKey key;
+	/**
+	 * Tells if this handler must be closed.
+	 */
+	protected boolean isClosable;
 
 
 	// XMPP stuff
@@ -74,6 +80,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 		this.writeMessages = new ArrayDeque<>();
 		this.inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
 		this.outputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
+		this.isClosable = false;
 	}
 
 
@@ -86,20 +93,43 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 		this.key = key;
 	}
 
+
+	/**
+	 * Makes this {@link XMPPHandler} to be closable (i.e. stop receiving messages, send all unsent messages,
+	 * send close message, and close the corresponding key's channel).
+	 * Note: Once this method is executed, there is no chance to go back.
+	 */
+	/* package */ void closeHandler() {
+		if (isClosable) {
+			return;
+		}
+		this.isClosable = true;
+		// TODO: What happens if handler contains half an xmpp message?
+		if (this.key.isValid()) {
+			this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
+			writeMessage(CLOSE_MESSAGE.getBytes());
+		} else {
+			handleClose(this.key); // If key is not valid, proceed to close the handler without writing anything
+		}
+	}
+
 	/**
 	 * Saves the message in this handler to be sent.
 	 *
 	 * @param message The message to be sent.
 	 */
-	private void writeMessage(byte[] message) {
+	/* package */ void writeMessage(byte[] message) {
 		if (message == null) {
 			throw new IllegalArgumentException();
 		}
 		for (Byte b : message) {
 			writeMessages.offer(b);
 		}
+		// Note that if the key is invalidated before writing the message,
+		// this handler will store the message until the key is a valid one.
 		key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
 	}
+
 
 	/**
 	 * // TODO: Fill this javadoc.
@@ -144,17 +174,15 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 				if (readBytes > 0) { // If a message was actually read ...
 					System.arraycopy(inputBuffer.array(), 0, message, 0, readBytes);
 				}
-				// TODO: if readBytes is smaller than BUFFER_SIZE, should we retry reading?
-				// TODO: we can read again to see if a new message arrived till total amount of read bytes == BUFFER_SIZE
-				// TODO: "Diego": Para mi NO, lee lo que hay y listo. Despues volves si hay más en el otro ciclo.
 			} else if (readBytes == -1) {
-				channel.close(); // Channel reached end of stream
+				handleClose(this.key);
 			}
 		} catch (IOException ignored) {
 			// I/O error (for example, connection reset by peer)
 		}
 		if (message != null && message.length > 0) {
-			XMLInterpreter.feed(message);
+			//XMLInterpreter.feed(message);
+			peerHandler.writeMessage(message); // TODO: remember to fix this.
 		}
 
 	}
@@ -162,36 +190,70 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 
 	@Override
 	public void handleWrite(SelectionKey key) {
-		byte[] message;
-		if (writeMessages.size() > BUFFER_SIZE) {
-			message = new byte[BUFFER_SIZE];
-		} else {
-			message = new byte[writeMessages.size()];
-		}
-		for (int i = 0; i < message.length; i++) {
-			message[i] = writeMessages.poll();
-		}
-		if (message.length > 0) {
-			SocketChannel channel = (SocketChannel) this.key.channel();
-			outputBuffer.clear();
-			outputBuffer.put(message);
-			outputBuffer.flip();
-			try {
-				do {
-					channel.write(outputBuffer);
+		if (!writeMessages.isEmpty()) {
+			byte[] message;
+			if (writeMessages.size() > BUFFER_SIZE) {
+				message = new byte[BUFFER_SIZE];
+			} else {
+				message = new byte[writeMessages.size()];
+			}
+			for (int i = 0; i < message.length; i++) {
+				message[i] = writeMessages.poll();
+			}
+			if (message.length > 0) {
+				SocketChannel channel = (SocketChannel) this.key.channel();
+				outputBuffer.clear();
+				outputBuffer.put(message);
+				outputBuffer.flip();
+				try {
+					do {
+						channel.write(outputBuffer);
+					}
+					// TODO check if this is not blocking. In case it's blocking, we can return those bytes to the queue with a push operation (it's a deque)
+					while (outputBuffer.hasRemaining()); // Continue writing if message wasn't totally written
+				} catch (IOException e) {
+					int bytesSent = outputBuffer.limit() - outputBuffer.position();
+					byte[] restOfMessage = new byte[message.length - bytesSent];
+					System.arraycopy(message, bytesSent, restOfMessage, 0, restOfMessage.length);
 				}
-				// TODO check if this is not blocking.
-				while (outputBuffer.hasRemaining()); // Continue writing if message wasn't totally written
-			} catch (IOException e) {
-				int bytesSent = outputBuffer.limit() - outputBuffer.position();
-				byte[] restOfMessage = new byte[message.length - bytesSent];
-				System.arraycopy(message, bytesSent, restOfMessage, 0, restOfMessage.length);
 			}
 		}
+		handleAfterWrite();
+	}
+
+	/**
+	 * This method must be executed at the end of the handleWrite method.
+	 */
+	private void handleAfterWrite() {
 		if (writeMessages.isEmpty()) {
 			// Turns off the write bit if there are no more messages to write
-			this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_WRITE); // TODO: check how we turn on and off
+			this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_WRITE);
+			if (isClosable) {
+				handleClose(key);
+			}
 		}
 		outputBuffer.clear();
+	}
+
+	@Override
+	public boolean handleError(SelectionKey key) {
+		return false; // TODO: change as specified in javadoc
+	}
+
+	@Override
+	public boolean handleClose(SelectionKey key) {
+		if (key != this.key) {
+			throw new IllegalArgumentException();
+		}
+		try {
+			this.key.channel().close();
+			// TODO: send some message before? Note: if yes, we can't close the peer's key now.
+			if (this.peerHandler != null) {
+				this.peerHandler.closeHandler();
+			}
+		} catch (IOException e) {
+
+		}
+		return false; // TODO: change as specified in javadoc
 	}
 }

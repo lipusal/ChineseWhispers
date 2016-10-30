@@ -12,6 +12,11 @@ import java.nio.channels.SelectionKey;
  */
 public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 
+	/**
+	 * Says how many times the peer connection can be tried.
+	 */
+	private static int MAX_PEER_CONNECTIONS_TRIES = 3;
+
 
 	/**
 	 * A proxy connection configurator to get server and port to which a user should establish a connection.
@@ -21,6 +26,11 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 	 * The new connections consumer that will be notified when new connections arrive.
 	 */
 	private final NewConnectionsConsumer newConnectionsConsumer;
+
+	/**
+	 * Holds how many peer connection tries have been done.
+	 */
+	private int peerConnectionTries;
 
 
 	/**
@@ -39,16 +49,26 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 		this.peerHandler = new XMPPClientHandler(applicationProcessor, this);
 		this.XMLInterpreter = new XMLInterpreter(peerHandler);
 		this.proxyConfigurationProvider = proxyConfigurationProvider;
+		this.peerConnectionTries = 0;
+		// TODO: remember to remove these two
+		clientJid = "hola";
+		connectPeer();
 	}
 
 
 	/**
 	 * Method to be executed to tunnel the client being connected to this server handler into the origin server.
 	 */
-	private void connectPeer() {
+	/* package */ void connectPeer() {
 		if (clientJid == null) {
 			throw new IllegalStateException();
 		}
+		if (peerConnectionTries >= MAX_PEER_CONNECTIONS_TRIES) {
+			// TODO: Close connection?
+			closeHandler();
+			return;
+		}
+		System.out.print("Trying to connect to origin server...");
 		SelectionKey peerKey = TCPSelector.getInstance().
 				addClientSocketChannel(proxyConfigurationProvider.getServer(clientJid),
 						proxyConfigurationProvider.getServerPort(clientJid),
@@ -58,8 +78,12 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 			handleError(key); // Our own key
 			return;
 		}
-		peerHandler.setKey(key);
+		peerHandler.setKey(peerKey);
+		peerConnectionTries++;
 	}
+
+
+
 
 
 	@Override

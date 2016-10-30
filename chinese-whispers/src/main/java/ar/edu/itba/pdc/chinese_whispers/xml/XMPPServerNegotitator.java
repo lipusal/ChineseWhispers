@@ -96,7 +96,7 @@ public class XMPPServerNegotitator extends XMPPNegotiator {
 
                         String response = "<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>";
                         System.out.println(response);
-                        System.out.println("Conexion with server was a SUCCESS");
+                        System.out.println("Connection with client was a SUCCESS");
                         byte[] bytes = response.getBytes();
                         for (byte b : bytes) {
                             output.offer(b);

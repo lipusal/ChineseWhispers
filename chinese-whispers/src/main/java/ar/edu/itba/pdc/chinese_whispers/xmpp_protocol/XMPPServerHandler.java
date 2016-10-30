@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Base64;
+import java.util.Map;
 
 /**
  * Created by jbellini on 27/10/16.
@@ -60,9 +62,28 @@ public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
 
 				ParserResponse parserResponse = xmppNegotiator.feed(message);
 				if(parserResponse==ParserResponse.NEGOTIATION_END){
+
+					//Initialize data obtained
 					connexionState=ConnexionState.XMPP_STANZA_STREAM;
+					Map initialNegotiationParameters = xmppNegotiator.getInitialParameters();
 					otherEndHandler.xmppNegotiator.setAuthorization(xmppNegotiator.getAuthorization());
-					otherEndHandler.xmppNegotiator.setInitialParameters(xmppNegotiator.getInitialParameters());
+					otherEndHandler.xmppNegotiator.setInitialParameters(initialNegotiationParameters);
+					if(!initialNegotiationParameters.containsKey("to")){
+						throw  new IllegalStateException();
+						//TODO send error? Send error before this?
+					}else{
+						String authDecoded = new String(Base64.getDecoder().decode(xmppNegotiator.getAuthorization()));
+						String[] authParameters = authDecoded.split("\0");
+						if(authParameters.length!=3){ //Nothing, user, pass
+							throw  new IllegalStateException();
+							//TODO send error? Send error before this?
+						}
+						clientJID = authParameters[1]+"@"+initialNegotiationParameters.get("to");
+						//Uncomment this to silence arriving msg. What should be done of clientJID of server?
+						//otherEndHandler.clientJID=clientJID;
+					}
+
+					//Generates first message
 					StringBuilder startStream = new StringBuilder();
 					startStream.append("<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" xmlns=\"jabber:client\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\" ");
 					for(String attributeKey : xmppNegotiator.getInitialParameters().keySet()){
@@ -73,10 +94,14 @@ public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
 					}
 					startStream.append("> ");
 					System.out.println("Proxy to Server:" + startStream);
+
+					//Sends first message to otherEndHandler for him to send
 					byte[] bytes = startStream.toString().getBytes();
 					for (byte b : bytes) {
 						otherEndHandler.negotiatorWriteMessages.offer(b);
 					}
+
+					//Sets write key of other to writable to send the message
 					otherEndHandler.key.interestOps(otherEndHandler.key.interestOps() | SelectionKey.OP_WRITE);
 				}
 

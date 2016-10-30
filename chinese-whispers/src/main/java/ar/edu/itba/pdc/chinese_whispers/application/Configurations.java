@@ -18,6 +18,7 @@ public class Configurations {
 
     private Configurations(){
         silencedUsers=new HashSet<>();
+        silencedUsers.add("fede@pc");
         isL337=true;
         multiplexedUsers=new HashMap<>();
     }

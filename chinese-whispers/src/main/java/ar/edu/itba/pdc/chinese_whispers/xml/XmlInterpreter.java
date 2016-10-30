@@ -108,7 +108,7 @@ public class XmlInterpreter {
         while (hasData()) {
             next();
             switch (status) {
-                case AsyncXMLStreamReader.START_ELEMENT:
+                case AsyncXMLStreamReader.START_ELEMENT: //TODO escape especial characters in start_element.
                     //Update status when starting a non-nested element
                     if(parser.getDepth() <= 1) {
                         isL337ed = l337Requested;
@@ -169,30 +169,36 @@ public class XmlInterpreter {
                     //Only process content if NOT message tag or NOT silenced
                     if (!(isInMessageTag && isSilenced)) {
                         //Append leeted or normal characters as appropriate
-                        if (isInBodyTag && isL337ed) {
-                            for (char c : parser.getTextCharacters()) {
-                                switch (c) {
-                                    case 'a':
-                                        readXML.append("4");
-                                        break;
-                                    case 'e':
-                                        readXML.append("3");
-                                        break;
-                                    case 'i':
-                                        readXML.append("1");
-                                    case 'o':
-                                        readXML.append("0");
-                                        break;
-                                    case 'c':
-                                        readXML.append("&lt;");
-                                        break;
-                                    default:
-                                        readXML.append(c);
-                                        break;
-                                }
+                        for (char c : parser.getText().toCharArray()) {
+                            switch (c) {
+                                case 'a':
+                                    readXML.append((isInBodyTag && isL337ed)? "4": "a");
+                                    break;
+                                case 'e':
+                                    readXML.append((isInBodyTag && isL337ed)? "3": "e");
+                                    break;
+                                case 'i':
+                                    readXML.append((isInBodyTag && isL337ed)? "1": "i");
+                                    break;
+                                case 'o':
+                                    readXML.append((isInBodyTag && isL337ed)? "0": "o");
+                                    break;
+                                case 'c':
+                                    readXML.append((isInBodyTag && isL337ed)? "&lt;": "c");
+                                    break;
+                                case '<':
+                                    readXML.append("&lt;");
+                                    break;
+                                case '>':
+                                    readXML.append("&gt;");
+                                    break;
+                                case '&':
+                                    readXML.append("&amp;");
+                                    break;
+                                default:
+                                    readXML.append(c);
+                                    break;
                             }
-                        } else {
-                            readXML.append(parser.getText());
                         }
                     }
                     break;

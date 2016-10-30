@@ -67,7 +67,7 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 		}
 		if (connected) {
 			// If before this there was any other flag turned on, control shouldn't have reached here
-			key.interestOps(SelectionKey.OP_READ);
+			key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		}
 
 

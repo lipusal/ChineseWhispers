@@ -77,7 +77,7 @@ public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no
                     case AsyncXMLStreamReader.START_ELEMENT:
 
                         if(parser.getLocalName().equals("success")){
-                            System.out.println("Conexion with client was a SUCCESS");
+                            System.out.println("Connection with server was a SUCCESS");
                             return ParserResponse.NEGOTIATION_END;
                         }
                         //TODO see other cases and Negotiation.

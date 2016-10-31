@@ -64,7 +64,7 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 
 	@Override
 	public void handleRead(SelectionKey key) {
-        byte[] message = readInputMessage();
+        byte[] message = readInputMessage(key);
         if (message != null && message.length > 0) {
 
             if (connectionState == ConnectionState.XMPP_STANZA_STREAM) {

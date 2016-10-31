@@ -27,3 +27,49 @@
 <auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>AGZlZGUAZmVkZQ==</auth>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Connected to the target VM, address: '127.0.0.1:62486', transport: 'socket'
+ diego diego
+Trying to bind port 3333... 	[Done]
+<stream:stream version="1.0" from="pc" xml:lang="es"id='randomgenerated' xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" xmlns:xml="http://www.w3.org/XML/1998/namespace" > <stream:features> <mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'> <mechanism>PLAIN</mechanism> </mechanisms> </stream:features>
+Bytes written for XMPP_NEGOTIATION: 327
+<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>
+Connection with client was a SUCCESS
+Trying to connect to origin server...Proxy to Server:<stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" xmlns:xml="http://www.w3.org/XML/1998/namespace" xml:lang="es" to="pc" version="1.0" >
+Bytes written for XMPP_STANZA_STREAM: 0
+Bytes written for XMPP_NEGOTIATION: 51
+Connect success! Connected!
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" xmlns:xml="http://www.w3.org/XML/1998/namespace" version="1.0" to="pc" xml:lang="es">
+
+Bytes written for XMPP_NEGOTIATION: 172
+Proxy to Server:<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>AGZlZGUAZmVkZQ==</auth>
+
+
+ diego diego
+Trying to bind port 3333... 	[Done]
+<stream:stream version="1.0" from="pc" xml:lang="es"id='randomgenerated' xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" xmlns:xml="http://www.w3.org/XML/1998/namespace" > <stream:features> <mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'> <mechanism>PLAIN</mechanism> </mechanisms> </stream:features>
+Bytes written for XMPP_NEGOTIATION: 327
+<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>
+Connection with client was a SUCCESS
+Trying to connect to origin server...Proxy to Server:<stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" xmlns:xml="http://www.w3.org/XML/1998/namespace" xml:lang="es" to="pc" version="1.0" >
+Bytes written for XMPP_STANZA_STREAM: 0
+Bytes written for XMPP_NEGOTIATION: 51
+Connect success! Connected!
+Bytes written for XMPP_NEGOTIATION: 172
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" xmlns:xml="http://www.w3.org/XML/1998/namespace" version="1.0" to="pc" xml:lang="es">
+
+Bytes written for XMPP_NEGOTIATION: 0

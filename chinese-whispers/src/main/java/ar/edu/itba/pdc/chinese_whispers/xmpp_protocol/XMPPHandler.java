@@ -122,6 +122,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         inputBuffer.clear();
         try {
             int readBytes = channel.read(inputBuffer);
+            System.out.println("ReadBytes= "+readBytes);
             if (readBytes >= 0) {
                 message = new byte[readBytes];
                 if (readBytes > 0) { // If a message was actually read ...
@@ -146,6 +147,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         if (isClosable) {
             return;
         }
+    System.out.println("Close handler");
         this.isClosable = true;
         // TODO: What happens if handler contains half an xmpp message?
         if (this.key.isValid()) {
@@ -193,21 +195,24 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 
 	@Override
 	public void handleWrite(SelectionKey key) {// TODO: check how we turn on and off
-        boolean empty = false;
 		if(connectionState==ConnectionState.XMPP_STANZA_STREAM){
-            empty = writeQ(writeMessages);
+            System.out.println("Bytes written for XMPP_STANZA_STREAM: "+writeQ(writeMessages));
 		}
 		//Needs to always happen to send the succes msg.
-		if(writeQ(negotiatorWriteMessages)){
-			if(empty) this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_WRITE);
-		}
+        System.out.println("Bytes written for XMPP_NEGOTIATION: "+writeQ(negotiatorWriteMessages));
+
+        if( (connectionState!=ConnectionState.XMPP_STANZA_STREAM || writeMessages.isEmpty() )
+                && negotiatorWriteMessages.isEmpty())
+            this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_WRITE);
+
         if (isClosable) {
             handleClose(key);
         }
         outputBuffer.clear();
 	}
 
-	private boolean writeQ(Deque<Byte> writeMessages) {
+	private int writeQ(Deque<Byte> writeMessages) {
+        int byteWritten = 0;
         if (!writeMessages.isEmpty()) {
             byte[] message;
             if (writeMessages.size() > BUFFER_SIZE) {
@@ -225,7 +230,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
                 outputBuffer.flip();
                 try {
                     do {
-                        channel.write(outputBuffer);
+                        byteWritten+=channel.write(outputBuffer);
                     }
                     // TODO check if this is not blocking. In case it's blocking, we can return those bytes to the queue with a push operation (it's a deque)
                     while (outputBuffer.hasRemaining()); // Continue writing if message wasn't totally written
@@ -236,7 +241,8 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
                 }
             }
         }
-        return writeMessages.isEmpty();
+
+        return byteWritten;
     }
     
     

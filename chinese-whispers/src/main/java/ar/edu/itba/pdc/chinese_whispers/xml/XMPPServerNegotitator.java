@@ -83,6 +83,8 @@ public class XMPPServerNegotitator extends XMPPNegotiator {
                             //TODO handle error?
                         }
                         break;
+                    case AsyncXMLStreamReader.EVENT_INCOMPLETE:
+                        return ParserResponse.EVERYTHING_NORMAL;
                     case -1:
                         //TODO throw exception? Remove sout
                         System.out.println("XML interpreter entered error state (invalid XML)");
@@ -103,6 +105,8 @@ public class XMPPServerNegotitator extends XMPPNegotiator {
                         }
                         while (hasData()  && status!=AsyncXMLStreamReader.EVENT_INCOMPLETE)next(); //TODO handle more?
                         return ParserResponse.NEGOTIATION_END;
+                    case AsyncXMLStreamReader.EVENT_INCOMPLETE:
+                        return ParserResponse.EVERYTHING_NORMAL;
                     case -1:
                         //TODO throw exception? Remove sout
                         System.out.println("XML interpreter entered error state (invalid XML)");

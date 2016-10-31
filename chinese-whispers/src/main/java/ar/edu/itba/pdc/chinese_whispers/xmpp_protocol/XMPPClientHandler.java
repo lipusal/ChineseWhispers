@@ -74,6 +74,7 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 						throw new IllegalStateException("Remote address wasn't specified."); // TODO: check this
 					}
 					connected = channel.connect(remote);
+
 				}
 			} catch (IOException e) {
 				System.out.println("Connection refused");
@@ -83,8 +84,11 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 		}
 		if (connected) {
 			// Makes the key readalbe and writable (in case there where messages waiting for being delivered)
-			this.key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-		}
+            System.out.println("Connect success! Connected!");
+            this.key.interestOps(key.interestOps() | SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+		}else{
+            System.out.println("Connect failed! Not Connected!");
+        }
 
 
 		// TODO: Add this key when connected into some set in some future class to have tracking of connections

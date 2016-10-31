@@ -116,7 +116,7 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
                     }
 
                     //Sets write key of other to writable to send the message
-                    peerHandler.key.interestOps(peerHandler.key.interestOps() | SelectionKey.OP_WRITE);
+                    //peerHandler.key.interestOps(peerHandler.key.interestOps() | SelectionKey.OP_WRITE);
                 }
 
                 key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);

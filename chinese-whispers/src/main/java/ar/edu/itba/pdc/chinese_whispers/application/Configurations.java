@@ -1,6 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.application;
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.ProxyConfigurationProvider;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ProxyConfigurationProvider;
 
 import java.util.HashMap;
 import java.util.HashSet;

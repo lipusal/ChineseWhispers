@@ -1,6 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.application;
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.ApplicationProcessor;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 
 /**
  * Created by jbellini on 29/10/16.

@@ -1,6 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.application;
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.ProxyConfigurationProvider;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ProxyConfigurationProvider;
 
 /**
  * Created by jbellini on 29/10/16.

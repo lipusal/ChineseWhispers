@@ -1,14 +1,13 @@
 package ar.edu.itba.pdc.chinese_whispers.xml;
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.OutputConsumer;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
 import com.fasterxml.aalto.AsyncByteArrayFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
 
-import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
-import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
@@ -49,49 +48,24 @@ public class XMLInterpreter {
 	}
 
 	/**
-	 * Constructs a new interpreter with initial data, and processes said initial data.
-	 *
-	 * @param initialData    The initial data to process.
-	 * @param outputConsumer The consumer that will consume output data.
-	 * @throws XMLStreamException When {@link AsyncXMLInputFactory#createAsyncFor(byte[])} does.
-	 */
-	public XMLInterpreter(byte[] initialData, OutputConsumer outputConsumer)
-			throws XMLStreamException {
-		inputFactory = new InputFactoryImpl();
-		parser = inputFactory.createAsyncFor(initialData);
-		this.outputConsumer = outputConsumer;
-		process();
-	}
-
-	/**
 	 * Adds bytes to be processed by the interpreter.
 	 *
 	 * @param data The data to process.
 	 * @throws XMLStreamException If this interpreter has unprocessed data. Be sure to call {@link #process()} between
 	 *                            calls to this method, which ensures that all data is consumed.
 	 */
-	public void feed(byte[] data) {
+	public ParserResponse feed(byte[] data) {
 		try {
 			parser.getInputFeeder().feedInput(data, 0, data.length);
-			process();
+			return process();
 		} catch (XMLStreamException e) {
-			//TODO catch
-		}
-
-	}
-
-	/**
-	 * @return Whether this interpreter has data left to read.
-	 */
-	private boolean hasData() {
-		try {
-			return parser.hasNext();
-		} catch (XMLStreamException e) {
-			//TODO log this or something
 			e.printStackTrace();
-			return false;
+			//TODO catch
+			return ParserResponse.XML_ERROR;
 		}
+
 	}
+
 
 	/**
 	 * Processes all fed data. Transforms messages if leeted, ignores messages if silenced, and sets an error state on
@@ -99,13 +73,13 @@ public class XMLInterpreter {
 	 *
 	 * @return The number of bytes offered to the output Deque, or -1 if the interpreter is in error state.
 	 */
-	private int process() {
-		if (!hasData()) {
-			return 0;
+	private ParserResponse process() throws XMLStreamException {
+		if (!parser.hasNext()) {
+			return ParserResponse.EVERYTHING_NORMAL;
 		}
 		StringBuilder readXML = new StringBuilder();
-		while (hasData()) {
-			next();
+		while (parser.hasNext()) {
+			status = parser.next();
 			switch (status) {
 				case AsyncXMLStreamReader.START_ELEMENT:
 					//Update status when starting a non-nested element
@@ -217,27 +191,16 @@ public class XMLInterpreter {
 					System.out.println(readXML);
 					byte[] bytes = readXML.toString().getBytes();
 					outputConsumer.consumeMessage(bytes);
-					return bytes.length;
+					return ParserResponse.EVERYTHING_NORMAL;
 				case -1:
 					//TODO throw exception? Remove sout
 					System.out.println("XML interpreter entered error state (invalid XML)");
-					return -1;
+					return ParserResponse.XML_ERROR;
 			}
 		}
 		byte[] bytes = readXML.toString().getBytes();
 		outputConsumer.consumeMessage(bytes);
-		return bytes.length;
-	}
-
-	/**
-	 * Checks whether this interpreter is in error state. An error state is reached when reading invalid XML, at which
-	 * point the interpreter becomes invalid and stops processing the stream further. The stream may be considered
-	 * invalid and discarded.
-	 *
-	 * @return Whether this interpreter is in error state.
-	 */
-	public boolean isInErrorState() {
-		return status == -1;
+		return ParserResponse.EVERYTHING_NORMAL;
 	}
 
 	/**
@@ -261,18 +224,4 @@ public class XMLInterpreter {
 		l337Requested = l337ed;
 	}
 
-	/**
-	 * Reads until the next XML event, as specified by {@link AsyncXMLStreamReader#next()}.
-	 *
-	 * @return The current event code.
-	 */
-	private int next() {
-		try {
-			status = parser.next();
-		} catch (XMLStreamException e) {
-			e.printStackTrace();
-			status = -1;
-		}
-		return status;
-	}
 }

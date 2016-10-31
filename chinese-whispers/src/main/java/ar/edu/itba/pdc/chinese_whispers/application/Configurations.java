@@ -149,22 +149,18 @@ public class Configurations implements ProxyConfigurationProvider {
 
 
 	// ProxyConfigurationProvider
-
-
-	// TODO: remember fix these two (uncomment commented lines and remove magic results)
-
-
 	@Override
 	public String getServer(String clientJid) {
 		return getMultiplexedServerHost(clientJid);
 	}
-
-
 	@Override
 	public int getServerPort(String clientJid) {
 		return getMultiplexedServerPort(clientJid);
 	}
-
+	@Override
+	public boolean isUserSilenced(String clientJid) {
+		return isSilenced(clientJid);
+	}
 
 	/**
 	 * Add user with password or replace password to existing user

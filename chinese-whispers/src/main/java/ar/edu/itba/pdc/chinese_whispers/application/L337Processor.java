@@ -4,12 +4,17 @@ import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProc
 
 /**
  * Created by jbellini on 29/10/16.
- *
+ * <p>
  * This {@link ApplicationProcessor} changes messages using L337.
  * This class implements singleton pattern.
  */
 public class L337Processor implements ApplicationProcessor {
 
+
+	/**
+	 * Holds the system configurations.
+	 */
+	final private Configurations configurations;
 
 	/**
 	 * Holds the singleton instance.
@@ -20,7 +25,7 @@ public class L337Processor implements ApplicationProcessor {
 	 * Private constructor to implement singleton pattern.
 	 */
 	private L337Processor() {
-		// Nothing here...
+		configurations = Configurations.getInstance();
 	}
 
 
@@ -33,44 +38,114 @@ public class L337Processor implements ApplicationProcessor {
 
 
 	@Override
-	public void processMessageBody(byte[] message) {
-
-		if (message != null) {
-			for (int i = 0; i < message.length; i++) {
-				switch (message[i]) {
-					case 'A':
-					case 'a':
-						message[i] = '4';
-						break;
-					case 'E':
-					case 'e':
-						message[i] = '3';
-						break;
-					case 'I':
-					case 'i':
-						message[i] = '1';
-						break;
-					case 'O':
-					case 'o':
-						message[i] = '0';
-						break;
-					case 'C':
-					case 'c':
-						message[i] = '<';
-						break;
-				}
-			}
+	public void processMessageBody(StringBuilder stringBuilder, char[] message) {
+		if (stringBuilder == null || message == null) {
+			throw new IllegalArgumentException(); // TODO: Or should we just return
+		}
+		if (!configurations.isL337()) {
+			return; // Don't do anything if L337 is set off.
 		}
 
+		for (char c : message) {
+			switch (c) {
+				case 'A':
+				case 'a':
+					stringBuilder.append("4");
+					break;
+				case 'E':
+				case 'e':
+					stringBuilder.append("3");
+					break;
+				case 'I':
+				case 'i':
+					stringBuilder.append("1");
+					break;
+				case 'O':
+				case 'o':
+					stringBuilder.append("0");
+					break;
+				case 'C':
+				case 'c':
+					stringBuilder.append("&lt;");
+					break;
+				default:
+					stringBuilder.append(c);
+					break;
+			}
+		}
+	}
+
+	@Override
+	public byte[] processMessageBody(byte[] message) {
+		if (message == null) {
+			return null;
+		}
+		if (configurations.isL337()) {
+			return message; // Don't do anything if L337 is set off.
+		}
+
+		byte[] finalMessage = new byte[calculateFinalMessageLength(message)]; // TODO: Check which characters we must escape.
+
+		for (int i = 0; i < message.length; i++) {
+			switch (message[i]) {
+				case 'A':
+				case 'a':
+					finalMessage[i] = '4';
+					break;
+				case 'E':
+				case 'e':
+					finalMessage[i] = '3';
+					break;
+				case 'I':
+				case 'i':
+					finalMessage[i] = '1';
+					break;
+				case 'O':
+				case 'o':
+					finalMessage[i] = '0';
+					break;
+				case 'C':
+				case 'c':
+					finalMessage[i++] = '&';
+					finalMessage[i++] = 'l';
+					finalMessage[i++] = 't';
+					finalMessage[i] = ';';
+					break;
+				default:
+					finalMessage[i] = message[i];
+					break;
+			}
+		}
+		return finalMessage;
 	}
 
 	@Override
 	public void processMessageBody(String message) {
+		if (configurations.isL337()) {
+			return; // Don't do anything if L337 is set off.
+		}
 		message.replace('A', '4').replace('a', '4')
 				.replace('E', '3').replace('e', '3')
 				.replace('I', '1').replace('i', '1')
 				.replace('O', '0').replace('o', '0')
-				.replace('C', '<').replace('c', '<');
+				.replace("C", "&lt;").replace("c", "&lt;");
 
+	}
+
+	/**
+	 * Calculates the final message length after processing the given {@code message}.
+	 *
+	 * @param message The message to be processed.
+	 * @return The final length.
+	 */
+	private int calculateFinalMessageLength(byte[] message) {
+		int count = 0;
+		for (byte character : message) {
+			if (character == 'C' || character == 'c') {
+				count += 3; // To escape the '<' we add "&lt;"
+			}
+			count++;
+		}
+		return count;
 	}
 }

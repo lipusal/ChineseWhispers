@@ -7,7 +7,7 @@ import java.util.Deque;
 import java.util.Map;
 
 /**
- * Created by Estela on 30/10/2016.
+ * Created by Droche on 30/10/2016.
  */
 public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no hay que mandar el STLTST paa que ande.
 

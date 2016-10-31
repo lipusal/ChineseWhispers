@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * Created by Estela on 30/10/2016.
+ * Created by Droche on 30/10/2016.
  */
 public abstract class XMPPNegotiator {
     protected final AsyncXMLInputFactory inputFactory;

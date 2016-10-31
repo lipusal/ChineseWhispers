@@ -6,7 +6,7 @@ import com.fasterxml.aalto.AsyncXMLStreamReader;
 import java.util.Deque;
 
 /**
- * Created by Estela on 30/10/2016.
+ * Created by Droche on 30/10/2016.
  */
 public class XMPPServerNegotitator extends XMPPNegotiator {
 

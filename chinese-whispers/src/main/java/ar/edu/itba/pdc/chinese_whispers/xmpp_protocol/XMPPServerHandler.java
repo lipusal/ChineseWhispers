@@ -1,16 +1,14 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 
+import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPServerHandler;
 import ar.edu.itba.pdc.chinese_whispers.xml.XMPPServerNegotitator;
 import ar.edu.itba.pdc.chinese_whispers.xml.XMLInterpreter;
 
 
 import java.nio.channels.SelectionKey;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.util.Base64;
 import java.util.Map;
 
@@ -26,9 +24,9 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 
 
 	/**
-	 * A proxy connection configurator to get server and port to which a user should establish a connection.
+	 * The server configurations singleton
 	 */
-	private final ProxyConfigurationProvider proxyConfigurationProvider;
+	private final Configurations configurations;
 	/**
 	 * The new connections consumer that will be notified when new connections arrive.
 	 */
@@ -55,7 +53,7 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 		this.newConnectionsConsumer = newConnectionsConsumer;
         this.peerHandler = new XMPPClientHandler(applicationProcessor, this);
         this.XMLInterpreter = new XMLInterpreter(peerHandler);
-        this.proxyConfigurationProvider = proxyConfigurationProvider;
+        this.configurations = Configurations.getInstance();
         this.peerConnectionTries = 0;
         xmppNegotiator = new XMPPServerNegotitator(negotiatorWriteMessages);
 
@@ -68,7 +66,7 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
         if (message != null && message.length > 0) {
 
             if (connectionState == ConnectionState.XMPP_STANZA_STREAM) {
-                sendProcesedStanza(message);
+                sendProcessedStanza(message);
             } else if (connectionState == ConnectionState.XMPP_NEGOTIATION) {
 
                 ParserResponse parserResponse = xmppNegotiator.feed(message);
@@ -141,8 +139,8 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 		}
 		System.out.print("Trying to connect to origin server...");
 		SelectionKey peerKey = TCPSelector.getInstance().
-				addClientSocketChannel(proxyConfigurationProvider.getServer(clientJid),
-						proxyConfigurationProvider.getServerPort(clientJid),
+				addClientSocketChannel(configurations.getServer(clientJid),
+						configurations.getServerPort(clientJid),
 						(XMPPClientHandler) peerHandler);
 		if (peerKey == null) {
 			// Connection failed ...

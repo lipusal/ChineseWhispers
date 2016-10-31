@@ -31,19 +31,16 @@ public class Main {
 			return;
 		}
 
-//		AdminAcceptorHandler administrationAcceptorHandler = new AdminAcceptorHandler();
-//
-//		System.out.print("Trying to bind port 4444... ");
-//		try {
-//			selector.addServerSocketChannel(4444, administrationAcceptorHandler);
-//		} catch (Throwable e) {
-//			System.err.println("ERROR! Couldn't bind!");
-//			return;
-//		}
-//
-//
-//
-//		System.out.println("\t[Done]");
+		AdminAcceptorHandler administrationAcceptorHandler = new AdminAcceptorHandler();
+
+		System.out.print("Trying to bind port 4444... ");
+		try {
+			selector.addServerSocketChannel(4444, administrationAcceptorHandler);
+		} catch (Throwable e) {
+			System.err.println("ERROR! Couldn't bind!");
+			return;
+		}
+		System.out.println("\t[Done]");
 		while (true) {
 			// Before select tasks...
 			selector.doSelect(); // Perform select operations...

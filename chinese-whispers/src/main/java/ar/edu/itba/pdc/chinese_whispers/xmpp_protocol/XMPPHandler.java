@@ -105,7 +105,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 		this.key = key;
 	}
 
-	protected void sendProcesedStanza(byte[] message){
+	protected void sendProcessedStanza(byte[] message){
 		XMLInterpreter.setL337ed(Configurations.getInstance().isL337());
         XMLInterpreter.setSilenced(Configurations.getInstance().isSilenced(clientJid));
         XMLInterpreter.feed(message);

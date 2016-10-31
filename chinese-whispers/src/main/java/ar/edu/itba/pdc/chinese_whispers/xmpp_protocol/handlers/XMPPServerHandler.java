@@ -1,15 +1,16 @@
-package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
+package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
-import ar.edu.itba.pdc.chinese_whispers.xml.XMLInterpreter;
-import ar.edu.itba.pdc.chinese_whispers.xml.XMPPServerNegotiator;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ConnectionState;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPServerNegotiator;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ConnectionState;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NewConnectionsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ProxyConfigurationProvider;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.XMLInterpreter;
+
 
 import java.nio.channels.SelectionKey;
 import java.util.Base64;
@@ -101,7 +102,7 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 
                     //Generates first message
                     StringBuilder startStream = new StringBuilder();
-                    startStream.append("<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" xmlns=\"jabber:client\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\" ");
+                    startStream.append("<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" xmlns=\"jabber:client\" xmlns:xml_parser=\"http://www.w3.org/XML/1998/namespace\" ");
                     for (String attributeKey : xmppNegotiator.getInitialParameters().keySet()) {
                         startStream.append(attributeKey)
                                 .append("=\"")

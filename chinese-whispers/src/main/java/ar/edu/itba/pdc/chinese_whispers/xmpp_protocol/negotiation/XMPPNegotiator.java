@@ -1,4 +1,4 @@
-package ar.edu.itba.pdc.chinese_whispers.xml;
+package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation;
 
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
 import com.fasterxml.aalto.AsyncByteArrayFeeder;
@@ -24,6 +24,7 @@ public abstract class XMPPNegotiator {
     protected int status = 0;
     protected NegotiationStatus negotiationStatus;
     protected Deque<Byte> output;
+
 
     public Map<String, String> getInitialParameters() {
         return initialParameters;

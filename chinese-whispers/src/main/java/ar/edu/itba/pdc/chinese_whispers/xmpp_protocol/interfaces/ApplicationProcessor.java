@@ -1,6 +1,8 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces;
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.XMPPServerHandler;
+
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.XMPPServerHandler;
+
 
 /**
  * Created by jbellini on 29/10/16.

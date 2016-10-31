@@ -1,4 +1,4 @@
-package ar.edu.itba.pdc.chinese_whispers.xml;
+package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser;
 
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;

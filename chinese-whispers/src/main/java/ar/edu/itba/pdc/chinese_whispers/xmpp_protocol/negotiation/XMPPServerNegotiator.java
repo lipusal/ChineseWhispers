@@ -1,4 +1,4 @@
-package ar.edu.itba.pdc.chinese_whispers.xml;
+package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation;
 
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -19,7 +19,7 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
      */
     public XMPPServerNegotiator(Deque<Byte> output) {
         super(output);
-        this.negotiationStatus=NegotiationStatus.START;
+        this.negotiationStatus= NegotiationStatus.START;
     }
 
     /**

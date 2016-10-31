@@ -2,11 +2,8 @@ package ar.edu.itba.pdc.chinese_whispers.application;
 
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.AdminAcceptorHandler;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.XMPPAcceptorHandler;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.XMPPClientHandler;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.XMPPServerHandler;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.XMPPAcceptorHandler;
 
-import java.nio.channels.SelectionKey;
 import java.util.Base64;
 
 /**

@@ -1,12 +1,12 @@
-package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
+package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPClientHandler;
 
-import ar.edu.itba.pdc.chinese_whispers.xml.XMPPClientNegotiator;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPClientNegotiator;
 
-import ar.edu.itba.pdc.chinese_whispers.xml.XMLInterpreter;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ConnectionState;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.XMLInterpreter;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 
 

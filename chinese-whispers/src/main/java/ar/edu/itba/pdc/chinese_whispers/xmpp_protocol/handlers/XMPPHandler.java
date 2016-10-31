@@ -1,13 +1,14 @@
-package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
+package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 
-import ar.edu.itba.pdc.chinese_whispers.xml.XMPPNegotiator;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPNegotiator;
 
-import ar.edu.itba.pdc.chinese_whispers.xml.XMLInterpreter;
+
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ConnectionState;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.XMLInterpreter;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 
@@ -30,10 +31,13 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 	protected static final int BUFFER_SIZE = 1024;
 	/**
 	 * String to be sent when detecting error.
+	 * It does not contain </stream:stream> because close_message is always sent when closing.
 	 */
 	private final static String XML_ERROR_RESPONSE = "<stream:error>\n<bad-format\n" +
-			"xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>\n</stream:error>\n"; //Do not contain </stream:stream> because close_message is always sent when closing.
-
+			"xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>\n</stream:error>\n";
+	/**
+	 * String to be sent to finish communication
+	 */
 	private final static String CLOSE_MESSAGE = "</stream:stream>\n";
 
 

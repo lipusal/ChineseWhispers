@@ -1,4 +1,5 @@
-package ar.edu.itba.pdc.chinese_whispers.xml;
+package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation;
+
 
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -55,7 +56,7 @@ public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no
                         //Update status when starting a non-nested element
                         String text =  parser.getText();
                         if(text.equals("PLAIN")){
-                            String response = "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' " +
+                            String response = "<auth xmlns='urn:ietf:params:xml_parser:ns:xmpp-sasl' " +
                                     "mechanism='PLAIN'>"+authorization+"</auth>";
                             negotiationStatus=NegotiationStatus.CHALLENGE;
                             System.out.println("Proxy to Server:" + response);

@@ -6,8 +6,30 @@ import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.ApplicationProcessor;
  * Created by jbellini on 29/10/16.
  *
  * This {@link ApplicationProcessor} changes messages using L337.
+ * This class implements singleton pattern.
  */
 public class L337Processor implements ApplicationProcessor {
+
+
+	/**
+	 * Holds the singleton instance.
+	 */
+	private static L337Processor singleton;
+
+	/**
+	 * Private constructor to implement singleton pattern.
+	 */
+	private L337Processor() {
+		// Nothing here...
+	}
+
+
+	public static L337Processor getInstance() {
+		if (singleton == null) {
+			singleton = new L337Processor();
+		}
+		return singleton;
+	}
 
 
 	@Override

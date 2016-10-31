@@ -1,121 +1,161 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 
+import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
+import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPServerHandler;
+import ar.edu.itba.pdc.chinese_whispers.xml.XMPPServerNegotitator;
+import ar.edu.itba.pdc.chinese_whispers.xml.XMLInterpreter;
 
-import java.io.IOException;
+
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Base64;
+import java.util.Map;
 
 /**
  * Created by jbellini on 27/10/16.
  */
-public class XMPPServerHandler extends XMPPHandler implements TCPServerHandler {
+public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 
-
-	// TODO: move it to super class???
 	/**
-	 * The application processor that processes incoming data.
+	 * Says how many times the peer connection can be tried.
 	 */
-	private final ApplicationProcessor applicationProcessor;
+	private static int MAX_PEER_CONNECTIONS_TRIES = 3;
 
+
+	/**
+	 * A proxy connection configurator to get server and port to which a user should establish a connection.
+	 */
+	private final ProxyConfigurationProvider proxyConfigurationProvider;
 	/**
 	 * The new connections consumer that will be notified when new connections arrive.
 	 */
 	private final NewConnectionsConsumer newConnectionsConsumer;
 
+	/**
+	 * Holds how many peer connection tries have been done.
+	 */
+	private int peerConnectionTries;
+
 
 	/**
-	 * Constructor. All parameters can be {@code null}. When any parameter is {@code null}, that object win't be used.
+	 * Constructor.
+	 * This constructor will create it's {@link XMPPClientHandler} peer.
 	 *
-	 * @param applicationProcessor   The application processor that processes incoming data. Can be {@code null}.
-	 * @param newConnectionsConsumer The new connections connsumer that will be notified when new connections arrive.
-	 *                               Can be {@code null}.
+	 * @param applicationProcessor       The application processor.
+	 * @param newConnectionsConsumer     The object to be notified when new XMPP connections are established.
+	 * @param proxyConfigurationProvider The object to be queried for proxy configurations.
 	 */
-	public XMPPServerHandler(ApplicationProcessor applicationProcessor,
-	                         NewConnectionsConsumer newConnectionsConsumer) {
-
-		this.applicationProcessor = applicationProcessor;
+	/* package */ XMPPServerHandler(ApplicationProcessor applicationProcessor,
+	                                NewConnectionsConsumer newConnectionsConsumer,
+	                                ProxyConfigurationProvider proxyConfigurationProvider) {
+		super(applicationProcessor);
 		this.newConnectionsConsumer = newConnectionsConsumer;
-	}
+        this.peerHandler = new XMPPClientHandler(applicationProcessor, this);
+        this.XMLInterpreter = new XMLInterpreter(peerHandler);
+        this.proxyConfigurationProvider = proxyConfigurationProvider;
+        this.peerConnectionTries = 0;
+        xmppNegotiator = new XMPPServerNegotitator(negotiatorWriteMessages);
+
+    }
 
 
 	@Override
 	public void handleRead(SelectionKey key) {
-		SocketChannel channel = (SocketChannel) key.channel();
-		byte[] message = null;
-		inputBuffer.clear();
-		try {
-			int readBytes = channel.read(inputBuffer);
-			if (readBytes >= 0) {
-				message = new byte[readBytes];
-				if (readBytes > 0) { // If a message was actually read ...
-					System.arraycopy(inputBuffer.array(), 0, message, 0, readBytes);
-				}
-				// TODO: if readBytes is smaller than BUFFER_SIZE, should we retry reading?
-				// TODO: we can read again to see if a new message arrived till total amount of read bytes == BUFFER_SIZE
-			} else if (readBytes == -1) {
-				channel.close(); // Channel reached end of stream
-			}
-		} catch (IOException ignored) {
-			// I/O error (for example, connection reset by peer)
-		}
-		inputBuffer.clear();
-		if (message != null && message.length > 0) {
-			readMessages.offer(message);
-		}
+        byte[] message = readInputMessage();
+        if (message != null && message.length > 0) {
+
+            if (connectionState == ConnectionState.XMPP_STANZA_STREAM) {
+                sendProcesedStanza(message);
+            } else if (connectionState == ConnectionState.XMPP_NEGOTIATION) {
+
+                ParserResponse parserResponse = xmppNegotiator.feed(message);
+                if (parserResponse == ParserResponse.NEGOTIATION_END) {
+
+                    //Initialize data obtained
+                    connectionState = ConnectionState.XMPP_STANZA_STREAM;
+                    Map initialNegotiationParameters = xmppNegotiator.getInitialParameters();
+                    peerHandler.xmppNegotiator.setAuthorization(xmppNegotiator.getAuthorization());
+                    peerHandler.xmppNegotiator.setInitialParameters(initialNegotiationParameters);
+                    if (!initialNegotiationParameters.containsKey("to")) {
+                        throw new IllegalStateException();
+                        //TODO send error? Send error before this?
+                    } else {
+                        String authDecoded = new String(Base64.getDecoder().decode(xmppNegotiator.getAuthorization()));
+                        String[] authParameters = authDecoded.split("\0");
+                        if (authParameters.length != 3) { //Nothing, user, pass
+                            throw new IllegalStateException();
+                            //TODO send error? Send error before this?
+                        }
+                        clientJid = authParameters[1] + "@" + initialNegotiationParameters.get("to");
+                        //Uncomment this to silence arriving msg. What should be done of clientJID of server?
+                        //otherEndHandler.clientJID=clientJID;
+                    }
+
+                    //Connect Peer
+                    connectPeer();
+
+                    //Generates first message
+                    StringBuilder startStream = new StringBuilder();
+                    startStream.append("<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" xmlns=\"jabber:client\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\" ");
+                    for (String attributeKey : xmppNegotiator.getInitialParameters().keySet()) {
+                        startStream.append(attributeKey)
+                                .append("=\"")
+                                .append(xmppNegotiator.getInitialParameters().get(attributeKey))
+                                .append("\" ");
+                    }
+                    startStream.append("> ");
+                    System.out.println("Proxy to Server:" + startStream);
+
+                    //Sends first message to otherEndHandler for him to send
+                    byte[] bytes = startStream.toString().getBytes();
+                    for (byte b : bytes) {
+                        peerHandler.negotiatorWriteMessages.offer(b);
+                    }
+
+                    //Sets write key of other to writable to send the message
+                    peerHandler.key.interestOps(peerHandler.key.interestOps() | SelectionKey.OP_WRITE);
+                }
+
+                key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+            }
 
 
+        }
+    }
+
+
+	/**
+	 * Method to be executed to tunnel the client being connected to this server handler into the origin server.
+	 */
+	/* package */ void connectPeer() {
+		if (clientJid == null) {
+			throw new IllegalStateException();
+		}
+		if (peerConnectionTries >= MAX_PEER_CONNECTIONS_TRIES) {
+			// TODO: Close connection?
+			closeHandler();
+			return;
+		}
+		System.out.print("Trying to connect to origin server...");
+		SelectionKey peerKey = TCPSelector.getInstance().
+				addClientSocketChannel(proxyConfigurationProvider.getServer(clientJid),
+						proxyConfigurationProvider.getServerPort(clientJid),
+						(XMPPClientHandler) peerHandler);
+		if (peerKey == null) {
+			// Connection failed ...
+			handleError(key); // Our own key
+			return;
+		}
+		peerHandler.setKey(peerKey);
+		peerConnectionTries++;
 	}
 
-	@Override
-	public void handleWrite(SelectionKey key) {
-		byte[] message = writeMessages.poll();
-		if (message != null) {
-			if (message.length > BUFFER_SIZE) {
-				byte[] actualMessage = new byte[BUFFER_SIZE];
-				System.arraycopy(message, 0, actualMessage, 0, actualMessage.length);
-				byte[] wontBeSentMessage = new byte[message.length - actualMessage.length];
-				System.arraycopy(message, actualMessage.length, wontBeSentMessage, 0, wontBeSentMessage.length);
-				writeMessages.push(wontBeSentMessage);
-				message = actualMessage;
-			}
-			SocketChannel channel = (SocketChannel) key.channel();
-			outputBuffer.clear();
-			outputBuffer.put(message);
-			outputBuffer.flip();
-			try {
-				do {
-					channel.write(outputBuffer);
-				} while (outputBuffer.hasRemaining()); // Continue writing if message wasn't totally written
-			} catch (IOException e) {
-				int bytesSent = outputBuffer.limit() - outputBuffer.position();
-				byte[] restOfMessage = new byte[message.length - bytesSent];
-				System.arraycopy(message, bytesSent, restOfMessage, 0, restOfMessage.length);
-				writeMessages.push(restOfMessage);
-			}
-			if (writeMessages.isEmpty()) {
-				// Turns off the write bit if there are no more messages to write
-				key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE); // TODO: check how we turn on and off
-			}
-			outputBuffer.clear();
-		}
-	}
 
-	@Override
-	public void handleAccept(SelectionKey key) {
-		try {
-			SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
-			channel.configureBlocking(false);
-			// The handler assigned to accepted sockets won't accept new connections
-			channel.register(key.selector(), SelectionKey.OP_READ, new XMPPServerHandler(applicationProcessor, null));
 
-			// TODO: Add this new key into some set in some future class to have tracking of connections
 
-		} catch (IOException ignored) {
-		}
-	}
 
 	@Override
 	public boolean handleError(SelectionKey key) {

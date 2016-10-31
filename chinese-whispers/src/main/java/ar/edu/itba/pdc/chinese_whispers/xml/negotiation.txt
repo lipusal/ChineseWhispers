@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" version="1.0" xmlns="jabber:client" to="pc" xml:lang="es" xmlns:xml="http://www.w3.org/XML/1998/namespace">
+
+<stream:stream version="1.0" from="pc" xml:lang="es"id='randomgenerated' xmlns="jabber:client" xmlns:xml="http://www.w3.org/XML/1998/namespace" > <stream:features> <mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'> <mechanism>PLAIN</mechanism> </mechanisms> </stream:features>
+
+
+
+<?xml version='1.0' encoding='UTF-8'?><stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" from="pc" id="1msrp9tlux" xml:lang="es" version="1.0"><stream:features><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"></starttls><mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><mechanism>PLAIN</mechanism><mechanism>ANONYMOUS</mechanism><mechanism>SCRAM-SHA-1</mechanism><mechanism>CRAM-MD5</mechanism><mechanism>DIGEST-MD5</mechanism></mechanisms><compression xmlns="http://jabber.org/features/compress"><method>zlib</method></compression><auth xmlns="http://jabber.org/features/iq-auth"/><register xmlns="http://jabber.org/features/iq-register"/></stream:features>
+
+<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="PLAIN">AGRpZWdvAGRpZWdv</auth>
+
+<challenge xmlns="urn:ietf:params:xml:ns:xmpp-sasl">cmVhbG09InBjIixub25jZT0iL0hOQVpyd1Z6eXZENUZpaWFPcGd0Wit3Y3J2bTBRQ3I5cmRLKytxZyIscW9wPSJhdXRoIixjaGFyc2V0PXV0Zi04LGFsZ29yaXRobT1tZDUtc2Vzcw==</challenge>
+
+<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">dXNlcm5hbWU9ImZlZGUiLHJlYWxtPSJwYyIsbm9uY2U9Ii9ITkFacndWenl2RDVGaWlhT3BndFord2Nydm0wUUNyOXJkSysrcWciLGNub25jZT0iM2FMZDFZMDBXS1VGSkY5OWF4OEtRZ1Q2YkhwN2VteG5zb05BTEhpUVAvUT0iLG5jPTAwMDAwMDAxLGRpZ2VzdC11cmk9InhtcHAvcGMiLHFvcD1hdXRoLHJlc3BvbnNlPWIyMmU5NTFmYmJjNjA2YjNmZDQyMzMyYzhmZTVhMTliLGNoYXJzZXQ9dXRmLTg=</response>
+
+<success xmlns="urn:ietf:params:xml:ns:xmpp-sasl">cnNwYXV0aD03YTdkYzNiMWM2OGJiYjBjMWIzZTY0MWQyMGQ2OWU5ZQ==</success>
+
+<?xml version="1.0"?>
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" version="1.0" xmlns="jabber:client" to="pc" xml:lang="es" xmlns:xml="http://www.w3.org/XML/1998/namespace">
+
+
+//////
+<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="DIGEST-MD5"/>
+
+<success xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>
+
+<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>AGZlZGUAZmVkZQ==</auth>
+
+

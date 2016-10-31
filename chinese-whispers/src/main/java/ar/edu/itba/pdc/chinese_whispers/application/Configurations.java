@@ -48,6 +48,7 @@ public class Configurations implements ProxyConfigurationProvider {
 		silencedUsers = new HashSet<>();
 		isL337 = false;
 		multiplexedUsers = new HashMap<>();
+        defaultServer = new HostAndPort("localhost",5222);
 	}
 
 
@@ -143,22 +144,19 @@ public class Configurations implements ProxyConfigurationProvider {
 
 	// ProxyConfigurationProvider
 
-	private int actualPort = 4000; // TODO: for testing! Remove when everything works together
 
 	// TODO: remember fix these two (uncomment commented lines and remove magic results)
 
 
 	@Override
 	public String getServer(String clientJid) {
-		return "localhost";
-//		return configurations.getMultiplexedServerHost(clientJid);
+		return getMultiplexedServerHost(clientJid);
 	}
 
 
 	@Override
 	public int getServerPort(String clientJid) {
-		return actualPort++;
-//		return configurations.getMultiplexedServerPort(clientJid);
+		return getMultiplexedServerPort(clientJid);
 	}
 
 

@@ -58,9 +58,7 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
         this.proxyConfigurationProvider = proxyConfigurationProvider;
         this.peerConnectionTries = 0;
         xmppNegotiator = new XMPPServerNegotitator(negotiatorWriteMessages);
-        // TODO: remember to remove these two
-        clientJid = "hola";
-        connectPeer();
+
     }
 
 
@@ -95,6 +93,9 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
                         //Uncomment this to silence arriving msg. What should be done of clientJID of server?
                         //otherEndHandler.clientJID=clientJID;
                     }
+
+                    //Connect Peer
+                    connectPeer();
 
                     //Generates first message
                     StringBuilder startStream = new StringBuilder();

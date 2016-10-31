@@ -1,7 +1,11 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPClientHandler;
+
 import ar.edu.itba.pdc.chinese_whispers.xml.XMPPClientNegotiator;
+
+import ar.edu.itba.pdc.chinese_whispers.xml.XMLInterpreter;
+
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -14,25 +18,36 @@ import java.nio.channels.SocketChannel;
 public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 
 
-	public XMPPClientHandler(XMPPServerHandler xmppServerHandler) {
-		super();
-		otherEndHandler= xmppServerHandler;
-		xmppNegotiator = new XMPPClientNegotiator(negotiatorWriteMessages);
+    /**
+     * Constructor.
+     * Should only be called in {@link XMPPServerHandler}'s constructor.
+     *
+     * @param applicationProcessor The application processor.
+     * @param peerHandler          The {@link XMPPServerHandler} that corresponds to this handler.
+     */
+	/* package */ XMPPClientHandler(ApplicationProcessor applicationProcessor, XMPPServerHandler peerHandler) {
+        super(applicationProcessor);
+        if (peerHandler == null) {
+            throw new IllegalArgumentException();
+        }
+        this.peerHandler = peerHandler;
+        this.XMLInterpreter = new XMLInterpreter(peerHandler);
+        xmppNegotiator = new XMPPClientNegotiator(negotiatorWriteMessages);
 	}
 
 	@Override
-	public void handleRead() {
+	public void handleRead(SelectionKey key) {
 		byte[] message = readInputMessage();
 		if (message != null && message.length > 0) {
-			if(connexionState == ConnexionState.XMPP_STANZA_STREAM){
+			if(connectionState == ConnectionState.XMPP_STANZA_STREAM){
 				sendProcesedStanza(message);
-			}else if(connexionState==ConnexionState.XMPP_NEGOTIATION) {
+			}else if(connectionState==ConnectionState.XMPP_NEGOTIATION) {
 
 				ParserResponse parserResponse = xmppNegotiator.feed(message);
 
 				if(parserResponse==ParserResponse.NEGOTIATION_END){
-					connexionState=ConnexionState.XMPP_STANZA_STREAM;
-					otherEndHandler.connexionState=ConnexionState.XMPP_STANZA_STREAM;
+                    connectionState=ConnectionState.XMPP_STANZA_STREAM;
+					peerHandler.connectionState=ConnectionState.XMPP_STANZA_STREAM;
 				}
 
 				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
@@ -41,14 +56,12 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 		}
 	}
 
-	@Override
-	public void handleWrite() {
-		super.handleWrite();
-	}
-
 
 	@Override
 	public void handleConnect(SelectionKey key) {
+		if (key != this.key) {
+			throw new IllegalArgumentException();
+		}
 		SocketChannel channel = (SocketChannel) key.channel();
 		boolean connected = channel.isConnected();
 		if (!connected) {
@@ -62,12 +75,15 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 					}
 					connected = channel.connect(remote);
 				}
-			} catch (IOException ignored) {
+			} catch (IOException e) {
+				System.out.println("Connection refused");
+				((XMPPServerHandler) peerHandler).connectPeer(); // Ask peer handler to retry connection
+
 			}
 		}
 		if (connected) {
-			// If before this there was any other flag turned on, control shouldn't have reached here
-			key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+			// Makes the key readalbe and writable (in case there where messages waiting for being delivered)
+			this.key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		}
 
 

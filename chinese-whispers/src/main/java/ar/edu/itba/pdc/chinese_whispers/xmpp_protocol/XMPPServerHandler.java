@@ -3,14 +3,13 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
-import ar.edu.itba.pdc.chinese_whispers.xml.XMPPServerNegotiator;
 import ar.edu.itba.pdc.chinese_whispers.xml.XMLInterpreter;
+import ar.edu.itba.pdc.chinese_whispers.xml.XMPPServerNegotiator;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ConnectionState;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NewConnectionsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ProxyConfigurationProvider;
-
 
 import java.nio.channels.SelectionKey;
 import java.util.Base64;
@@ -66,11 +65,11 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 
 	@Override
 	public void handleRead(SelectionKey key) {
-        byte[] message = readInputMessage();
+        byte[] message = readInputMessage(key);
         if (message != null && message.length > 0) {
 
             if (connectionState == ConnectionState.XMPP_STANZA_STREAM) {
-                sendProcesedStanza(message);
+                sendProcessedStanza(message);
             } else if (connectionState == ConnectionState.XMPP_NEGOTIATION) {
 
                 ParserResponse parserResponse = xmppNegotiator.feed(message);

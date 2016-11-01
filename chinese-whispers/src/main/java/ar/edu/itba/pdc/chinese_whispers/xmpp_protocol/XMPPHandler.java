@@ -109,14 +109,14 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 		this.key = key;
 	}
 
-	protected void sendProcesedStanza(byte[] message){
+	protected void sendProcessedStanza(byte[] message){
 		XMLInterpreter.setL337ed(Configurations.getInstance().isL337());
         XMLInterpreter.setSilenced(Configurations.getInstance().isSilenced(clientJid));
         XMLInterpreter.feed(message);
 		peerHandler.key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
 	}
 
-	protected byte[] readInputMessage(){
+	protected byte[] readInputMessage(SelectionKey key){
         if (key == null || key != this.key) {
             throw new IllegalArgumentException();
         }
@@ -213,13 +213,13 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 		//Needs to always happen to send the succes msg.
         System.out.println("Bytes written for XMPP_NEGOTIATION: "+writeQ(negotiatorWriteMessages));
 
-        if( (connectionState!=ConnectionState.XMPP_STANZA_STREAM || writeMessages.isEmpty() )
-                && negotiatorWriteMessages.isEmpty())
-            this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_WRITE);
-
-        if (isClosable) {
-            handleClose(key);
-        }
+		if ((connectionState != ConnectionState.XMPP_STANZA_STREAM || writeMessages.isEmpty())
+				&& negotiatorWriteMessages.isEmpty()){
+			this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_WRITE);
+			if (isClosable) {
+				handleClose(key);
+			}
+		}
         outputBuffer.clear();
 	}
 

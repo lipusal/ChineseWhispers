@@ -4,8 +4,7 @@ import ar.edu.itba.pdc.chinese_whispers.connection.TCPClientHandler;
 
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPClientNegotiator;
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ConnectionState;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.XMLInterpreter;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 

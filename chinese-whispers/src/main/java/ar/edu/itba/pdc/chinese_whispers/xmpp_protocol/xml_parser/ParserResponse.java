@@ -1,4 +1,4 @@
-package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums;
+package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser;
 
 /**
  * Created by drocheg on 29/10/2016.
@@ -9,4 +9,5 @@ public enum ParserResponse {
     XML_ERROR,
     NEGOTIATION_END,
 
+    // TODO: I would change it to parser state 
 }

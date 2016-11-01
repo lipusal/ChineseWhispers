@@ -1,7 +1,7 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation;
 
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 
 import javax.xml.stream.XMLStreamException;

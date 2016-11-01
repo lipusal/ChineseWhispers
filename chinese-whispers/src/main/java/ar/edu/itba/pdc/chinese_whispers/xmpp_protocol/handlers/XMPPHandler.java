@@ -1,6 +1,5 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
-import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPNegotiator;
@@ -43,23 +42,23 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 
 	// Communication stuff
 	/**
-	 * Contains messges to be written
+	 * Contains messages to be written by this handler.
 	 */
 	protected final Deque<Byte> writeMessages;
 	/**
-	 * Contains messges to be written by negotiator
+	 * Contains messages to be written by the negotiator.
 	 */
 	protected final Deque<Byte> negotiatorWriteMessages;
 	/**
-	 * Buffer from to fill when reading
+	 * Buffer to fill with read data.
 	 */
 	protected final ByteBuffer inputBuffer;
 	/**
-	 * Buffer to fill when writing
+	 * Buffer to fill with data to be written.
 	 */
 	protected final ByteBuffer outputBuffer;
 	/**
-	 * The handler of the other end of the connection
+	 * The handler of the other end of the connection.
 	 */
 	protected XMPPHandler peerHandler;
 	/**
@@ -74,25 +73,28 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 
 	// XMPP stuff
 	/**
-	 * State to tell the connection State.
+	 * State to tell the XMPP connection state.
 	 */
 	protected ConnectionState connectionState;
 	/**
 	 * XML Parser
 	 */
-	protected XMLInterpreter XMLInterpreter; // Should be initialized by subclass.
+	protected XMLInterpreter xmlInterpreter; // Should be initialized by subclass.
 	/**
 	 * Client JID
 	 */
 	protected String clientJid; // Will be initialized when XMPP client sends "Auth" tag.
-    /**
-     * The XMPPNegotiator that handle the xmpp negotiation at the start of the xmpp connexion
-     */
-    protected XMPPNegotiator xmppNegotiator;
 	/**
+	 * The {@link XMPPNegotiator} that will handle the XMPP negotiation at the beginning of the XMPP connection.
+	 */
+	protected XMPPNegotiator xmppNegotiator;
+
+
+	/**
+	 * Constructor.
+	 *
 	 * @param applicationProcessor The {@link ApplicationProcessor} that will process data.
 	 */
-
 	protected XMPPHandler(ApplicationProcessor applicationProcessor) {
 		super(applicationProcessor);
 		connectionState = ConnectionState.XMPP_NEGOTIATION;
@@ -113,66 +115,28 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 		this.key = key;
 	}
 
-	protected void sendProcessedStanza(byte[] message){
-		XMLInterpreter.setL337ed(Configurations.getInstance().isL337());
-        XMLInterpreter.setSilenced(Configurations.getInstance().isSilenced(clientJid));
-        XMLInterpreter.feed(message);
-		peerHandler.key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-	}
-
-	protected byte[] readInputMessage(SelectionKey key){
-        if (key == null || key != this.key) {
-            throw new IllegalArgumentException();
-        }
-
-        SocketChannel channel = (SocketChannel) this.key.channel();
-        byte[] message = null;
-        inputBuffer.clear();
-        try {
-            int readBytes = channel.read(inputBuffer);
-            System.out.println("ReadBytes= "+readBytes);
-            if (readBytes >= 0) {
-                message = new byte[readBytes];
-                if (readBytes > 0) { // If a message was actually read ...
-                    System.arraycopy(inputBuffer.array(), 0, message, 0, readBytes);
-                }
-            } else if (readBytes == -1) {
-                handleClose(this.key);
-            }
-        } catch (IOException ignored) {
-            // I/O error (for example, connection reset by peer)
-        }
-        return message;
-    }
+	/**
+	 * Method to be executed once a message is received (i.e. when a message is read).
+	 *
+	 * @param message The recently read message.
+	 */
+	abstract protected void processReadMessage(byte[] message);
 
 
-/**
- * Makes this {@link XMPPHandler} to be closable (i.e. stop receiving messages, send all unsent messages,
- * send close message, and close the corresponding key's channel).
- * Note: Once this method is executed, there is no chance to go back.
- */
-/* package */ void closeHandler(){
-		if (isClosable || key ==null) {
-			return;
-		}
-		System.out.println("Close handler");
-		this.isClosable = true;
-		// TODO: What happens if handler contains half an xmpp message?
-		if (this.key.isValid()) {
-			this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
-			writeMessage(CLOSE_MESSAGE.getBytes());
-		} else {
-			handleClose(this.key); // If key is not valid, proceed to close the handler without writing anything
-		}
 
 
-		if (this.peerHandler != null) {
-			peerHandler.closeHandler();
-		}
+	protected void sendProcessedStanza(byte[] message) {
+//		xmlInterpreter.setL337ed(Configurations.getInstance().isL337());
+
+		// TODO: Un client debe chequear si el usuario esta silenciado?
+//		xmlInterpreter.setSilenced(Configurations.getInstance().isSilenced(clientJid));
+		xmlInterpreter.feed(message);
+		// TODO: remove this. The XMLInterpreter calls the method consumeMessage that will set the key's interestOps.
+//		peerHandler.key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
 	}
 
 	/**
-	 * Saves the message in this handler to be sent.
+	 * Saves the message in this handler to be sent when possible.
 	 *
 	 * @param message The message to be sent.
 	 */
@@ -185,8 +149,44 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 		}
 		// Note that if the key is invalidated before writing the message,
 		// this handler will store the message until the key is a valid one.
-		key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+		if (key.isValid()) {
+			key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+		}
 	}
+
+	@Override
+	public void consumeMessage(byte[] message) {
+		writeMessage(message);
+	}
+
+
+	/**
+	 * Makes this {@link XMPPHandler} to be closable (i.e. stop receiving messages, send all unsent messages,
+	 * send close message, and close the corresponding key's channel).
+	 * It also closes the peer handler.
+	 * Note: Once this method is executed, there is no chance to go back.
+	 */
+	/* package */ void closeHandler() {
+		if (isClosable) {
+			return;
+		}
+		this.isClosable = true;
+		// TODO: What happens if handler contains half an xmpp message?
+		if (this.key != null && this.key.isValid()) {
+			this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
+			writeMessage(CLOSE_MESSAGE.getBytes());
+		} else {
+			handleClose(this.key); // If key is not valid, proceed to close the handler without writing anything
+		}
+
+		// Close also peer handler
+		if (this.peerHandler != null) {
+			peerHandler.closeHandler();
+		}
+	}
+
+
+
 
 
 	/**
@@ -210,24 +210,107 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 
 
 	@Override
-	public void handleWrite(SelectionKey key) {// TODO: check how we turn on and off
-		if(connectionState==ConnectionState.XMPP_STANZA_STREAM){
-            System.out.println("Bytes written for XMPP_STANZA_STREAM: "+writeQ(writeMessages));
+	public void handleRead(SelectionKey key) {
+		// Before trying to read, a key must be set to this handler.
+		if (this.key == null) {
+			throw new IllegalStateException();
 		}
-		//Needs to always happen to send the succes msg.
-        System.out.println("Bytes written for XMPP_NEGOTIATION: "+writeQ(negotiatorWriteMessages));
+		// The given key mustn't be null, and must be the same as the set key.
+		if (key == null || key != this.key) {
+			throw new IllegalArgumentException();
+		}
 
-		if ((connectionState != ConnectionState.XMPP_STANZA_STREAM || writeMessages.isEmpty())
-				&& negotiatorWriteMessages.isEmpty()){
+		SocketChannel channel = (SocketChannel) this.key.channel();
+		byte[] message = null;
+		inputBuffer.clear();
+		try {
+			int readBytes = channel.read(inputBuffer);
+			if (readBytes >= 0) {
+				message = new byte[readBytes];
+				if (readBytes > 0) { // If a message was actually read ...
+					System.arraycopy(inputBuffer.array(), 0, message, 0, readBytes);
+				}
+			} else if (readBytes == -1) {
+				handleClose(this.key);
+			}
+		} catch (IOException ignored) {
+			// I/O error (for example, connection reset by peer)
+			// TODO: Check what we do here...
+		}
+		if (message != null && message.length > 0) {
+			processReadMessage(message);
+		}
+	}
+
+
+	@Override
+	public void handleWrite(SelectionKey key) {
+		if (!writeMessages.isEmpty()) {
+			byte[] message;
+			if (writeMessages.size() > BUFFER_SIZE) {
+				message = new byte[BUFFER_SIZE];
+			} else {
+				message = new byte[writeMessages.size()];
+			}
+			for (int i = 0; i < message.length; i++) {
+				message[i] = writeMessages.poll();
+			}
+			if (message.length > 0) {
+				SocketChannel channel = (SocketChannel) this.key.channel();
+				outputBuffer.clear();
+				outputBuffer.put(message);
+				outputBuffer.flip();
+				try {
+					do {
+						channel.write(outputBuffer);
+					}
+					// TODO check if this is not blocking. In case it's blocking, we can return those bytes to the queue with a push operation (it's a deque)
+					while (outputBuffer.hasRemaining()); // Continue writing if message wasn't totally written
+				} catch (IOException e) {
+					int bytesSent = outputBuffer.limit() - outputBuffer.position();
+					byte[] restOfMessage = new byte[message.length - bytesSent];
+					System.arraycopy(message, bytesSent, restOfMessage, 0, restOfMessage.length);
+				}
+			}
+		}
+		afterWriting();
+	}
+
+	/**
+	 * This method must be executed at the end of the handleWrite method.
+	 */
+	private void afterWriting() {
+		if (writeMessages.isEmpty()) {
+			// Turns off the write bit if there are no more messages to write
 			this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_WRITE);
 			if (isClosable) {
 				handleClose(key);
 			}
 		}
-        outputBuffer.clear();
+		outputBuffer.clear();
 	}
 
-	private int writeQ(Deque<Byte> writeMessages) {
+
+
+
+    public void handleWrites(SelectionKey key) {// TODO: check how we turn on and off
+        if(connectionState==ConnectionState.XMPP_STANZA_STREAM){
+            System.out.println("Bytes written for XMPP_STANZA_STREAM: "+writeQ(writeMessages));
+        }
+        //Needs to always happen to send the succes msg.
+        System.out.println("Bytes written for XMPP_NEGOTIATION: "+writeQ(negotiatorWriteMessages));
+
+        if ((connectionState != ConnectionState.XMPP_STANZA_STREAM || writeMessages.isEmpty())
+                && negotiatorWriteMessages.isEmpty()){
+            this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_WRITE);
+            if (isClosable) {
+                handleClose(key);
+            }
+        }
+        outputBuffer.clear();
+    }
+
+    private int writeQ(Deque<Byte> writeMessages) {
         int byteWritten = 0;
         if (!writeMessages.isEmpty()) {
             byte[] message;
@@ -260,11 +343,6 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 
         return byteWritten;
     }
-    
-    
-	public void consumeMessage(byte[] message) {
-		writeMessage(message);
-	}
 
 
 	@Override

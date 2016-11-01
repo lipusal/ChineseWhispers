@@ -22,6 +22,8 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
         this.negotiationStatus= NegotiationStatus.START;
     }
 
+
+    // TODO: Esto mete leeted tambien?
     /**
      * Processes all fed data. Transforms messages if leeted, ignores messages if silenced, and sets an error state on
      * invalid XML. Sends all processed data to the Deque specified upon instantiation.

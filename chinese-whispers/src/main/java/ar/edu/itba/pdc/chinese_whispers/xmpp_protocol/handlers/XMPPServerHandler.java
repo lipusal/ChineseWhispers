@@ -55,79 +55,87 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 	                                ProxyConfigurationProvider proxyConfigurationProvider) {
 		super(applicationProcessor);
 		this.newConnectionsConsumer = newConnectionsConsumer;
-        this.peerHandler = new XMPPClientHandler(applicationProcessor, this);
-        this.XMLInterpreter = new XMLInterpreter(peerHandler);
-        this.proxyConfigurationProvider = proxyConfigurationProvider;
-        this.peerConnectionTries = 0;
-        xmppNegotiator = new XMPPServerNegotiator(negotiatorWriteMessages);
-
-    }
+		this.peerHandler = new XMPPClientHandler(applicationProcessor, this);
+		this.xmlInterpreter = new XMLInterpreter(applicationProcessor, peerHandler);
+		this.proxyConfigurationProvider = proxyConfigurationProvider;
+		this.peerConnectionTries = 0;
+		xmppNegotiator = new XMPPServerNegotiator(negotiatorWriteMessages);
+	}
 
 
 	@Override
-	public void handleRead(SelectionKey key) {
-        byte[] message = readInputMessage(key);
-        if (message != null && message.length > 0) {
-
-            if (connectionState == ConnectionState.XMPP_STANZA_STREAM) {
-                sendProcessedStanza(message);
-            } else if (connectionState == ConnectionState.XMPP_NEGOTIATION) {
-
-                ParserResponse parserResponse = xmppNegotiator.feed(message);
-				handleResponse(parserResponse);
-                if (parserResponse == ParserResponse.NEGOTIATION_END) {
-
-                    //Initialize data obtained
-                    connectionState = ConnectionState.XMPP_STANZA_STREAM;
-                    Map initialNegotiationParameters = xmppNegotiator.getInitialParameters();
-                    peerHandler.xmppNegotiator.setAuthorization(xmppNegotiator.getAuthorization());
-                    peerHandler.xmppNegotiator.setInitialParameters(initialNegotiationParameters);
-                    if (!initialNegotiationParameters.containsKey("to")) {
-                        throw new IllegalStateException();
-                        //TODO send error? Send error before this?
-                    } else {
-                        String authDecoded = new String(Base64.getDecoder().decode(xmppNegotiator.getAuthorization()));
-                        String[] authParameters = authDecoded.split("\0");
-                        if (authParameters.length != 3) { //Nothing, user, pass
-                            throw new IllegalStateException();
-                            //TODO send error? Send error before this?
-                        }
-                        clientJid = authParameters[1] + "@" + initialNegotiationParameters.get("to");
-                        //Uncomment this to silence arriving msg. What should be done of clientJID of server?
-                        //otherEndHandler.clientJID=clientJID;
-                    }
-
-                    //Connect Peer
-                    connectPeer();
-
-                    //Generates first message
-                    StringBuilder startStream = new StringBuilder();
-                    startStream.append("<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" xmlns=\"jabber:client\" xmlns:xml_parser=\"http://www.w3.org/XML/1998/namespace\" ");
-                    for (String attributeKey : xmppNegotiator.getInitialParameters().keySet()) {
-                        startStream.append(attributeKey)
-                                .append("=\"")
-                                .append(xmppNegotiator.getInitialParameters().get(attributeKey))
-                                .append("\" ");
-                    }
-                    startStream.append("> ");
-                    System.out.println("Proxy to Server:" + startStream);
-
-                    //Sends first message to otherEndHandler for him to send
-                    byte[] bytes = startStream.toString().getBytes();
-                    for (byte b : bytes) {
-                        peerHandler.negotiatorWriteMessages.offer(b);
-                    }
-
-                    //Sets write key of other to writable to send the message
-                    //peerHandler.key.interestOps(peerHandler.key.interestOps() | SelectionKey.OP_WRITE);
-                }
-
-                key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-            }
+	protected void sendProcessedStanza(byte[] message) {
+		xmlInterpreter.setSilenced(proxyConfigurationProvider.isUserSilenced(clientJid));
+		super.sendProcessedStanza(message);
+	}
 
 
-        }
-    }
+
+
+	@Override
+	void processReadMessage(byte[] message) {
+		if (message != null && message.length > 0) {
+
+			if (connectionState == ConnectionState.XMPP_STANZA_STREAM) {
+				sendProcessedStanza(message);
+			} else if (connectionState == ConnectionState.XMPP_NEGOTIATION) {
+
+				ParserResponse parserResponse = xmppNegotiator.feed(message);
+                handleResponse(parserResponse);
+				if (parserResponse == ParserResponse.NEGOTIATION_END) {
+
+					//Initialize data obtained
+					connectionState = ConnectionState.XMPP_STANZA_STREAM;
+					Map<String, String> initialNegotiationParameters = xmppNegotiator.getInitialParameters();
+					peerHandler.xmppNegotiator.setAuthorization(xmppNegotiator.getAuthorization());
+					peerHandler.xmppNegotiator.setInitialParameters(initialNegotiationParameters);
+					if (!initialNegotiationParameters.containsKey("to")) {
+						throw new IllegalStateException();
+						//TODO send error? Send error before this?
+					} else {
+						String authDecoded = new String(Base64.getDecoder().decode(xmppNegotiator.getAuthorization()));
+						String[] authParameters = authDecoded.split("\0");
+						if (authParameters.length != 3) { //Nothing, user, pass
+							throw new IllegalStateException();
+							//TODO send error? Send error before this?
+						}
+						clientJid = authParameters[1] + "@" + initialNegotiationParameters.get("to");
+						//Uncomment this to silence arriving msg. What should be done of clientJID of server?
+						//otherEndHandler.clientJID=clientJID;
+					}
+
+					//Connect Peer
+					connectPeer(); // TODO: Check that only once code reaches here...
+
+					//Generates first message
+					StringBuilder startStream = new StringBuilder();
+					startStream.append("<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" ")
+							.append("xmlns=\"jabber:client\" ")
+							.append("xmlns:xml_parser=\"http://www.w3.org/XML/1998/namespace\" ");
+					for (String attributeKey : xmppNegotiator.getInitialParameters().keySet()) {
+						startStream.append(attributeKey)
+								.append("=\"")
+								.append(xmppNegotiator.getInitialParameters().get(attributeKey))
+								.append("\" ");
+					}
+					startStream.append("> ");
+					System.out.println("Proxy to Server:" + startStream);
+
+					//Sends first message to otherEndHandler for him to send
+					byte[] bytes = startStream.toString().getBytes();
+					for (byte b : bytes) {
+						peerHandler.negotiatorWriteMessages.offer(b);
+					}
+
+					//Sets write key of other to writable to send the message
+					//peerHandler.key.interestOps(peerHandler.key.interestOps() | SelectionKey.OP_WRITE);
+				}
+
+				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+			}
+
+		}
+	}
 
 
 	/**
@@ -155,9 +163,6 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 		peerHandler.setKey(peerKey);
 		peerConnectionTries++;
 	}
-
-
-
 
 
 	@Override

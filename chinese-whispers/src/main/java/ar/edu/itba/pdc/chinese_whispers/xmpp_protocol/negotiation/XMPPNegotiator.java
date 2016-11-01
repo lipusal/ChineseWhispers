@@ -26,6 +26,8 @@ public abstract class XMPPNegotiator {
     protected Deque<Byte> output;
 
 
+
+
     public Map<String, String> getInitialParameters() {
         return initialParameters;
     }

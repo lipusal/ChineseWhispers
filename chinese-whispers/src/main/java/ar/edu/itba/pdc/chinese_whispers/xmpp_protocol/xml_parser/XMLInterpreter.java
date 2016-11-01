@@ -2,7 +2,6 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser;
 
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
-
 import com.fasterxml.aalto.AsyncByteArrayFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -55,26 +54,6 @@ public class XMLInterpreter {
         this.outputConsumer = outputConsumer;
     }
 
-//<<<<<<< Updated upstream
-//=======
-//        * Constructs a new interpreter with initial data, and processes said initial data.
-//            *
-//            * @param applicationProcessor       Object that will perform data processing.
-//	 * @param initialData                The initial data to process.
-//            * @param outputConsumer             The consumer that will consume output data.
-//            * @throws XMLStreamException When {@link AsyncXMLInputFactory#createAsyncFor(byte[])} does.
-//	 */
-//    public XMLInterpreter(byte[] initialData, ApplicationProcessor applicationProcessor, OutputConsumer outputConsumer)
-//            throws XMLStreamException {
-//        inputFactory = new InputFactoryImpl();
-//        parser = inputFactory.createAsyncFor(initialData);
-//        this.applicationProcessor = applicationProcessor;
-//        this.outputConsumer = outputConsumer;
-//        process();
-//    }
-//
-//    /**
-//     >>>>>>> Stashed changes
 
     /**
      * Adds bytes to be processed by the interpreter.
@@ -84,6 +63,7 @@ public class XMLInterpreter {
      *                            calls to this method, which ensures that all data is consumed.
      */
     public ParserResponse feed(byte[] data) {
+        // TODO: check repeated code
         try {
             parser.getInputFeeder().feedInput(data, 0, data.length);
             return process();
@@ -115,7 +95,7 @@ public class XMLInterpreter {
                 case AsyncXMLStreamReader.START_ELEMENT:
                     //Update status when starting a non-nested element
                     if (parser.getDepth() <= 2) {
-//						isL337ed = l337Requested; TODO: check this
+//						isL337ed = l337Requested; TODO: check this: Now is commented because the processor will decide if it has to perform l337 processing
                         isSilenced = silenceRequested;
                     }
                     if (parser.getLocalName().equals("body")) {
@@ -221,6 +201,7 @@ public class XMLInterpreter {
     }
 
 
+    // TODO: This is commented because it's the processor who decides if l337 processing is done
     //	/**
 //	 * Sets whether this stream is "leeted." Leeted streams transform certain alphabetic characters inside <body>
 //	 * stanzas into similar-looking numbers.

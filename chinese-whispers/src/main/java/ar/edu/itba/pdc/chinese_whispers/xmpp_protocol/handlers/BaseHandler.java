@@ -8,20 +8,19 @@ import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProc
  */
 public abstract class BaseHandler implements TCPHandler {
 
-	// Application stuff
-	/**
-	 * Application processor to process data.
-	 */
-	protected final ApplicationProcessor applicationProcessor;
+    // Application stuff
+    /**
+     * Application processor to process data.
+     */
+    protected final ApplicationProcessor applicationProcessor;
 
 
-
-	protected BaseHandler(ApplicationProcessor applicationProcessor) {
-		if (applicationProcessor == null) {
-			throw new IllegalArgumentException();
-		}
-		this.applicationProcessor = applicationProcessor;
-	}
+    protected BaseHandler(ApplicationProcessor applicationProcessor) {
+        if (applicationProcessor == null) {
+            throw new IllegalArgumentException();
+        }
+        this.applicationProcessor = applicationProcessor;
+    }
 
 
 }

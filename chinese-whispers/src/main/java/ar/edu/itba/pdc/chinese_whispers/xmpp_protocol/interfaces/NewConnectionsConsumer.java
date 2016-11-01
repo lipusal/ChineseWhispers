@@ -11,11 +11,11 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces;
 public interface NewConnectionsConsumer {
 
 
-	/**
-	 * Consumes new XMPP connections.
-	 *
-	 * @param clientJid The user's JID
-	 */
-	void consumeNewConnection(String clientJid);
+    /**
+     * Consumes new XMPP connections.
+     *
+     * @param clientJid The user's JID
+     */
+    void consumeNewConnection(String clientJid);
 
 }

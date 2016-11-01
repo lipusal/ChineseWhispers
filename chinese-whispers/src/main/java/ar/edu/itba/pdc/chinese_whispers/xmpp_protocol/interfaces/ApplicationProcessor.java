@@ -14,25 +14,27 @@ import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.XMPPServerHandler
 public interface ApplicationProcessor {
 
 
-	/**
-	 * Method to be executed when parsing content that is part of a body.
-	 *
-	 * @param stringBuilder The string builder to build the final message.
-	 * @param message       The message to be parsed.
-	 */
-	void processMessageBody(StringBuilder stringBuilder, char[] message);
+    /**
+     * Method to be executed when parsing content that is part of a body.
+     *
+     * @param stringBuilder The string builder to build the final message.
+     * @param message       The message to be parsed.
+     */
+    void processMessageBody(StringBuilder stringBuilder, char[] message);
 
-	/**
-	 * Method to be executed when parsing content that is part of a body.
-	 *
-	 * @param message The message to be processed.
-	 */
-	byte[] processMessageBody(byte[] message);
+    /**
+     * Method to be executed when parsing content that is part of a body.
+     *
+     * @param message The message to be processed.
+     */
+    @Deprecated
+    byte[] processMessageBody(byte[] message);
 
-	/**
-	 * Method to be executed when parsing content that is part of a body.
-	 *
-	 * @param message The message to be processed.
-	 */
-	void processMessageBody(String message);
+    /**
+     * Method to be executed when parsing content that is part of a body.
+     *
+     * @param message The message to be processed.
+     */
+    @Deprecated
+    void processMessageBody(String message);
 }

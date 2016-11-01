@@ -9,5 +9,5 @@ public enum ParserResponse {
     XML_ERROR,
     NEGOTIATION_END,
 
-    // TODO: I would change it to parser state 
+    // TODO: I would change it to parser state
 }

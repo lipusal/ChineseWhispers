@@ -1,13 +1,10 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPClientHandler;
-
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPClientNegotiator;
-
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.XMLInterpreter;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
-
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -34,9 +31,8 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
         }
         this.peerHandler = peerHandler;
         this.xmlInterpreter = new XMLInterpreter(applicationProcessor, peerHandler);
-        xmppNegotiator = new XMPPClientNegotiator(negotiatorWriteMessages);
+        xmppNegotiator = new XMPPClientNegotiator(this);
     }
-
 
 
     @Override
@@ -52,9 +48,7 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
                 if (parserResponse == ParserResponse.NEGOTIATION_END) {
                     connectionState = ConnectionState.XMPP_STANZA_STREAM;
                     peerHandler.connectionState = ConnectionState.XMPP_STANZA_STREAM;
-
                 }
-                key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
             }
         }
     }

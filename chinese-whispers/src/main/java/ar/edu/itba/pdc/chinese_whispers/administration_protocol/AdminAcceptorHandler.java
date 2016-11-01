@@ -1,9 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.administration_protocol;
 
-import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPServerHandler;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.XMPPServerHandler;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ProxyConfigurationProvider;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
@@ -20,14 +17,10 @@ public class AdminAcceptorHandler implements TCPServerHandler {
 
 
 
-	/**
-	 * A proxy connection configurator to pass it to each new {@link XMPPServerHandler}.
-	 */
-	private final ProxyConfigurationProvider proxyConfigurationProvider;
 
 
 	public AdminAcceptorHandler() {
-		this.proxyConfigurationProvider = Configurations.getInstance();
+
 	}
 
 

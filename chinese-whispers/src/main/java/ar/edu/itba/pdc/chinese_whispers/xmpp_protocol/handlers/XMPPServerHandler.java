@@ -67,6 +67,12 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
         super.sendProcessedStanza(message);
     }
 
+    @Override
+    public void handleWrite(SelectionKey key) {
+        System.out.println("ServerHandler(proxy-client)");
+        super.handleWrite(key);
+    }
+
 
     @Override
     protected void processReadMessage(byte[] message) {
@@ -80,11 +86,15 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
                 handleResponse(parserResponse);
                 if (parserResponse == ParserResponse.NEGOTIATION_END) {
 
+                    //Stop reading until negotiation finish on other sides.
+                    key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+
                     //Initialize obtained data
                     connectionState = ConnectionState.XMPP_STANZA_STREAM;
                     Map<String, String> initialNegotiationParameters = xmppNegotiator.getInitialParameters();
 
                     // TODO: These are accessing peer handler's private fields...
+
                     peerHandler.xmppNegotiator.setAuthorization(xmppNegotiator.getAuthorization());
                     peerHandler.xmppNegotiator.setInitialParameters(initialNegotiationParameters);
 
@@ -110,7 +120,7 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
                     StringBuilder startStream = new StringBuilder();
                     startStream.append("<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" ")
                             .append("xmlns=\"jabber:client\" ")
-                            .append("xmlns:xml_parser=\"http://www.w3.org/XML/1998/namespace\" ");
+                            .append("xmlns:xml=\"http://www.w3.org/XML/1998/namespace\" ");
                     for (String attributeKey : xmppNegotiator.getInitialParameters().keySet()) {
                         startStream.append(attributeKey)
                                 .append("=\"")

@@ -19,8 +19,10 @@ public interface ApplicationProcessor {
      *
      * @param stringBuilder The string builder to build the final message.
      * @param message       The message to be parsed.
+     * @param isInBodyTag   Boolean telling if it is in a bodyTag.
+     *
      */
-    void processMessageBody(StringBuilder stringBuilder, char[] message);
+    void processMessageBody(StringBuilder stringBuilder, char[] message, boolean isInBodyTag);
 
     /**
      * Method to be executed when parsing content that is part of a body.

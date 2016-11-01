@@ -1,6 +1,9 @@
 package ar.edu.itba.pdc.chinese_whispers.application;
 
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.handlers.AdminAcceptorHandler;
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.AuthenticationProvider;
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.XMPPAcceptorHandler;
 
@@ -25,8 +28,9 @@ public class Main {
 			System.err.println("ERROR! Couldn't bind!");
 			return;
 		}
+		Configurations configurations = Configurations.getInstance();
 
-		AdminAcceptorHandler administrationAcceptorHandler = new AdminAcceptorHandler();
+		AdminAcceptorHandler administrationAcceptorHandler = new AdminAcceptorHandler(configurations, configurations, configurations);
 
 		System.out.print("Trying to bind port 4444... ");
 		try {

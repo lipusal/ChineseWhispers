@@ -38,44 +38,36 @@ public class L337Processor implements ApplicationProcessor {
 
 
 	@Override
-	public void processMessageBody(StringBuilder stringBuilder, char[] message) {
+	public void processMessageBody(StringBuilder stringBuilder, char[] message, boolean isInBodyTag) {
 		if (stringBuilder == null || message == null) {
 			throw new IllegalArgumentException(); // TODO: Or should we just return
 		}
-		if (!configurations.isProcessL337()) {
-			return; // Don't do anything if L337 is set off.
-		}
-
+		//Append l3373d or normal characters as appropriate
 		for (char c : message) {
 			switch (c) {
-				case 'A':
 				case 'a':
-					stringBuilder.append("4");
+					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "4": "a");
 					break;
-				case 'E':
 				case 'e':
-					stringBuilder.append("3");
+					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "3": "e");
 					break;
-				case 'I':
 				case 'i':
-					stringBuilder.append("1");
+					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "1": "i");
 					break;
-				case 'O':
 				case 'o':
-					stringBuilder.append("0");
+					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "0": "o");
 					break;
-				case 'C':
 				case 'c':
-					stringBuilder.append("&lt;");
+					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "&lt;": "c");
 					break;
 				case '<':
-                    stringBuilder.append("&lt;");
+					stringBuilder.append("&lt;");
 					break;
 				case '>':
-                    stringBuilder.append("&gt;");
+					stringBuilder.append("&gt;");
 					break;
 				case '&':
-                    stringBuilder.append("&amp;");
+					stringBuilder.append("&amp;");
 					break;
 				default:
 					stringBuilder.append(c);

@@ -55,7 +55,7 @@ public class Configurations implements ProxyConfigurationProvider, Configuration
      */
     private Configurations() {
         silencedUsers = new HashSet<>();
-        processL337 = true;
+        processL337 = false;
         multiplexedUsers = new HashMap<>();
         defaultServer = new HostAndPort("localhost", 5222);
         authorizationMap = new HashMap<>();

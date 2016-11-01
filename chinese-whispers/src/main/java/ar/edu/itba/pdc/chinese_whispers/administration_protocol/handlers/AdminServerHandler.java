@@ -141,6 +141,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case unsesit
         } catch (IOException ignored) {
             // I/O error (for example, connection reset by peer)
         }
+        //Do NOT remove this if this is merged with XMPPHandler. Needs to be adapted in that case.
         if (!writeMessages.isEmpty()) key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
     }
 

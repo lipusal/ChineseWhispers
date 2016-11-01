@@ -153,7 +153,7 @@ public class XMLInterpreter {
                     //Only process content if NOT message tag or NOT silenced
                     if (!(isInMessageTag && isSilenced)) {
                         //Append l337ed or normal characters as appropriate
-                        applicationProcessor.processMessageBody(readXML, parser.getText().toCharArray());
+                        applicationProcessor.processMessageBody(readXML, parser.getText().toCharArray(), isInBodyTag);
                     }
                     break;
                 case AsyncXMLStreamReader.END_ELEMENT:

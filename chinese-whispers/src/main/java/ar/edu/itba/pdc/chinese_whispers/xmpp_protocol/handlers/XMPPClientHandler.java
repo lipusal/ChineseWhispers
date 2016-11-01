@@ -48,11 +48,17 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
                 if (parserResponse == ParserResponse.NEGOTIATION_END) {
                     connectionState = ConnectionState.XMPP_STANZA_STREAM;
                     peerHandler.connectionState = ConnectionState.XMPP_STANZA_STREAM;
+                    peerHandler.key.interestOps(peerHandler.key.interestOps() | SelectionKey.OP_READ);
                 }
             }
         }
     }
 
+    @Override
+    public void handleWrite(SelectionKey key) {
+        System.out.println("ClientHandler(proxy-server)");
+        super.handleWrite(key);
+    }
 
     @Override
     public void handleConnect(SelectionKey key) {

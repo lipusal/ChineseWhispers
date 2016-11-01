@@ -241,7 +241,9 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         inputBuffer.clear();
         try {
             int readBytes = channel.read(inputBuffer);
+            System.out.println("readBytes : " +readBytes);
             if (readBytes >= 0) {
+
                 message = new byte[readBytes];
                 if (readBytes > 0) { // If a message was actually read ...
                     System.arraycopy(inputBuffer.array(), 0, message, 0, readBytes);
@@ -256,6 +258,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         if (message != null && message.length > 0) {
             processReadMessage(message);
         }
+        if (!writeMessages.isEmpty()) key.interestOps(key.interestOps() | SelectionKey.OP_WRITE); //TODO delete this, for testing.
     }
 
 
@@ -269,15 +272,13 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         if (key == null || key != this.key) {
             throw new IllegalArgumentException();
         }
-        if (connectionState == ConnectionState.XMPP_STANZA_STREAM) {
-            doWriteMessage(writeMessages);
-        }
-
-        doWriteMessage(negotiatorWriteMessages); // Needs to always happen to send the success message.
 
 
-        if ((connectionState != ConnectionState.XMPP_STANZA_STREAM || writeMessages.isEmpty())
-                && negotiatorWriteMessages.isEmpty()) {
+        doWriteMessage(writeMessages);
+        doWriteMessage(negotiatorWriteMessages);
+
+
+        if (writeMessages.isEmpty() && negotiatorWriteMessages.isEmpty()) {
             // Turns off the write bit if there are no more messages to write
             this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_WRITE);
             if (isClosable) {
@@ -318,6 +319,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
                 outputBuffer.flip();
                 try {
                     int writtenBytes = channel.write(outputBuffer);
+                    System.out.println("written bytes: " + writtenBytes);
                     // Return the rest of the message to the deque... TODO: Use the buffer
                     if (writtenBytes < message.length) {
                         for (int i = message.length - 1; i >= writtenBytes; i--)

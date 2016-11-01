@@ -121,7 +121,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 
 
     protected void sendProcessedStanza(byte[] message) {
-//		xmlInterpreter.setL337ed(Configurations.getInstance().isL337());
+//		xmlInterpreter.setL337ed(Configurations.getInstance().isProcessL337());
 
         // TODO: Un client debe chequear si el usuario esta silenciado? Con el comentario de abajo ya no chequea.
         // TODO: Notar que este método esta overrideado en XMPPServerHandler, haciendo la llamada correspondiente para chequear si el usuario esta silenciado

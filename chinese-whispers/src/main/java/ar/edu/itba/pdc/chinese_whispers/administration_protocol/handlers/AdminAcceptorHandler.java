@@ -1,5 +1,8 @@
-package ar.edu.itba.pdc.chinese_whispers.administration_protocol;
+package ar.edu.itba.pdc.chinese_whispers.administration_protocol.handlers;
 
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.AuthenticationProvider;
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPServerHandler;
 
 import java.io.IOException;
@@ -16,11 +19,28 @@ import java.nio.channels.SocketChannel;
 public class AdminAcceptorHandler implements TCPServerHandler {
 
 
+	/**
+	 * {@link MetricsProvider} to be passed to the new created {@link AdminServerHandler}.
+	 */
+	private final MetricsProvider metricsProvider;
+
+	/**
+	 * {@link ConfigurationsConsumer} to be passed to the new created {@link AdminServerHandler}
+	 */
+	private final ConfigurationsConsumer configurationsConsumer;
+
+    /**
+     * {@link AuthenticationProvider} to be passed to the new created {@link AdminServerHandler}
+     */
+    private final AuthenticationProvider authenticationProvider;
 
 
-
-	public AdminAcceptorHandler() {
-
+	public AdminAcceptorHandler(MetricsProvider metricsProvider,
+								ConfigurationsConsumer configurationsConsumer,
+                                AuthenticationProvider authenticationProvider) {
+		this.metricsProvider = metricsProvider;
+		this.configurationsConsumer = configurationsConsumer;
+        this.authenticationProvider = authenticationProvider;
 	}
 
 
@@ -51,7 +71,8 @@ public class AdminAcceptorHandler implements TCPServerHandler {
 		try {
 			SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
 			channel.configureBlocking(false);
-			AdministrationHandler handler = new AdministrationHandler();
+			AdminServerHandler handler = new AdminServerHandler(metricsProvider,
+                    configurationsConsumer, authenticationProvider);
 			// The handler assigned to accepted sockets won't accept new connections, it will read and write
 			// (it's writable upon creation because it might be created with data in its write messages queue)
 			SelectionKey newKey = channel.register(key.selector(),

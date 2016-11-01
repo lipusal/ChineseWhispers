@@ -42,7 +42,7 @@ public class L337Processor implements ApplicationProcessor {
 		if (stringBuilder == null || message == null) {
 			throw new IllegalArgumentException(); // TODO: Or should we just return
 		}
-		if (!configurations.isL337()) {
+		if (!configurations.isProcessL337()) {
 			return; // Don't do anything if L337 is set off.
 		}
 
@@ -89,7 +89,7 @@ public class L337Processor implements ApplicationProcessor {
 		if (message == null) {
 			return null;
 		}
-		if (configurations.isL337()) {
+		if (configurations.isProcessL337()) {
 			return message; // Don't do anything if L337 is set off.
 		}
 
@@ -149,7 +149,7 @@ public class L337Processor implements ApplicationProcessor {
 
 	@Override
 	public void processMessageBody(String message) {
-		if (configurations.isL337()) {
+		if (configurations.isProcessL337()) {
 			return; // Don't do anything if L337 is set off.
 		}
 		message.replace('A', '4').replace('a', '4')

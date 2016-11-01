@@ -83,7 +83,7 @@ public class XMLInterpreter {
 			switch (status) {
 				case AsyncXMLStreamReader.START_ELEMENT:
 					//Update status when starting a non-nested element
-					if (parser.getDepth() <= 1) {
+					if (parser.getDepth() <= 2) {
 						isL337ed = l337Requested;
 						isSilenced = silenceRequested;
 					}

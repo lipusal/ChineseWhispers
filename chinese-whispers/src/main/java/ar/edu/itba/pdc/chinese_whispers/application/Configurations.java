@@ -33,6 +33,10 @@ public class Configurations implements ProxyConfigurationProvider {
 	 * Stores where the default server is listening.
 	 */
 	private HostAndPort defaultServer;
+	/**
+	 * Map storing user and passwords for administration protocol
+	 */
+	private Map<String,String> authorizationMap;
 
 
 	/**
@@ -46,9 +50,11 @@ public class Configurations implements ProxyConfigurationProvider {
 	 */
 	private Configurations() {
 		silencedUsers = new HashSet<>();
-		isL337 = false;
+		isL337 = true;
 		multiplexedUsers = new HashMap<>();
         defaultServer = new HostAndPort("localhost",5222);
+		authorizationMap = new HashMap<>();
+		authorizationMap.put("PROTOS","42");
 	}
 
 
@@ -83,7 +89,7 @@ public class Configurations implements ProxyConfigurationProvider {
 	 * @param isL337 the L337 new value.
 	 */
 	public void setIsL337(boolean isL337) {
-		isL337 = isL337;
+		this.isL337 = isL337;
 	}
 
 	/**
@@ -160,7 +166,35 @@ public class Configurations implements ProxyConfigurationProvider {
 	}
 
 
+	/**
+	 * Add user with password or replace password to existing user
+	 */
+	public void setPassword(String username, String password){
+		authorizationMap.put(username,password);
+	}
 
+	/**
+	 * Checks if a user with corresponding username/password exists in the authorization Map.
+	 * @param username
+	 * @param password
+	 * @return
+	 */
+	public boolean checkIfValidUser(String username, String password){
+		if(password==null) return false;
+		return password.equals(authorizationMap.get(username));
+	}
+
+	public void silenceUser(String username){
+		silencedUsers.add(username);
+	}
+
+	public void unSilenceUser(String username){
+		silencedUsers.remove(username);
+	}
+
+	public void multiplexUserToDefault(String userJid) {
+		multiplexedUsers.remove(userJid);
+	}
 
 	/**
 	 * Class that encapsulates host and port.

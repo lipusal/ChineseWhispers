@@ -32,11 +32,5 @@ public interface ApplicationProcessor {
     @Deprecated
     byte[] processMessageBody(byte[] message);
 
-    /**
-     * Method to be executed when parsing content that is part of a body.
-     *
-     * @param message The message to be processed.
-     */
-    @Deprecated
-    void processMessageBody(String message);
+
 }

@@ -76,6 +76,7 @@ public class L337Processor implements ApplicationProcessor {
 		}
 	}
 
+	@Deprecated
 	@Override
 	public byte[] processMessageBody(byte[] message) {
 		if (message == null) {
@@ -139,19 +140,6 @@ public class L337Processor implements ApplicationProcessor {
 		return finalMessage;
 	}
 
-	@Override
-	public void processMessageBody(String message) {
-		if (configurations.isProcessL337()) {
-			return; // Don't do anything if L337 is set off.
-		}
-		message.replace('A', '4').replace('a', '4')
-				.replace('E', '3').replace('e', '3')
-				.replace('I', '1').replace('i', '1')
-				.replace('O', '0').replace('o', '0')
-				.replace("C", "&lt;").replace("c", "&lt;")
-                .replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;");
-
-	}
 
 	/**
 	 * Calculates the final message length after processing the given {@code message}.

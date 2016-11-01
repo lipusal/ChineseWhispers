@@ -1,13 +1,13 @@
-package ar.edu.itba.pdc.chinese_whispers.xml;
+package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation;
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NegotiationConsumer;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
 import com.fasterxml.aalto.AsyncByteArrayFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
 
 import javax.xml.stream.XMLStreamException;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,12 +18,46 @@ public abstract class XMPPNegotiator {
     protected final AsyncXMLInputFactory inputFactory;
     protected final AsyncXMLStreamReader<AsyncByteArrayFeeder> parser;
 
-    protected Map<String,String> initialParameters;
+    /**
+     * TODO: Complete JAVADOC
+     */
+    protected Map<String, String> initialParameters;
+    /**
+     * TODO: Complete JAVADOC
+     */
     protected String authorization;
 
+    /**
+     * TODO: Complete JAVADOC
+     */
     protected int status = 0;
+    /**
+     * TODO: Complete JAVADOC
+     */
     protected NegotiationStatus negotiationStatus;
-    protected Deque<Byte> output;
+
+
+    /**
+     * The object that will consume negotiation messages.
+     */
+    protected final NegotiationConsumer negotiationConsumer;
+
+
+    /**
+     * Constructs a new XMPP negotiator.
+     *
+     * @param negotiationConsumer The object that will consume negotiation messages.
+     */
+    public XMPPNegotiator(NegotiationConsumer negotiationConsumer) {
+        if (negotiationConsumer == null) {
+            throw new IllegalArgumentException();
+        }
+        inputFactory = new InputFactoryImpl();
+        parser = inputFactory.createAsyncForByteArray();
+        this.negotiationConsumer = negotiationConsumer;
+        this.initialParameters = new HashMap<>();
+    }
+
 
     public Map<String, String> getInitialParameters() {
         return initialParameters;
@@ -41,17 +75,6 @@ public abstract class XMPPNegotiator {
         this.authorization = authorization;
     }
 
-    /**
-     * Constructs a new interpreter.
-     *
-     * @param output Where to send processed output.
-     */
-    public XMPPNegotiator(Deque<Byte> output) {
-        inputFactory = new InputFactoryImpl();
-        parser = inputFactory.createAsyncForByteArray();
-        this.output = output;
-        initialParameters =  new HashMap<>();
-    }
 
     /**
      * Adds bytes to be processed by the interpreter.
@@ -59,10 +82,12 @@ public abstract class XMPPNegotiator {
      * @param data The data to process.
      */
     public ParserResponse feed(byte[] data) {
+
+        // TODO: check repeated code.
         try {
             parser.getInputFeeder().feedInput(data, 0, data.length);
             return process();
-        }catch (XMLStreamException e){
+        } catch (XMLStreamException e) {
             //TODO catch
             e.printStackTrace();
             return ParserResponse.XML_ERROR;
@@ -70,7 +95,6 @@ public abstract class XMPPNegotiator {
 
 
     }
-
 
 
     protected abstract ParserResponse process() throws XMLStreamException;

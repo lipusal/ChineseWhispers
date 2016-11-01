@@ -48,4 +48,9 @@ public class ProxyConfigurator implements ProxyConfigurationProvider {
 	public int getServerPort(String clientJid) {
 		return configurations.getMultiplexedServerPort(clientJid);
 	}
+
+	@Override
+	public boolean isUserSilenced(String clientJid) {
+		return configurations.isUserSilenced(clientJid);
+	}
 }

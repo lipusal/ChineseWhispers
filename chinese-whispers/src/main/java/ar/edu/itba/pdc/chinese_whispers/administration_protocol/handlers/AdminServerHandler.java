@@ -1,21 +1,21 @@
-package ar.edu.itba.pdc.chinese_whispers.administration_protocol;
+package ar.edu.itba.pdc.chinese_whispers.administration_protocol.handlers;
 
-import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.AuthenticationProvider;
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.Deque;
 
 /**
  * Created by jbellini on 28/10/16.
  */
-public class AdministrationHandler implements TCPHandler { //TODO Make case unsesitive for users admins?
+public class AdminServerHandler implements TCPHandler { //TODO Make case unsesitive for users admins?
 
     // Constants
     /**
@@ -67,25 +67,44 @@ public class AdministrationHandler implements TCPHandler { //TODO Make case unse
      */
     private boolean isClosing;
 
-    private Configurations configurations;
 
-    public AdministrationHandler() {
+    /**
+     * Object that provides the handler with metrics.
+     */
+    private final MetricsProvider metricsProvider;
+
+    /**
+     * Object that will store configurations.
+     */
+    private final ConfigurationsConsumer configurationsConsumer;
+
+    /**
+     * Object that provides the handler with authentication data.
+     */
+    private final AuthenticationProvider authenticationProvider;
+
+
+    public AdminServerHandler(MetricsProvider metricsProvider,
+                              ConfigurationsConsumer configurationsConsumer,
+                              AuthenticationProvider authenticationProvider) {
         messageRead = new ArrayDeque<>();
         writeMessages = new ArrayDeque<>();
         inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
         outputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
-        configurations = Configurations.getInstance();
+        this.metricsProvider = metricsProvider;
+        this.configurationsConsumer = configurationsConsumer;
+        this.authenticationProvider = authenticationProvider;
     }
 
 
     /**
-     * Makes this {@link AdministrationHandler} to be closable (i.e. stop receiving messages, send all unsent messages,
+     * Makes this {@link AdminServerHandler} to be closable (i.e. stop receiving messages, send all unsent messages,
      * send close message, and close the corresponding key's channel).
      * Note: Once this method is executed, there is no chance to go back.
      */
     /* package */ void closeHandler(SelectionKey key) {
         if (isClosing) return;
-        System.out.println("Close AdministrationHandler");
+        System.out.println("Close AdminServerHandler");
         isClosing = true;
         // TODO: What happens if handler contains half a message?
         if (key.isValid()) {
@@ -122,6 +141,7 @@ public class AdministrationHandler implements TCPHandler { //TODO Make case unse
         } catch (IOException ignored) {
             // I/O error (for example, connection reset by peer)
         }
+        //Do NOT remove this if this is merged with XMPPHandler. Needs to be adapted in that case.
         if (!writeMessages.isEmpty()) key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
     }
 
@@ -150,14 +170,14 @@ public class AdministrationHandler implements TCPHandler { //TODO Make case unse
                 case "L337":
                     if (requestElements.length != 1) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
                     else {
-                        configurations.setIsL337(true);
+                        configurationsConsumer.setL337Processing(true);
                         response = DEFAULT_OK_RESPONSE;
                     }
                     break;
                 case "UNL337":
                     if (requestElements.length != 1) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
                     else {
-                        configurations.setIsL337(false);
+                        configurationsConsumer.setL337Processing(false);
                         response = DEFAULT_OK_RESPONSE;
                     }
                     break;
@@ -168,7 +188,7 @@ public class AdministrationHandler implements TCPHandler { //TODO Make case unse
                     }
                     if (requestElements.length != 3) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
                     else {
-                        if (!configurations.checkIfValidUser(requestElements[1], requestElements[2])) {
+                        if (authenticationProvider.isValidUser(requestElements[1], requestElements[2])) {
                             response = DEFAULT_OK_RESPONSE;
                             isLoggedIn = true;
                         } else {
@@ -193,22 +213,27 @@ public class AdministrationHandler implements TCPHandler { //TODO Make case unse
                 case "BLCK":
                     if (requestElements.length != 2) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
                     else {
-                        configurations.silenceUser(requestElements[1]);
+                        configurationsConsumer.silenceUser(requestElements[1]);
                         response = DEFAULT_OK_RESPONSE;
                     }
                     break;
                 case "UNBLCK":
                     if (requestElements.length != 2) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
                     else {
-                        configurations.unSilenceUser(requestElements[1]);
+                        configurationsConsumer.unSilenceUser(requestElements[1]);
                         response = DEFAULT_OK_RESPONSE;
                     }
                     break;
                 case "MPLX":
                     if (requestElements.length == 4) {
                         response = DEFAULT_OK_RESPONSE;
-                        if (requestElements[1].equals("DEFAULT")) configurations.setDefaultServer(requestElements[2],Integer.valueOf(requestElements[3]));
-                        else configurations.multiplexUser(requestElements[1], requestElements[2], Integer.valueOf(requestElements[3]));//TODO wat if port not a number?
+                        if (requestElements[1].equals("DEFAULT")) {
+                            configurationsConsumer.setDefaultServer(requestElements[2],
+                                    Integer.valueOf(requestElements[3]));
+                        } else {
+                            configurationsConsumer.multiplexUser(requestElements[1], requestElements[2],
+                                    Integer.valueOf(requestElements[3])); // TODO wat if port not a number?
+                        }
                         break;
                     }
                     if (requestElements.length == 3) {
@@ -217,7 +242,7 @@ public class AdministrationHandler implements TCPHandler { //TODO Make case unse
                             break;
                         }
                         if (requestElements[2].equals("DEFAULT")) {
-                            configurations.multiplexUserToDefault(requestElements[1]);
+                            configurationsConsumer.multiplexToDefaultServer(requestElements[1]);
                             break;
                         }
                     }
@@ -226,7 +251,7 @@ public class AdministrationHandler implements TCPHandler { //TODO Make case unse
                 case "CNFG":
                     if (requestElements.length != 1) {
                         response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
-                    }else{
+                    } else {
                         response = "Not implemented yet";
                     }
                     break;
@@ -235,7 +260,7 @@ public class AdministrationHandler implements TCPHandler { //TODO Make case unse
                         response = "ALL METRICSSSSSSSSSS";
                         break;
                     }
-                    if(requestElements.length == 2){
+                    if (requestElements.length == 2) {
                         response = "THIS METRIC IN PARTICULAR";
                         break;
                     }
@@ -249,7 +274,7 @@ public class AdministrationHandler implements TCPHandler { //TODO Make case unse
 
 
         for (byte b : response.getBytes()) {
-            if(b!='\13') writeMessages.offer(b);
+            if (b != '\13') writeMessages.offer(b);
         }
         writeMessages.offer(new Byte("10"));
     }

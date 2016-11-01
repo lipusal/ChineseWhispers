@@ -1,4 +1,4 @@
-package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums;
+package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 /**
  * Created by drocheg on 29/10/2016.

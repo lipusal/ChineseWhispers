@@ -68,6 +68,15 @@ public class L337Processor implements ApplicationProcessor {
 				case 'c':
 					stringBuilder.append("&lt;");
 					break;
+				case '<':
+                    stringBuilder.append("&lt;");
+					break;
+				case '>':
+                    stringBuilder.append("&gt;");
+					break;
+				case '&':
+                    stringBuilder.append("&amp;");
+					break;
 				default:
 					stringBuilder.append(c);
 					break;
@@ -84,7 +93,7 @@ public class L337Processor implements ApplicationProcessor {
 			return message; // Don't do anything if L337 is set off.
 		}
 
-		byte[] finalMessage = new byte[calculateFinalMessageLength(message)]; // TODO: Check which characters we must escape.
+		byte[] finalMessage = new byte[calculateFinalMessageLength(message)];
 
 		for (int i = 0; i < message.length; i++) {
 			switch (message[i]) {
@@ -111,6 +120,25 @@ public class L337Processor implements ApplicationProcessor {
 					finalMessage[i++] = 't';
 					finalMessage[i] = ';';
 					break;
+                case '<':
+                    finalMessage[i++] = '&';
+                    finalMessage[i++] = 'l';
+                    finalMessage[i++] = 't';
+                    finalMessage[i] = ';';
+                    break;
+                case '>':
+                    finalMessage[i++] = '&';
+                    finalMessage[i++] = 'g';
+                    finalMessage[i++] = 't';
+                    finalMessage[i] = ';';
+                    break;
+                case '&':
+                    finalMessage[i++] = '&';
+                    finalMessage[i++] = 'a';
+                    finalMessage[i++] = 'm';
+                    finalMessage[i++] = 'p';
+                    finalMessage[i] = ';';
+                    break;
 				default:
 					finalMessage[i] = message[i];
 					break;
@@ -128,7 +156,8 @@ public class L337Processor implements ApplicationProcessor {
 				.replace('E', '3').replace('e', '3')
 				.replace('I', '1').replace('i', '1')
 				.replace('O', '0').replace('o', '0')
-				.replace("C", "&lt;").replace("c", "&lt;");
+				.replace("C", "&lt;").replace("c", "&lt;")
+                .replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;");
 
 	}
 

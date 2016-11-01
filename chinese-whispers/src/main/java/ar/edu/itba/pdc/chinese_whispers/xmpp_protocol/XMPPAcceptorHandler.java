@@ -1,6 +1,9 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPServerHandler;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NewConnectionsConsumer;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ProxyConfigurationProvider;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;

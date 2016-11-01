@@ -6,6 +6,10 @@ import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.xml.XMPPNegotiator;
 
 import ar.edu.itba.pdc.chinese_whispers.xml.XMLInterpreter;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ConnectionState;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -27,10 +31,10 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 	/**
 	 * String to be sent when detecting error.
 	 */
-	private final static String ERROR_RESPONSE = "<stream:error>\n<bad-format\n" +
-			"xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>\n</stream:error>\n</stream:stream>\n";
+	private final static String XML_ERROR_RESPONSE = "<stream:error>\n<bad-format\n" +
+			"xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>\n</stream:error>\n"; //Do not contain </stream:stream> because close_message is always sent when closing.
 
-	private final static String CLOSE_MESSAGE = "</stream>\n";
+	private final static String CLOSE_MESSAGE = "</stream:stream>\n";
 
 
 	// Communication stuff
@@ -143,19 +147,24 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
  * send close message, and close the corresponding key's channel).
  * Note: Once this method is executed, there is no chance to go back.
  */
-    /* package */ void closeHandler(){
-        if (isClosable) {
-            return;
-        }
-    System.out.println("Close handler");
-        this.isClosable = true;
-        // TODO: What happens if handler contains half an xmpp message?
-        if (this.key.isValid()) {
-            this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
-            writeMessage(CLOSE_MESSAGE.getBytes());
-        } else {
-            handleClose(this.key); // If key is not valid, proceed to close the handler without writing anything
-        }
+/* package */ void closeHandler(){
+		if (isClosable || key ==null) {
+			return;
+		}
+		System.out.println("Close handler");
+		this.isClosable = true;
+		// TODO: What happens if handler contains half an xmpp message?
+		if (this.key.isValid()) {
+			this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
+			writeMessage(CLOSE_MESSAGE.getBytes());
+		} else {
+			handleClose(this.key); // If key is not valid, proceed to close the handler without writing anything
+		}
+
+
+		if (this.peerHandler != null) {
+			peerHandler.closeHandler();
+		}
 	}
 
 	/**
@@ -184,11 +193,14 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 	protected void handleResponse(ParserResponse parserResponse) { //TODO mandarme ERROR al que lo envio, no al que recibe.
 		if (parserResponse == ParserResponse.EVERYTHING_NORMAL) return;
 		if (parserResponse == ParserResponse.XML_ERROR) {
-			byte[] message = ERROR_RESPONSE.getBytes(); //TODO check.
+			System.out.println("handleResponse XML_ERROR: ");
+			byte[] message = XML_ERROR_RESPONSE.getBytes(); //TODO check.
 			writeMessage(message); //TODO change this to send to Q.
+			closeHandler();
 		}
 		if (parserResponse == ParserResponse.STREAM_CLOSED) {
-			//TODO setBooleanSomething to closed. Wait for closure on other end.
+			System.out.println("handleResponse STREAM_CLOSED: ");
+
 		}
 	}
 
@@ -263,13 +275,10 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 		}
 		try {
 			this.key.channel().close();
-			// TODO: send some message before? Note: if yes, we can't close the peer's key now.
-			if (this.peerHandler != null) {
-				this.peerHandler.closeHandler();
-			}
 		} catch (IOException e) {
 
 		}
 		return false; // TODO: change as specified in javadoc
 	}
+
 }

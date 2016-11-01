@@ -5,6 +5,9 @@ import ar.edu.itba.pdc.chinese_whispers.connection.TCPClientHandler;
 import ar.edu.itba.pdc.chinese_whispers.xml.XMPPClientNegotiator;
 
 import ar.edu.itba.pdc.chinese_whispers.xml.XMLInterpreter;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ConnectionState;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 
 
 import java.io.IOException;
@@ -45,6 +48,7 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
 
 				ParserResponse parserResponse = xmppNegotiator.feed(message);
 
+				handleResponse(parserResponse);
 				if(parserResponse==ParserResponse.NEGOTIATION_END){
                     connectionState=ConnectionState.XMPP_STANZA_STREAM;
 					peerHandler.connectionState=ConnectionState.XMPP_STANZA_STREAM;

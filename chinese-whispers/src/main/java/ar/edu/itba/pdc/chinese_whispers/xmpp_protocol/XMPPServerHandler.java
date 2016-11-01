@@ -3,14 +3,16 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol;
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPServerHandler;
-import ar.edu.itba.pdc.chinese_whispers.xml.XMPPServerNegotitator;
+import ar.edu.itba.pdc.chinese_whispers.xml.XMPPServerNegotiator;
 import ar.edu.itba.pdc.chinese_whispers.xml.XMLInterpreter;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ConnectionState;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NewConnectionsConsumer;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ProxyConfigurationProvider;
 
 
 import java.nio.channels.SelectionKey;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.util.Base64;
 import java.util.Map;
 
@@ -57,7 +59,7 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
         this.XMLInterpreter = new XMLInterpreter(peerHandler);
         this.proxyConfigurationProvider = proxyConfigurationProvider;
         this.peerConnectionTries = 0;
-        xmppNegotiator = new XMPPServerNegotitator(negotiatorWriteMessages);
+        xmppNegotiator = new XMPPServerNegotiator(negotiatorWriteMessages);
 
     }
 
@@ -72,6 +74,7 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
             } else if (connectionState == ConnectionState.XMPP_NEGOTIATION) {
 
                 ParserResponse parserResponse = xmppNegotiator.feed(message);
+				handleResponse(parserResponse);
                 if (parserResponse == ParserResponse.NEGOTIATION_END) {
 
                     //Initialize data obtained

@@ -1,8 +1,9 @@
 package ar.edu.itba.pdc.chinese_whispers.xml;
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 
+import javax.xml.stream.XMLStreamException;
 import java.util.Deque;
 import java.util.Map;
 
@@ -41,12 +42,12 @@ public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no
      * @return The number of bytes offered to the output Deque, or -1 if the interpreter is in error state.
      */
     @Override
-    protected ParserResponse process() {
-        if (!hasData()) {
+    protected ParserResponse process() throws XMLStreamException {
+        if (!parser.hasNext()) {
             return ParserResponse.EVERYTHING_NORMAL;
         }
         StringBuilder readXML = new StringBuilder();
-        while (hasData()) {
+        while (parser.hasNext()) {
             next();
             if(negotiationStatus==NegotiationStatus.AUTH){
                 switch (status) {
@@ -62,7 +63,7 @@ public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no
                             for (byte b : bytes) {
                                 output.offer(b);
                             }
-                            while (hasData()  && status!=AsyncXMLStreamReader.EVENT_INCOMPLETE)next(); //TODO handle more?
+                            while (parser.hasNext()  && status!=AsyncXMLStreamReader.EVENT_INCOMPLETE)next(); //TODO handle more?
                             return ParserResponse.EVERYTHING_NORMAL;
                         }
                     case AsyncXMLStreamReader.EVENT_INCOMPLETE:

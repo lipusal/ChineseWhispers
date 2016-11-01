@@ -1,14 +1,15 @@
 package ar.edu.itba.pdc.chinese_whispers.xml;
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.enums.ParserResponse;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 
+import javax.xml.stream.XMLStreamException;
 import java.util.Deque;
 
 /**
  * Created by Droche on 30/10/2016.
  */
-public class XMPPServerNegotitator extends XMPPNegotiator {
+public class XMPPServerNegotiator extends XMPPNegotiator {
 
 
     /**
@@ -16,7 +17,7 @@ public class XMPPServerNegotitator extends XMPPNegotiator {
      *
      * @param output Where to send processed output.
      */
-    public XMPPServerNegotitator(Deque<Byte> output) {
+    public XMPPServerNegotiator(Deque<Byte> output) {
         super(output);
         this.negotiationStatus=NegotiationStatus.START;
     }
@@ -28,12 +29,12 @@ public class XMPPServerNegotitator extends XMPPNegotiator {
      * @return The number of bytes offered to the output Deque, or -1 if the interpreter is in error state.
      */
     @Override
-    protected ParserResponse process() {
-        if (!hasData()) {
+    protected ParserResponse process() throws XMLStreamException {
+        if (!parser.hasNext()) {
             return ParserResponse.EVERYTHING_NORMAL;
         }
         StringBuilder readXML = new StringBuilder();
-        while (hasData()) {
+        while (parser.hasNext()) {
             next();
             if(negotiationStatus==NegotiationStatus.START){
                 switch (status) {
@@ -77,7 +78,7 @@ public class XMPPServerNegotitator extends XMPPNegotiator {
                             for (byte b : bytes) {
                                 output.offer(b);
                             }
-                            while (hasData() && status!=AsyncXMLStreamReader.EVENT_INCOMPLETE)next(); //TODO handle more?
+                            while (parser.hasNext() && status!=AsyncXMLStreamReader.EVENT_INCOMPLETE)next(); //TODO handle more?
                             return ParserResponse.EVERYTHING_NORMAL;
                         } else {
                             //TODO handle error?
@@ -103,7 +104,7 @@ public class XMPPServerNegotitator extends XMPPNegotiator {
                         for (byte b : bytes) {
                             output.offer(b);
                         }
-                        while (hasData()  && status!=AsyncXMLStreamReader.EVENT_INCOMPLETE)next(); //TODO handle more?
+                        while (parser.hasNext()  && status!=AsyncXMLStreamReader.EVENT_INCOMPLETE)next(); //TODO handle more?
                         return ParserResponse.NEGOTIATION_END;
                     case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                         return ParserResponse.EVERYTHING_NORMAL;

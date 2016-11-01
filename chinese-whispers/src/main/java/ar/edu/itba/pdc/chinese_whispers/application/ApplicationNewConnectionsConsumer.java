@@ -1,6 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.application;
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.NewConnectionsConsumer;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NewConnectionsConsumer;
 
 import java.util.HashSet;
 import java.util.Set;

@@ -192,7 +192,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         // TODO: What happens if handler contains half an xmpp message?
         if (this.key != null && this.key.isValid()) {
             this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
-            writeMessage(CLOSE_MESSAGE.getBytes());
+            writeMessage(CLOSE_MESSAGE.getBytes()); //TODO send error when doing this because there was an error.
         } else {
             handleClose(this.key); // If key is not valid, proceed to close the handler without writing anything
         }
@@ -313,13 +313,16 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
                 message[i] = deque.poll();
             }
             if (message.length > 0) {
+                int writtenBytes=0;
                 SocketChannel channel = (SocketChannel) this.key.channel();
+
                 outputBuffer.clear();
                 outputBuffer.put(message);
                 outputBuffer.flip();
                 try {
-                    int writtenBytes = channel.write(outputBuffer);
-                    System.out.println("written bytes: " + writtenBytes);
+                    writtenBytes = channel.write(outputBuffer);
+
+
                     // Return the rest of the message to the deque... TODO: Use the buffer
                     if (writtenBytes < message.length) {
                         for (int i = message.length - 1; i >= writtenBytes; i--)
@@ -330,6 +333,9 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
                     byte[] restOfMessage = new byte[message.length - bytesSent];
                     System.arraycopy(message, bytesSent, restOfMessage, 0, restOfMessage.length);
                 }
+                //TODO delete this:
+                System.out.print("written bytes: " + writtenBytes + " message: ");
+                System.out.println(new String(message));
             }
         }
     }

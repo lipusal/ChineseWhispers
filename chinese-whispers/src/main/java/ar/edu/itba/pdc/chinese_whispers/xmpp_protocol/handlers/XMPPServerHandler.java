@@ -118,16 +118,16 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 
                     //Generates first message
                     StringBuilder startStream = new StringBuilder();
-                    startStream.append("<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" ")
-                            .append("xmlns=\"jabber:client\" ")
-                            .append("xmlns:xml=\"http://www.w3.org/XML/1998/namespace\" ");
+                    startStream.append("<stream:stream xmlns:stream=\'http://etherx.jabber.org/streams\' ")
+                            .append("xmlns=\'jabber:client\' ")
+                            .append("xmlns:xml=\'http://www.w3.org/XML/1998/namespace\' ");
                     for (String attributeKey : xmppNegotiator.getInitialParameters().keySet()) {
                         startStream.append(attributeKey)
-                                .append("=\"")
+                                .append("=\'")
                                 .append(xmppNegotiator.getInitialParameters().get(attributeKey))
-                                .append("\" ");
+                                .append("\'");
                     }
-                    startStream.append("> ");
+                    startStream.append(">\n");
                     System.out.println("Proxy to Server:" + startStream);
 
 

@@ -312,7 +312,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case unsesit
             }
         }
 
-        if (writeMessages.isEmpty() && messageRead.isEmpty()) {
+        if (writeMessages.isEmpty() && (messageRead.isEmpty() || byteWritten==0 ) ){ //TODO check if byteWritten==0 can happen
             key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
             if (isClosing) {
                 handleClose(key);

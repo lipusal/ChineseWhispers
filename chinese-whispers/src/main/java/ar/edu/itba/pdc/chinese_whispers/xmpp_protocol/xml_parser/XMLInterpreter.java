@@ -123,9 +123,9 @@ public class XMLInterpreter {
                                     readXML.append(":")
                                             .append(parser.getNamespacePrefix(i));
                                 }
-                                readXML.append("=\"")
+                                readXML.append("=\'")
                                         .append(parser.getNamespaceURI(i))
-                                        .append("\"")
+                                        .append("\'")
                                         .append(i < namespaceCount - 1 ? " " : "");
                             }
                         }
@@ -140,9 +140,9 @@ public class XMLInterpreter {
                                             .append(":");
                                 }
                                 readXML.append(parser.getAttributeLocalName(i))
-                                        .append("=\"")
+                                        .append("=\'")
                                         .append(parser.getAttributeValue(i))
-                                        .append("\"")
+                                        .append("\'")
                                         .append(i < attrCount - 1 ? " " : "");
                             }
                         }
@@ -164,7 +164,7 @@ public class XMLInterpreter {
                             readXML.append(parser.getPrefix()).append(":");
                         }
                         readXML.append(parser.getLocalName());
-                        readXML.append(">");
+                        readXML.append(">\n");
                     }
 
                     //Update status

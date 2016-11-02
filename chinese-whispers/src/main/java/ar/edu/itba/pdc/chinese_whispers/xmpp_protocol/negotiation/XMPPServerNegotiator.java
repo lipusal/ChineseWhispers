@@ -59,22 +59,21 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
                                     if (attributeFullName.toString().equals("to")) readXML.append("from");
                                     else if (attributeFullName.toString().equals("from")) readXML.append("to");
                                     else readXML.append(attributeFullName);
-                                    readXML.append("=\"")
+                                    readXML.append("=\'")
                                             .append(parser.getAttributeValue(i))
-                                            .append("\"")
+                                            .append("\'")
                                             .append(i < attrCount - 1 ? " " : "");
                                     if (!initialParameters.containsKey(attributeFullName.toString())) {
                                         initialParameters.put(attributeFullName.toString(), parser.getAttributeValue(i));
                                     }
                                 }
                             }
-                            readXML.append("id='randomgenerated' xmlns:stream=\"http://etherx.jabber.org/streams\" xmlns=\"jabber:client\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\" "); //TODO random
-                            readXML.append("> ");
+                            readXML.append(" id='randomgenerated' xmlns:stream=\'http://etherx.jabber.org/streams\' xmlns=\'jabber:client\' xmlns:xml=\'http://www.w3.org/XML/1998/namespace\'>\n"); //TODO random
                             readXML.append("<stream:features> " +
                                     "<mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'> " +
                                     "<mechanism>PLAIN</mechanism> " +
                                     "</mechanisms> " +
-                                    "</stream:features>");
+                                    "</stream:features>\n");
                             negotiationStatus = NegotiationStatus.AUTH;
                             System.out.println(readXML);
                             negotiationConsumer.consumeNegotiationMessage(readXML.toString().getBytes());
@@ -96,7 +95,7 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
                 switch (status) { //TODO check it is really plain and not other shit.
                     case AsyncXMLStreamReader.CHARACTERS:
                         authorization = parser.getText(); //If it is bullshit, and not a base64 it explode afterwards.
-                        String response = "<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>"; //TODO retry?
+                        String response = "<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>\n"; //TODO retry?
                         System.out.println(response);
                         System.out.println("Connection with client was a SUCCESS");
                         negotiationConsumer.consumeNegotiationMessage(response.getBytes());

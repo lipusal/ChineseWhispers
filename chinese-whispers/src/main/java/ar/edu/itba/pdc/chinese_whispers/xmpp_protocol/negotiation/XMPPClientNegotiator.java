@@ -64,7 +64,7 @@ public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no
                         String text = parser.getText();
                         if (text.equals("PLAIN")) {
                             String response = "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' " +
-                                    "mechanism='PLAIN'>" + authorization + "</auth>";
+                                    "mechanism='PLAIN'>" + authorization + "</auth>\n";
                             negotiationStatus = NegotiationStatus.CHALLENGE;
                             System.out.println("Proxy to Server:" + response);
                             negotiationConsumer.consumeNegotiationMessage(response.getBytes());

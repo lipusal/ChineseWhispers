@@ -189,8 +189,9 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
             return;
         }
         this.isClosable = true;
+        if(key==null) return;
         // TODO: What happens if handler contains half an xmpp message?
-        if (this.key != null && this.key.isValid()) {
+        if (this.key.isValid()) {
             this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
             writeMessage(CLOSE_MESSAGE.getBytes()); //TODO send error when doing this because there was an error.
         } else {
@@ -198,7 +199,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         }
 
         // Close also peer handler
-        if (this.peerHandler != null) {
+        if (this.peerHandler != null ) {
             peerHandler.closeHandler();
         }
     }

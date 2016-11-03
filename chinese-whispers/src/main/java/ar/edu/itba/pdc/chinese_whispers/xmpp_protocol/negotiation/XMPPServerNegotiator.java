@@ -92,9 +92,9 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
                         return ParserResponse.XML_ERROR;
                 }
             } else if (negotiationStatus == NegotiationStatus.AUTH) {
-                switch (status) { //TODO check it is really plain and not other shit.
+                switch (status) { //TODO check it is really plain and the authorization
                     case AsyncXMLStreamReader.CHARACTERS:
-                        authorization = parser.getText(); //If it is bullshit, and not a base64 it explode afterwards.
+                        authorization = parser.getText(); //TODO If it is bullshit, and not a base64 it explode afterwards.
                         String response = "<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>\n"; //TODO retry?
                         System.out.println(response);
                         System.out.println("Connection with client was a SUCCESS");

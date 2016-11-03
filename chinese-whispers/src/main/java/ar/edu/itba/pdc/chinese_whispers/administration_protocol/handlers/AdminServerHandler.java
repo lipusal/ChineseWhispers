@@ -3,6 +3,7 @@ package ar.edu.itba.pdc.chinese_whispers.administration_protocol.handlers;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.AuthenticationProvider;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
+import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 
 import java.io.IOException;
@@ -13,9 +14,9 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
- * Created by jbellini on 28/10/16.
+ * Created by Droche on 30/10/16.
  */
-public class AdminServerHandler implements TCPHandler { //TODO Make case unsesitive for users admins?
+public class AdminServerHandler implements TCPHandler { //TODO Make case insensitive for users admins? Make errors responses follow codes. Error msj between "".
 
     // Constants
     /**
@@ -207,7 +208,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case unsesit
                 case "HELP":
                     if (requestElements.length != 1) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
                     else {
-                        response = "COMMAND LIST HELP???"; //TODO do list
+                        response = "L337 UNL337 AUTH QUIT HELP BLCK UNBLCK MPLX CNFG MTRC"; //TODO do list
                     }
                     break;
                 case "BLCK":
@@ -252,7 +253,13 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case unsesit
                     if (requestElements.length != 1) {
                         response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
                     } else {
-                        response = "Not implemented yet";
+                        StringBuilder responseBuild = new StringBuilder();
+                        responseBuild.append("BLCK ");
+                        //TODO finish. Needs a getSilencedUsers.
+                        responseBuild.append("MPLX ");
+                        //TODO finish. Needs a getMultiplexedUsers
+                        responseBuild.append("L337" );
+                        responseBuild.append(Configurations.getInstance().isProcessL337()? "ON" : "OFF");
                     }
                     break;
                 case "MTRC":

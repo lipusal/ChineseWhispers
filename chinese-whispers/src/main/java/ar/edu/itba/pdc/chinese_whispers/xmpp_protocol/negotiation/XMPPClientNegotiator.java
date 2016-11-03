@@ -57,47 +57,36 @@ public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no
         StringBuilder readXML = new StringBuilder();
         while (parser.hasNext()) {
             next();
-            if (negotiationStatus == NegotiationStatus.AUTH) {
-                switch (status) {
-                    case AsyncXMLStreamReader.CHARACTERS:
+            switch (status) {
+                case AsyncXMLStreamReader.START_ELEMENT:
+                    if (negotiationStatus == NegotiationStatus.CHALLENGE) {
+                        if (parser.getLocalName().equals("success")) {
+                            System.out.println("Connection with server was a SUCCESS");
+                            return ParserResponse.NEGOTIATION_END;
+                        }
+                    }
+                    if(parser.getLocalName().equals("challenge")){
+                        return ParserResponse.NEGOTIATION_ERROR;//TODO unsupported operation?
+                    }
+                case AsyncXMLStreamReader.CHARACTERS:
+                    if (negotiationStatus == NegotiationStatus.AUTH) {
                         //Update status when starting a non-nested element
                         String text = parser.getText();
-                        if (text.equals("PLAIN")) {
+                        if (text.equals("PLAIN")) {//TODO contains vs equals. Do we even check this?
                             String response = "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' " +
                                     "mechanism='PLAIN'>" + authorization + "</auth>\n";
                             negotiationStatus = NegotiationStatus.CHALLENGE;
                             System.out.println("Proxy to Server:" + response);
                             negotiationConsumer.consumeNegotiationMessage(response.getBytes());
-                            while (parser.hasNext() && status != AsyncXMLStreamReader.EVENT_INCOMPLETE) {
-                                next(); //TODO handle more?
-                            }
-                            return ParserResponse.EVERYTHING_NORMAL;
                         }
-                    case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                        return ParserResponse.EVERYTHING_NORMAL;
-                    case -1:
-                        //TODO throw exception? Remove sout
-                        System.out.println("XML interpreter entered error state (invalid XML)");
-                        return ParserResponse.XML_ERROR;
-                }
-                //TODO do what if NO PLAIN?
+                    }
+                case AsyncXMLStreamReader.EVENT_INCOMPLETE:
+                    return ParserResponse.EVERYTHING_NORMAL;
+                case -1:
+                    //TODO throw exception? Remove sout
+                    System.out.println("XML interpreter entered error state (invalid XML)");
+                    return ParserResponse.XML_ERROR;
 
-            } else if (negotiationStatus == NegotiationStatus.CHALLENGE) {
-                switch (status) { //TODO check it is really plain and not other shit
-                    case AsyncXMLStreamReader.START_ELEMENT:
-
-                        if (parser.getLocalName().equals("success")) {
-                            System.out.println("Connection with server was a SUCCESS");
-                            return ParserResponse.NEGOTIATION_END;
-                        }
-                        //TODO see other cases and Negotiation.
-                    case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                        return ParserResponse.EVERYTHING_NORMAL;
-                    case -1:
-                        //TODO throw exception? Remove sout
-                        System.out.println("XML interpreter entered error state (invalid XML)");
-                        return ParserResponse.XML_ERROR;
-                }
 
             }
 

@@ -1,11 +1,9 @@
 <?xml version="1.0"?>
 <stream:stream xmlns:stream="http://etherx.jabber.org/streams" version="1.0" xmlns="jabber:client" to="pc" xml:lang="es" xmlns:xml="http://www.w3.org/XML/1998/namespace">
 
-<stream:stream version="1.0" from="pc" xml:lang="es"id='randomgenerated' xmlns="jabber:client" xmlns:xml="http://www.w3.org/XML/1998/namespace" > <stream:features> <mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'> <mechanism>PLAIN</mechanism> </mechanisms> </stream:features>
+<stream:stream version="1.0" from="pc" xml:lang="es" id='randomgenerated' xmlns="jabber:client" xmlns:xml="http://www.w3.org/XML/1998/namespace" > <stream:features> <mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'> <mechanism>PLAIN</mechanism> </mechanisms> </stream:features>
 
-
-
-<?xml version='1.0' encoding='UTF-8'?><stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" from="pc" id="1msrp9tlux" xml:lang="es" version="1.0"><stream:features><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"></starttls><mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><mechanism>PLAIN</mechanism><mechanism>ANONYMOUS</mechanism><mechanism>SCRAM-SHA-1</mechanism><mechanism>CRAM-MD5</mechanism><mechanism>DIGEST-MD5</mechanism></mechanisms><compression xmlns="http://jabber.org/features/compress"><method>zlib</method></compression><auth xmlns="http://jabber.org/features/iq-auth"/><register xmlns="http://jabber.org/features/iq-register"/></stream:features>
+//<?xml version='1.0' encoding='UTF-8'?><stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" from="pc" id="1msrp9tlux" xml:lang="es" version="1.0"><stream:features><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"></starttls><mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><mechanism>PLAIN</mechanism><mechanism>ANONYMOUS</mechanism><mechanism>SCRAM-SHA-1</mechanism><mechanism>CRAM-MD5</mechanism><mechanism>DIGEST-MD5</mechanism></mechanisms><compression xmlns="http://jabber.org/features/compress"><method>zlib</method></compression><auth xmlns="http://jabber.org/features/iq-auth"/><register xmlns="http://jabber.org/features/iq-register"/></stream:features>
 
 <auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="PLAIN">AGRpZWdvAGRpZWdv</auth>
 
@@ -20,6 +18,14 @@
 
 
 //////
+<stream:stream version='1.0' from='pc' xml:lang='es' id='randomgenerated' xmlns:stream='http://etherx.jabber.org/streams' xmlns='jabber:client' xmlns:xml='http://www.w3.org/XML/1998/namespace'>
+<stream:features> <mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'> <mechanism>PLAIN</mechanism> </mechanisms> </stream:features>
+
+<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>
+
+<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='jabber:client' xmlns:xml='http://www.w3.org/XML/1998/namespace' xml:lang='es'to='pc'version='1.0'>
+<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>
+
 <auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="DIGEST-MD5"/>
 
 <success xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>

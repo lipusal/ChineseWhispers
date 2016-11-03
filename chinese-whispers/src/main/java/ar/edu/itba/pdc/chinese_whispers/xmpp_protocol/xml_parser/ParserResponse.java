@@ -8,6 +8,7 @@ public enum ParserResponse {
     STREAM_CLOSED,
     XML_ERROR,
     NEGOTIATION_END,
+    NEGOTIATION_ERROR,
 
     // TODO: I would change it to parser state
 }

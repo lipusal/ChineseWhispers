@@ -1,9 +1,10 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPServerHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NewConnectionsConsumer;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ProxyConfigurationProvider;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
@@ -26,14 +27,20 @@ public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler
     /**
      * A proxy connection configurator to pass it to each new {@link XMPPServerHandler}.
      */
-    private final ProxyConfigurationProvider proxyConfigurationProvider;
+    private final ConfigurationsConsumer configurationsConsumer;
+    /**
+     * The metric manager to give or ask metrics.
+     */
+    protected MetricsProvider metricsProvider;
 
 
     public XMPPAcceptorHandler(ApplicationProcessor applicationProcessor,
                                NewConnectionsConsumer newConnectionsConsumer,
-                               ProxyConfigurationProvider proxyConfigurationProvider) {
+                               ConfigurationsConsumer configurationsConsumer,
+                               MetricsProvider metricsProvider) {
         super(applicationProcessor);
-        this.proxyConfigurationProvider = proxyConfigurationProvider;
+        this.metricsProvider = metricsProvider;
+        this.configurationsConsumer = configurationsConsumer;
         this.newConnectionsConsumer = newConnectionsConsumer;
     }
 
@@ -67,7 +74,9 @@ public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler
             channel.configureBlocking(false);
             XMPPServerHandler handler = new XMPPServerHandler(applicationProcessor,
                     newConnectionsConsumer,
-                    proxyConfigurationProvider);
+                    configurationsConsumer,
+                    metricsProvider
+                    );
             // The handler assigned to accepted sockets won't accept new connections, it will read and write
             // (it's writable upon creation because it might be created with data in its write messages queue)
             SelectionKey newKey = channel.register(key.selector(),

@@ -12,6 +12,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Map;
 
 /**
  * Created by Droche on 30/10/16.
@@ -127,6 +128,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         try {
             int readBytes = channel.read(inputBuffer);
             System.out.println("ReadBytes= " + readBytes);
+            metricsProvider.addReadBytes(readBytes);//TODO do we lose bytesSent if exception?
             if (readBytes >= 0) {
                 for (int i = 0; i < readBytes; i++) {
                     byte b = inputBuffer.get(i);
@@ -147,6 +149,8 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
     }
 
     private void process(Deque<Byte> messageRead) {
+        //TODO unsensitive
+        //TODO logOut != QUIT
 //TODO handle messages right
         //TODO process message
         //TODO what if message is not well formed?
@@ -160,7 +164,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         }
 
         String string = new String(byteArray);
-        String response = "NOT IMPLEMENTED YET";
+        String response = "NOT IMPLEMENTED";
         System.out.println(string);
         String[] requestElements = string.split(" ");
         String command = requestElements[0];
@@ -201,11 +205,11 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                     if (requestElements.length != 1) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
                     else {
                         //TODO QUIT
-                        response = DEFAULT_OK_RESPONSE;
+                        response = "NOT IMPLEMENTED YET";
                     }
 
                     break;
-                case "HELP":
+                case "HELP": //TODO do not need auth
                     if (requestElements.length != 1) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
                     else {
                         response = "L337 UNL337 AUTH QUIT HELP BLCK UNBLCK MPLX CNFG MTRC"; //TODO do list
@@ -254,21 +258,56 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                         response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
                     } else {
                         StringBuilder responseBuild = new StringBuilder();
-                        responseBuild.append("BLCK ");
-                        //TODO finish. Needs a getSilencedUsers.
-                        responseBuild.append("MPLX ");
-                        //TODO finish. Needs a getMultiplexedUsers
-                        responseBuild.append("L337" );
-                        responseBuild.append(Configurations.getInstance().isProcessL337()? "ON" : "OFF");
+                        responseBuild.append("BLCK");
+                        if(configurationsConsumer.getSilencedUsers().isEmpty()){
+                            responseBuild.append(" NONE");
+                        }else{
+                            for(String silencedUser: configurationsConsumer.getSilencedUsers()){
+                                responseBuild.append(" "+silencedUser);
+                            }
+                        }
+                        responseBuild.append("\nMPLX");
+                        if(configurationsConsumer.getSilencedUsers().isEmpty()){
+                            responseBuild.append(" NONE");
+                        }else{
+                            for(String clientJid: configurationsConsumer.getMultiplexedUsers().keySet()){
+                                responseBuild.append(" "+clientJid+" "+configurationsConsumer.getMultiplexedUsers().get(clientJid)+" * "); //TODO way of showing info
+                            }
+                        }
+                        responseBuild.append("\nL337" );
+                        responseBuild.append(Configurations.getInstance().isProcessL337()? " ON" : " OFF");
+                        response = responseBuild.toString();
                     }
                     break;
                 case "MTRC":
                     if (requestElements.length == 1) {
-                        response = "ALL METRICSSSSSSSSSS";
+                        //response =  "BytesRead: "+metricsProvider.getReadBytes() + " BytesSent: "+metricsProvider.getSentBytes();
+                        Map<String,String> metrics = metricsProvider.getMetrics();
+                        StringBuilder responseBuilder = new StringBuilder(); //Reuse?
+                        for(String metringName: metrics.keySet()){
+                            responseBuilder.append(metringName);
+                            responseBuilder.append(" ");
+                        }
+                        response = responseBuilder.toString();
                         break;
                     }
                     if (requestElements.length == 2) {
-                        response = "THIS METRIC IN PARTICULAR";
+                        Map<String,String> metrics = metricsProvider.getMetrics();
+                        if(requestElements[1].equals("ALL")){
+                            StringBuilder responseBuilder = new StringBuilder(); //Reuse?
+                            for(String metringName: metrics.keySet()){
+                                responseBuilder.append(metringName+" ");
+                                responseBuilder.append(metrics.get(metringName)+" ");
+                            }
+                            response = responseBuilder.toString();
+                        }else{
+                            String metricName = requestElements[1];
+                            if(!metrics.containsKey(metricName)){
+                                response = "Unimplemented metric";
+                            }else{
+                                response = metrics.get(metricName);
+                            }
+                        }
                         break;
                     }
                     response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
@@ -290,8 +329,8 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
     public void handleWrite(SelectionKey key) {// TODO: check how we turn on and off
 
         int byteWritten = 0;
+        byte[] message = null;
         if (!writeMessages.isEmpty()) {
-            byte[] message;
             if (writeMessages.size() > BUFFER_SIZE) {
                 message = new byte[BUFFER_SIZE];
             } else {
@@ -317,6 +356,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                     System.arraycopy(message, bytesSent, restOfMessage, 0, restOfMessage.length);
                 }
             }
+
         }
 
         if (writeMessages.isEmpty() && (messageRead.isEmpty() || byteWritten==0 ) ){ //TODO check if byteWritten==0 can happen
@@ -326,7 +366,12 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
             }
         }
 
-        System.out.println("Bytes written by administrator: " + byteWritten);
+        System.out.print("Bytes written by administrator: " + byteWritten);
+        if(message!=null) System.out.println(" Message: " + new String(message));
+        else System.out.println("");
+        metricsProvider.addSentBytes(byteWritten);
+
+
     }
 
 

@@ -1,11 +1,12 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NewConnectionsConsumer;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ProxyConfigurationProvider;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPServerNegotiator;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.XMLInterpreter;
@@ -28,7 +29,7 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
     /**
      * A proxy connection configurator to get server and port to which a user should establish a connection.
      */
-    private final ProxyConfigurationProvider proxyConfigurationProvider;
+    private final ConfigurationsConsumer configurationsConsumer;
     /**
      * The new connections consumer that will be notified when new connections arrive.
      */
@@ -46,16 +47,17 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
      *
      * @param applicationProcessor       The application processor.
      * @param newConnectionsConsumer     The object to be notified when new XMPP connections are established.
-     * @param proxyConfigurationProvider The object to be queried for proxy configurations.
+     * @param configurationsConsumer The object to be queried for proxy configurations.
      */
     /* package */ XMPPServerHandler(ApplicationProcessor applicationProcessor,
                                     NewConnectionsConsumer newConnectionsConsumer,
-                                    ProxyConfigurationProvider proxyConfigurationProvider) {
-        super(applicationProcessor);
+                                    ConfigurationsConsumer configurationsConsumer,
+                                    MetricsProvider metricsProvider) {
+        super(applicationProcessor,metricsProvider);
         this.newConnectionsConsumer = newConnectionsConsumer;
-        this.peerHandler = new XMPPClientHandler(applicationProcessor, this);
+        this.peerHandler = new XMPPClientHandler(applicationProcessor, this, metricsProvider);
         this.xmlInterpreter = new XMLInterpreter(applicationProcessor, peerHandler);
-        this.proxyConfigurationProvider = proxyConfigurationProvider;
+        this.configurationsConsumer = configurationsConsumer;
         this.peerConnectionTries = 0;
         xmppNegotiator = new XMPPServerNegotiator(this);
     }
@@ -63,7 +65,7 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
 
     @Override
     protected void sendProcessedStanza(byte[] message) {
-        xmlInterpreter.setSilenced(proxyConfigurationProvider.isUserSilenced(clientJid));
+        xmlInterpreter.setSilenced(configurationsConsumer.isUserSilenced(clientJid));
         super.sendProcessedStanza(message);
     }
 
@@ -158,8 +160,8 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
         }
         System.out.print("Trying to connect to origin server...");
         SelectionKey peerKey = TCPSelector.getInstance().
-                addClientSocketChannel(proxyConfigurationProvider.getServer(clientJid),
-                        proxyConfigurationProvider.getServerPort(clientJid),
+                addClientSocketChannel(configurationsConsumer.getServer(clientJid),
+                        configurationsConsumer.getServerPort(clientJid),
                         (XMPPClientHandler) peerHandler);
         if (peerKey == null) {
             // Connection failed ...

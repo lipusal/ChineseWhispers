@@ -1,5 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPClientHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPClientNegotiator;
@@ -24,8 +25,8 @@ public class XMPPClientHandler extends XMPPHandler implements TCPClientHandler {
      * @param applicationProcessor The application processor.
      * @param peerHandler          The {@link XMPPServerHandler} that corresponds to this handler.
      */
-    /* package */ XMPPClientHandler(ApplicationProcessor applicationProcessor, XMPPServerHandler peerHandler) {
-        super(applicationProcessor);
+    /* package */ XMPPClientHandler(ApplicationProcessor applicationProcessor, XMPPServerHandler peerHandler, MetricsProvider metricsProvider) {
+        super(applicationProcessor,metricsProvider);
         if (peerHandler == null) {
             throw new IllegalArgumentException();
         }

@@ -1,5 +1,9 @@
 package ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 /**
  * Created by jbellini on 1/11/16.
  * <p>
@@ -54,4 +58,40 @@ public interface ConfigurationsConsumer {
      * @param clientJid The user's JID.
      */
     void multiplexToDefaultServer(String clientJid);
+
+    /**
+     * Returns server to which the user must be connected to.
+     *
+     * @param clientJid The user's JID.
+     * @return The host to which the user must be connected.
+     */
+    String getServer(String clientJid);
+
+    /**
+     * Returns the port in which the server to which the user will be connected to is listening.
+     *
+     * @param clientJid The user's JID.
+     * @return The port.
+     */
+    int getServerPort(String clientJid);
+
+
+    /**
+     * Returns whether the given user is silenced.
+     *
+     * @param clientJid The user's JID.
+     * @return {@code true} if the user is silenced, or {@code false} otherwise.
+     */
+    boolean isUserSilenced(String clientJid);
+
+
+    /**
+     * Returns a copy of a list with all silenced users.
+     */
+    Set<String> getSilencedUsers();
+
+    /**
+     * Returns a copy of a list with all silenced users.
+     */
+    Map<String,String> getMultiplexedUsers();
 }

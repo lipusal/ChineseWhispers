@@ -1,5 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NegotiationConsumer;
@@ -85,15 +86,19 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
      * The {@link XMPPNegotiator} that will handle the XMPP negotiation at the beginning of the XMPP connection.
      */
     protected XMPPNegotiator xmppNegotiator;
-
+    /**
+     * The metric manager to give or ask metrics.
+     */
+    protected MetricsProvider metricsProvider;
 
     /**
      * Constructor.
      *
      * @param applicationProcessor The {@link ApplicationProcessor} that will process data.
      */
-    protected XMPPHandler(ApplicationProcessor applicationProcessor) {
+    protected XMPPHandler(ApplicationProcessor applicationProcessor, MetricsProvider metricsProvider) {
         super(applicationProcessor);
+        this.metricsProvider = metricsProvider;
         connectionState = ConnectionState.XMPP_NEGOTIATION;
         this.writeMessages = new ArrayDeque<>();
         this.negotiatorWriteMessages = new ArrayDeque<>();
@@ -243,6 +248,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         try {
             int readBytes = channel.read(inputBuffer);
             System.out.println("readBytes : " +readBytes);
+            metricsProvider.addReadBytes(readBytes);
             if (readBytes >= 0) {
 
                 message = new byte[readBytes];
@@ -330,13 +336,14 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
                             deque.push(message[i]);
                     }
                 } catch (IOException e) {
-                    int bytesSent = outputBuffer.limit() - outputBuffer.position();
-                    byte[] restOfMessage = new byte[message.length - bytesSent];
-                    System.arraycopy(message, bytesSent, restOfMessage, 0, restOfMessage.length);
+                    writtenBytes = outputBuffer.limit() - outputBuffer.position();//TODO check
+                    byte[] restOfMessage = new byte[message.length - writtenBytes];
+                    System.arraycopy(message, writtenBytes, restOfMessage, 0, restOfMessage.length);
                 }
                 //TODO delete this:
                 System.out.print("written bytes: " + writtenBytes + " message: ");
                 System.out.println(new String(message));
+                metricsProvider.addSentBytes(writtenBytes);
             }
         }
     }

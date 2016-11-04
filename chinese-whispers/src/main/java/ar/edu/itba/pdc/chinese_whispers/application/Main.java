@@ -23,7 +23,7 @@ public class Main {
 		TCPSelector selector = TCPSelector.getInstance();
 
 		XMPPAcceptorHandler acceptorHandler = new XMPPAcceptorHandler(L337Processor.getInstance(),
-				ApplicationNewConnectionsConsumer.getInstance(), Configurations.getInstance());
+				ApplicationNewConnectionsConsumer.getInstance(), Configurations.getInstance(), MetricsManager.getInstance());
 
 		System.out.print("Trying to bind port 3333... ");
 		try {
@@ -34,7 +34,7 @@ public class Main {
 		}
 		Configurations configurations = Configurations.getInstance();
 
-		AdminAcceptorHandler administrationAcceptorHandler = new AdminAcceptorHandler(configurations, configurations, configurations);
+		AdminAcceptorHandler administrationAcceptorHandler = new AdminAcceptorHandler (MetricsManager.getInstance(), configurations, configurations);
 
 		System.out.print("Trying to bind port 4444... ");
 		try {

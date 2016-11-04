@@ -2,9 +2,6 @@ package ar.edu.itba.pdc.chinese_whispers.application;
 
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.AuthenticationProvider;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
-import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.MetricsConsumer;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ProxyConfigurationProvider;
 
 import java.util.*;
 
@@ -15,8 +12,7 @@ import java.util.*;
  * This class implements the singleton pattern.
  */
 // TODO DIEGO NO BORRAR DIEGO DIEGO TODO DIEGO TODO TODO DIEGO
-public class Configurations implements ProxyConfigurationProvider, ConfigurationsConsumer,
-        AuthenticationProvider, MetricsProvider, MetricsConsumer {
+public class Configurations implements ConfigurationsConsumer, AuthenticationProvider {
 
 
     /**
@@ -39,10 +35,6 @@ public class Configurations implements ProxyConfigurationProvider, Configuration
      * Map storing user and passwords for administration protocol
      */
     private Map<String, String> authorizationMap;
-    /**
-     * Holds the amount of bytes transferred since system start up.
-     */
-    private int transferredBytes;
 
     /**
      * Holds the singleton.
@@ -60,7 +52,6 @@ public class Configurations implements ProxyConfigurationProvider, Configuration
         defaultServer = new HostAndPort("localhost", 5222);
         authorizationMap = new HashMap<>();
         authorizationMap.put("PROTOS", "42");
-        transferredBytes = 0;
     }
 
 
@@ -125,8 +116,6 @@ public class Configurations implements ProxyConfigurationProvider, Configuration
         authorizationMap.put(username, password);
     }
 
-
-    // ProxyConfigurationProvider
     @Override
     public String getServer(String clientJid) {
         return getMultiplexedServerHost(clientJid);
@@ -140,6 +129,24 @@ public class Configurations implements ProxyConfigurationProvider, Configuration
     @Override
     public boolean isUserSilenced(String clientJid) {
         return isSilenced(clientJid);
+    }
+
+    @Override
+    public Set<String> getSilencedUsers() {
+        HashSet silencedUsersClone = new LinkedHashSet<>();
+        for(String silencedUser: silencedUsers){
+            silencedUsersClone.add(silencedUser);
+        }
+        return silencedUsersClone;
+    }
+
+    @Override
+    public Map<String, String> getMultiplexedUsers() {
+        Map<String,String> multiplexedUsersClone = new HashMap<>();
+        for(String clientJid: multiplexedUsers.keySet()){
+            multiplexedUsersClone.put(clientJid,multiplexedUsers.get(clientJid).toString());//TODO estara bien depender de esto?
+        }
+        return multiplexedUsersClone;
     }
 
 
@@ -196,25 +203,6 @@ public class Configurations implements ProxyConfigurationProvider, Configuration
     }
 
 
-    // Metric provider
-    @Override
-    public int transportedBytes() {
-        return transferredBytes;
-    }
-
-    @Override
-    public List<String> silencedUsers() {
-        return new LinkedList<>(silencedUsers);
-    }
-
-    // Metric consumer
-
-
-    @Override
-    public void transferredBytes(int amountOfBytes) {
-        transferredBytes += amountOfBytes;
-    }
-
     /**
      * Class that encapsulates host and port.
      */
@@ -228,6 +216,11 @@ public class Configurations implements ProxyConfigurationProvider, Configuration
             }
             this.host = host;
             this.port = port;
+        }
+
+        @Override
+        public String toString(){
+            return host+" "+port;
         }
     }
 }

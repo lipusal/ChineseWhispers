@@ -1,0 +1,38 @@
+telnet: open [\\RemoteServer] [Port]
+
+Se deberia aclarar la version del protocolos
+add a command to add users.
+
+MPLX userJid remoteServer [port] ??
+Port   : Specifies the port that you want to use. If you do not specify a port, the default port is assumed.
+
+add: LANG xxx para setear el lenguage.
+LANG te tira lo soportado
+LANG xxx te lo cambia a eso.
+
+Aclarar en el protocolo cual de los errores es prioritario (ejemplo wrong parameters vs unauthorized vs unexpected method)
+//TODO tiene que ver detalles de impelemtancion con el protocolo? Ejemplo l337 en medio de un msj.
+respuestas:
+
+//Correct:
+"OK" 100
+
+//User errors:
+UNAUTHORIZED. "Needs to LogIn using AUTH command"           200
+FORBIDDEN     "Needs more priviledge to do this operation"  201
+WRONG USERNAME/PASSWORD: FAILURE                            202
+Must QUIT to logIn again: UNEXPECTED COMMAND//Method not allowed 203
+WRONG NUMBER OF PARAMETERS                                  204
+WRONG SYNTAX OF PARAMETERS                                  205
+UNKNOWN COMMAND                                             206 //Desconoce el comando
+Too Many Requests "Hay muchas conexiones desde esta dirección de internet." 207
+"Unimplemented metric": NOT FOUND  208
+//Entiende el comando y esta implementado pero el comando pide que haga algo que no existe (devolver una metrica inexistente)
+
+//Server errors
+COMMAND NOT IMPLEMENTED                                     304 //Sabe que existe ese comando pero no lo implementó. Tiene sentido? Es error del server?
+Internal Server Error                                       301
+Service Unavailable                                         302
+Protocol Version Not Supported                              303
+
+""

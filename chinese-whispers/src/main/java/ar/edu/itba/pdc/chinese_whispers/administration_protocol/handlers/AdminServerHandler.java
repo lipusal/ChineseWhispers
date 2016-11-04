@@ -10,9 +10,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by Droche on 30/10/16.
@@ -41,11 +39,39 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
      */
     private static final int BUFFER_SIZE = 1024;
 
+    private static final int OK_CODE = 100;
+
+    private static final int UNAUTHORIZED_CODE = 200;
+    private static final int FORBIDDEN_CODE = 201;
+    private static final int FAILURE_CODE = 202;
+    private static final int UNEXPECTED_COMMAND_CODE = 203;
+    private static final int WRONG_NUMBER_OF_PARAMETERS_CODE = 204;
+    private static final int WRONG_SYNTAX_OF_PARAMETERS_CODE = 205;
+    private static final int UNKNOWN_COMMAND_CODE = 206;
+    private static final int TOO_MANY_REQUEST_CODE = 207;
+    private static final int NOT_FOUND_CODE = 208;
+
+    private static final int INTERNAL_SERVER_ERROR_CODE = 300;
+    private static final int SERVICE_UNAVAILABLE__CODE = 301;
+    private static final int PROTOCOL_VERSION_NOT_SUPPORTED_CODE = 302;
+    private static final int COMMAND_NOT_IMPLEMENTED_CODE = 303;
+
+
+
+
 
     /**
      * Boolean telling if user has loggedIn
      */
     private boolean isLoggedIn = false;
+    /**
+     * Set with the names of the commands that need authorization
+     */
+    private Set<String> authCommand;
+    /**
+     * Language set for responses
+     */
+    private String language;
 
     // Communication stuff
     /**
@@ -96,6 +122,17 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         this.metricsProvider = metricsProvider;
         this.configurationsConsumer = configurationsConsumer;
         this.authenticationProvider = authenticationProvider;
+        language = "ENG";
+
+        //Commands that need authorization:
+        authCommand = new HashSet<>();
+        authCommand.add("L337");
+        authCommand.add("UNL337");
+        authCommand.add("BLCK");
+        authCommand.add("UNBLCK");
+        authCommand.add("MPLX");
+        authCommand.add("CNFG");
+        authCommand.add("MTRC");
     }
 
 
@@ -164,99 +201,121 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         }
 
         String string = new String(byteArray);
-        String response = "NOT IMPLEMENTED";
+        //String response = "NOT IMPLEMENTED";
         System.out.println(string);
         String[] requestElements = string.split(" ");
         String command = requestElements[0];
+       // int responseCode = 300; //Case it's not changed, an error must have happened.
+        Response response = new Response();
 
-        if (!isLoggedIn && !command.equals("AUTH")) response = DEFAULT_UNAUTHORIZED_RESPONSE;
+        if (!isLoggedIn && authCommand.contains(command)){
+            response.setResponseMessage(DEFAULT_UNAUTHORIZED_RESPONSE);
+            response.setResponseCode(UNAUTHORIZED_CODE);
+        }
         else {
             switch (command) {
                 case "L337":
-                    if (requestElements.length != 1) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
-                    else {
+
+                    if (checkLength(requestElements.length, new int[]{1}, response)){
                         configurationsConsumer.setL337Processing(true);
-                        response = DEFAULT_OK_RESPONSE;
+                        response.setToDefaultOK();
                     }
                     break;
                 case "UNL337":
-                    if (requestElements.length != 1) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
-                    else {
+                    if (checkLength(requestElements.length, new int[]{1}, response)){
                         configurationsConsumer.setL337Processing(false);
-                        response = DEFAULT_OK_RESPONSE;
+                        response.setToDefaultOK();
+                    }
+                    break;
+                case "LANG":
+                    if (checkLength(requestElements.length, new int[]{1,2}, response)){
+                        if(requestElements.length==1){
+                            response.setResponseMessage("ENG");
+                            response.setResponseCode(OK_CODE);
+                        }
+                        if(requestElements.length==2){
+                            if(requestElements[1].equals("ENG")){
+                                response.setToDefaultOK();
+                            }else{
+                                response.setResponseCode(NOT_FOUND_CODE);
+                                response.setResponseMessage("Language not supported");
+                            }
+                        }
                     }
                     break;
                 case "AUTH":
                     if (isLoggedIn) {
-                        response = "Must QUIT to logIn again";
+                        response.setResponseMessage("Must QUIT to logIn again");
+                        response.setResponseCode(UNEXPECTED_COMMAND_CODE);
                         break;
                     }
-                    if (requestElements.length != 3) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
-                    else {
+                    if(checkLength(requestElements.length, new int[]{3}, response)){
                         if (authenticationProvider.isValidUser(requestElements[1], requestElements[2])) {
-                            response = DEFAULT_OK_RESPONSE;
+                            response.setToDefaultOK();
                             isLoggedIn = true;
                         } else {
-                            response = "WRONG USERNAME/PASSWORD";
+                            response.setResponseMessage("WRONG USERNAME/PASSWORD");
+                            response.setResponseCode(FAILURE_CODE);
                         }
                     }
                     break;
                 case "QUIT":
-                    if (requestElements.length != 1) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
-                    else {
+                    if(checkLength(requestElements.length, new int[]{1}, response)){
                         //TODO QUIT
-                        response = "NOT IMPLEMENTED YET";
+
                     }
 
                     break;
-                case "HELP": //TODO do not need auth
-                    if (requestElements.length != 1) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
-                    else {
-                        response = "L337 UNL337 AUTH QUIT HELP BLCK UNBLCK MPLX CNFG MTRC"; //TODO do list
+                case "HELP":
+                    if(checkLength(requestElements.length, new int[]{1}, response)){
+                        response.setResponseMessage("AUTH LANG HELP QUIT L337 UNL337 BLCK UNBLCK MPLX CNFG MTRC"); //TODO do list
+                        response.setResponseCode(OK_CODE);
                     }
                     break;
                 case "BLCK":
-                    if (requestElements.length != 2) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
-                    else {
+                    if(checkLength(requestElements.length, new int[]{2}, response)){
                         configurationsConsumer.silenceUser(requestElements[1]);
-                        response = DEFAULT_OK_RESPONSE;
+                        response.setToDefaultOK();
                     }
                     break;
                 case "UNBLCK":
-                    if (requestElements.length != 2) response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
-                    else {
+                    if(checkLength(requestElements.length, new int[]{2}, response)){
                         configurationsConsumer.unSilenceUser(requestElements[1]);
-                        response = DEFAULT_OK_RESPONSE;
+                        response.setToDefaultOK();
                     }
                     break;
                 case "MPLX":
-                    if (requestElements.length == 4) {
-                        response = DEFAULT_OK_RESPONSE;
-                        if (requestElements[1].equals("DEFAULT")) {
-                            configurationsConsumer.setDefaultServer(requestElements[2],
-                                    Integer.valueOf(requestElements[3]));
-                        } else {
-                            configurationsConsumer.multiplexUser(requestElements[1], requestElements[2],
-                                    Integer.valueOf(requestElements[3])); // TODO wat if port not a number?
-                        }
-                        break;
-                    }
-                    if (requestElements.length == 3) {
-                        if (requestElements[1].equals("DEFAULT")) {
-                            response = DEFAULT_OK_RESPONSE;
+                    if(checkLength(requestElements.length, new int[]{3,4}, response)){
+                        if (requestElements.length == 4) {//TODO wrong syntax
+                            if (requestElements[1].equals("DEFAULT")) {
+                                configurationsConsumer.setDefaultServer(requestElements[2],
+                                        Integer.valueOf(requestElements[3]));
+                                response.setToDefaultOK();
+
+                            } else {
+                                configurationsConsumer.multiplexUser(requestElements[1], requestElements[2],
+                                        Integer.valueOf(requestElements[3])); // TODO wat if port not a number?
+                                response.setToDefaultOK();
+                            }
                             break;
                         }
-                        if (requestElements[2].equals("DEFAULT")) {
-                            configurationsConsumer.multiplexToDefaultServer(requestElements[1]);
-                            break;
+                        if (requestElements.length == 3) {
+                            if (requestElements[1].equals("DEFAULT")) {
+                                response.setToDefaultOK();
+                                break;
+                            }
+                            if (requestElements[2].equals("DEFAULT")) {
+                                configurationsConsumer.multiplexToDefaultServer(requestElements[1]);
+                                response.setToDefaultOK();
+                                break;
+                            }
+                            response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
+                            response.setResponseMessage("asdasdads");
                         }
                     }
-                    response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
                     break;
                 case "CNFG":
-                    if (requestElements.length != 1) {
-                        response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
-                    } else {
+                    if(checkLength(requestElements.length, new int[]{1}, response)){
                         StringBuilder responseBuild = new StringBuilder();
                         responseBuild.append("BLCK");
                         if(configurationsConsumer.getSilencedUsers().isEmpty()){
@@ -276,53 +335,69 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                         }
                         responseBuild.append("\nL337" );
                         responseBuild.append(Configurations.getInstance().isProcessL337()? " ON" : " OFF");
-                        response = responseBuild.toString();
+
+                        response.setResponseCode(OK_CODE);
+                        response.setResponseMessage(responseBuild.toString());
                     }
                     break;
                 case "MTRC":
-                    if (requestElements.length == 1) {
-                        //response =  "BytesRead: "+metricsProvider.getReadBytes() + " BytesSent: "+metricsProvider.getSentBytes();
-                        Map<String,String> metrics = metricsProvider.getMetrics();
-                        StringBuilder responseBuilder = new StringBuilder(); //Reuse?
-                        for(String metringName: metrics.keySet()){
-                            responseBuilder.append(metringName);
-                            responseBuilder.append(" ");
-                        }
-                        response = responseBuilder.toString();
-                        break;
-                    }
-                    if (requestElements.length == 2) {
-                        Map<String,String> metrics = metricsProvider.getMetrics();
-                        if(requestElements[1].equals("ALL")){
+                    if(checkLength(requestElements.length, new int[]{1,2}, response)){
+                        if (requestElements.length == 1) {
+                            //response =  "BytesRead: "+metricsProvider.getReadBytes() + " BytesSent: "+metricsProvider.getSentBytes();
+                            Map<String,String> metrics = metricsProvider.getMetrics();
                             StringBuilder responseBuilder = new StringBuilder(); //Reuse?
                             for(String metringName: metrics.keySet()){
-                                responseBuilder.append(metringName+" ");
-                                responseBuilder.append(metrics.get(metringName)+" ");
+                                responseBuilder.append(metringName);
+                                responseBuilder.append(" ");
                             }
-                            response = responseBuilder.toString();
-                        }else{
-                            String metricName = requestElements[1];
-                            if(!metrics.containsKey(metricName)){
-                                response = "Unimplemented metric";
+                            response.setResponseMessage(responseBuilder.toString());
+                            response.setResponseCode(OK_CODE);
+                        }
+                        if (requestElements.length == 2) {
+                            Map<String,String> metrics = metricsProvider.getMetrics();
+                            if(requestElements[1].equals("ALL")){
+                                StringBuilder responseBuilder = new StringBuilder(); //Reuse?
+                                for(String metringName: metrics.keySet()){
+                                    responseBuilder.append(metringName+" ");
+                                    responseBuilder.append(metrics.get(metringName)+" ");
+                                }
+                                response.setResponseMessage(responseBuilder.toString());
+                                response.setResponseCode(OK_CODE);
                             }else{
-                                response = metrics.get(metricName);
+                                String metricName = requestElements[1];
+                                if(!metrics.containsKey(metricName)){
+                                    response.setResponseMessage("Unimplemented metric");
+                                    response.setResponseCode(NOT_FOUND_CODE);
+                                }else{
+                                    response.setResponseMessage(metrics.get(metricName));
+                                    response.setResponseCode(OK_CODE);
+                                }
                             }
                         }
-                        break;
                     }
-                    response = DEFAULT_WRONG_PARAMETERS_RESPONSE;
-                    break;
                 default:
-                    response = DEFAULT_UNKNOWN_RESPONSE;
+                    response.setResponseMessage(DEFAULT_UNKNOWN_RESPONSE);
+                    response.setResponseCode(UNKNOWN_COMMAND_CODE);
                     break;
             }
         }
 
 
-        for (byte b : response.getBytes()) {
+        for (byte b: (response.getResponseCode()+" \""+response.getResponseMessage()+"\"").getBytes()){
             if (b != '\13') writeMessages.offer(b);
         }
         writeMessages.offer(new Byte("10"));
+    }
+
+    private boolean checkLength(int length, int[] lengths, Response response) {
+        for(int posibleLength: lengths){
+            if(posibleLength==length){
+                return true;
+            }
+        }
+        response.setResponseMessage(DEFAULT_WRONG_PARAMETERS_RESPONSE);
+        response.setResponseCode(WRONG_NUMBER_OF_PARAMETERS_CODE);
+        return false;
     }
 
     @Override
@@ -374,6 +449,38 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
 
     }
 
+    private static class Response{
+
+        private String responseMessage;
+
+        private int responseCode;
+
+        public Response(){
+            responseCode= COMMAND_NOT_IMPLEMENTED_CODE;
+            responseMessage="NOT IMPLEMENTED YET";
+        }
+
+        public String getResponseMessage() {
+            return responseMessage;
+        }
+
+        public void setResponseMessage(String responseMessage) {
+            this.responseMessage = responseMessage;
+        }
+
+        public int getResponseCode() {
+            return responseCode;
+        }
+
+        public void setResponseCode(int responseCode) {
+            this.responseCode = responseCode;
+        }
+
+        protected void setToDefaultOK(){
+            this.responseMessage = DEFAULT_OK_RESPONSE;
+            this.responseCode = OK_CODE;
+        }
+    }
 
     @Override
     public boolean handleError(SelectionKey key) {

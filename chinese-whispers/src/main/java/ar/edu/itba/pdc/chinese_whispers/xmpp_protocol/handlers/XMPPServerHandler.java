@@ -103,7 +103,7 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
                         //TODO send error? Send error before this?
                     } else {
                         String authDecoded = new String(Base64.getDecoder().decode(xmppNegotiator.getAuthorization()));
-                        String[] authParameters = authDecoded.split("\0");
+                        String[] authParameters = authDecoded.split("\0"); //TODO check if no only 2.
                         if (authParameters.length != 3) { //Nothing, user, pass
                             throw new IllegalStateException();
                             //TODO send error? Send error before this?

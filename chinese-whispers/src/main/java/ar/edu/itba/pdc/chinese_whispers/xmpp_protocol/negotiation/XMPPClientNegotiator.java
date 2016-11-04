@@ -68,6 +68,7 @@ public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no
                     if(parser.getLocalName().equals("challenge")){
                         return ParserResponse.NEGOTIATION_ERROR;//TODO unsupported operation?
                     }
+                    break;
                 case AsyncXMLStreamReader.CHARACTERS:
                     if (negotiationStatus == NegotiationStatus.AUTH) {
                         //Update status when starting a non-nested element
@@ -80,6 +81,7 @@ public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no
                             negotiationConsumer.consumeNegotiationMessage(response.getBytes());
                         }
                     }
+                    break;
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     return ParserResponse.EVERYTHING_NORMAL;
                 case -1:

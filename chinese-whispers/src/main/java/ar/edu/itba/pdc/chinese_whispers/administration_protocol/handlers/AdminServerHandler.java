@@ -63,7 +63,11 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
     /**
      * Boolean telling if user has loggedIn
      */
-    private boolean isLoggedIn = false;
+    private boolean isLoggedIn;
+    /**
+     * String with user LogguedIn
+     */
+    private String userLogged;
     /**
      * Set with the names of the commands that need authorization
      */
@@ -77,7 +81,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
     /**
      * Contains parcial messages read
      */
-    private final Deque<Byte> messageRead;
+    private final Deque<Byte> messageRead; //TODO no cola infinita
     /**
      * Contains messges to be written
      */
@@ -123,7 +127,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         this.configurationsConsumer = configurationsConsumer;
         this.authenticationProvider = authenticationProvider;
         language = "ENG";
-
+        isLoggedIn = false;
         //Commands that need authorization:
         authCommand = new HashSet<>();
         authCommand.add("L337");
@@ -133,6 +137,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         authCommand.add("MPLX");
         authCommand.add("CNFG");
         authCommand.add("MTRC");
+        authCommand.add("LOGOUT");
     }
 
 
@@ -170,8 +175,8 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                 for (int i = 0; i < readBytes; i++) {
                     byte b = inputBuffer.get(i);
                     if (b == 10) {
-                        process(messageRead);
-                    } else {
+                        process(messageRead, key);
+                    } else if(b!=13){
                         messageRead.offer(b);
                     }
                 }
@@ -185,10 +190,9 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         if (!writeMessages.isEmpty()) key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
     }
 
-    private void process(Deque<Byte> messageRead) {
-        //TODO unsensitive
-        //TODO logOut != QUIT
-//TODO handle messages right
+    private void process(Deque<Byte> messageRead, SelectionKey key) {
+
+        //TODO handle messages right
         //TODO process message
         //TODO what if message is not well formed?
         byte[] byteArray = new byte[messageRead.size()];
@@ -201,11 +205,9 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         }
 
         String string = new String(byteArray);
-        //String response = "NOT IMPLEMENTED";
         System.out.println(string);
         String[] requestElements = string.split(" ");
-        String command = requestElements[0];
-       // int responseCode = 300; //Case it's not changed, an error must have happened.
+        String command = requestElements[0].toUpperCase();
         Response response = new Response();
 
         if (!isLoggedIn && authCommand.contains(command)){
@@ -215,7 +217,6 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         else {
             switch (command) {
                 case "L337":
-
                     if (checkLength(requestElements.length, new int[]{1}, response)){
                         configurationsConsumer.setL337Processing(true);
                         response.setToDefaultOK();
@@ -259,16 +260,22 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                         }
                     }
                     break;
+                case "LOGOUT":
+                    if(checkLength(requestElements.length, new int[]{1}, response)){
+                        response.setToDefaultOK();
+                        isLoggedIn=false;
+                        userLogged=null;
+                    }
+                    break;
                 case "QUIT":
                     if(checkLength(requestElements.length, new int[]{1}, response)){
-                        //TODO QUIT
-
+                        response.setToDefaultOK();
+                        closeHandler(key);
                     }
-
                     break;
                 case "HELP":
                     if(checkLength(requestElements.length, new int[]{1}, response)){
-                        response.setResponseMessage("AUTH LANG HELP QUIT L337 UNL337 BLCK UNBLCK MPLX CNFG MTRC"); //TODO do list
+                        response.setResponseMessage("AUTH LANG HELP QUIT L337 UNL337 BLCK UNBLCK MPLX CNFG MTRC LOGOUT"); //TODO do list
                         response.setResponseCode(OK_CODE);
                     }
                     break;
@@ -285,17 +292,26 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                     }
                     break;
                 case "MPLX":
-                    if(checkLength(requestElements.length, new int[]{3,4}, response)){
+                    if(checkLength(requestElements.length, new int[]{3,4}, response)){//TODO default port?
                         if (requestElements.length == 4) {//TODO wrong syntax
                             if (requestElements[1].equals("DEFAULT")) {
-                                configurationsConsumer.setDefaultServer(requestElements[2],
-                                        Integer.valueOf(requestElements[3]));
-                                response.setToDefaultOK();
-
+                                try{
+                                    configurationsConsumer.setDefaultServer(requestElements[2],
+                                            Integer.valueOf(requestElements[3]));
+                                    response.setToDefaultOK();
+                                }catch (NumberFormatException nfe){
+                                    response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
+                                    response.setResponseMessage("Port needs to be numeric");
+                                }
                             } else {
-                                configurationsConsumer.multiplexUser(requestElements[1], requestElements[2],
-                                        Integer.valueOf(requestElements[3])); // TODO wat if port not a number?
-                                response.setToDefaultOK();
+                                try{
+                                    configurationsConsumer.multiplexUser(requestElements[1], requestElements[2],
+                                            Integer.valueOf(requestElements[3]));
+                                    response.setToDefaultOK();
+                                }catch (NumberFormatException nfe){
+                                    response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
+                                    response.setResponseMessage("Port needs to be numeric");
+                                }
                             }
                             break;
                         }
@@ -310,7 +326,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                                 break;
                             }
                             response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
-                            response.setResponseMessage("asdasdads");
+                            response.setResponseMessage("MUST add port or ser server to DEFAULT");
                         }
                     }
                     break;
@@ -356,7 +372,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                         if (requestElements.length == 2) {
                             Map<String,String> metrics = metricsProvider.getMetrics();
                             if(requestElements[1].equals("ALL")){
-                                StringBuilder responseBuilder = new StringBuilder(); //Reuse?
+                                StringBuilder responseBuilder = new StringBuilder(); //TODO Reuse?
                                 for(String metringName: metrics.keySet()){
                                     responseBuilder.append(metringName+" ");
                                     responseBuilder.append(metrics.get(metringName)+" ");
@@ -381,10 +397,8 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                     break;
             }
         }
-
-
         for (byte b: (response.getResponseCode()+" \""+response.getResponseMessage()+"\"").getBytes()){
-            if (b != '\13') writeMessages.offer(b);
+            writeMessages.offer(b);
         }
         writeMessages.offer(new Byte("10"));
     }

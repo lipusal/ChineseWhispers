@@ -11,10 +11,10 @@ import java.util.*;
  * Class that manages system configurations.
  * This class implements the singleton pattern.
  */
-// TODO DIEGO NO BORRAR DIEGO DIEGO TODO DIEGO TODO TODO DIEGO
 public class Configurations implements ConfigurationsConsumer, AuthenticationProvider {
 
 
+    private static final int DEFAULT_PORT = 5222;
     /**
      * States if the system is l337ing.
      */
@@ -49,9 +49,9 @@ public class Configurations implements ConfigurationsConsumer, AuthenticationPro
         silencedUsers = new HashSet<>();
         processL337 = false;
         multiplexedUsers = new HashMap<>();
-        defaultServer = new HostAndPort("localhost", 5222);
+        defaultServer = new HostAndPort("localhost", DEFAULT_PORT);
         authorizationMap = new HashMap<>();
-        authorizationMap.put("PROTOS", "42");
+        authorizationMap.put("protos", "42"); //username lowercase
     }
 
 
@@ -199,7 +199,7 @@ public class Configurations implements ConfigurationsConsumer, AuthenticationPro
     // Authentication provider
     @Override
     public boolean isValidUser(String username, String password) {
-        return password != null && password.equals(authorizationMap.get(username));
+        return password != null && password.equals(authorizationMap.get(username.toLowerCase()));
     }
 
 

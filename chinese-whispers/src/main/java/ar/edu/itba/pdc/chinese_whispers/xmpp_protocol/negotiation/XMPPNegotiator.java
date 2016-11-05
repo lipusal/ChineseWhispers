@@ -88,8 +88,6 @@ public abstract class XMPPNegotiator {
             parser.getInputFeeder().feedInput(data, 0, data.length);
             return process();
         } catch (XMLStreamException e) {
-            //TODO catch
-            e.printStackTrace();
             return ParserResponse.XML_ERROR;
         }
 

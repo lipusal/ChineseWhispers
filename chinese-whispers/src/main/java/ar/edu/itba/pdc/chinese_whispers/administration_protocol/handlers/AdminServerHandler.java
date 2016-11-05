@@ -137,7 +137,6 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         authCommand.add("MPLX");
         authCommand.add("CNFG");
         authCommand.add("MTRC");
-        authCommand.add("LOGOUT");
     }
 
 
@@ -150,7 +149,6 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         if (isClosing) return;
         System.out.println("Close AdminServerHandler");
         isClosing = true;
-        // TODO: What happens if handler contains half a message?
         if (key.isValid()) {
             key.interestOps(key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
         } else {
@@ -170,7 +168,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         try {
             int readBytes = channel.read(inputBuffer);
             System.out.println("ReadBytes= " + readBytes);
-            metricsProvider.addReadBytes(readBytes);//TODO do we lose bytesSent if exception?
+            metricsProvider.addReadBytes(readBytes);
             if (readBytes >= 0) {
                 for (int i = 0; i < readBytes; i++) {
                     byte b = inputBuffer.get(i);
@@ -181,9 +179,9 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                     }
                 }
             } else if (readBytes == -1) {
-                handleClose(key);
+                closeHandler(key);
             }
-        } catch (IOException ignored) {
+        } catch (IOException ignored) {//TODO why ignored?
             // I/O error (for example, connection reset by peer)
         }
         //Do NOT remove this if this is merged with XMPPHandler. Needs to be adapted in that case.
@@ -192,8 +190,6 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
 
     private void process(Deque<Byte> messageRead, SelectionKey key) {
 
-        //TODO handle messages right
-        //TODO process message
         //TODO what if message is not well formed?
         byte[] byteArray = new byte[messageRead.size()];
 
@@ -262,9 +258,14 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                     break;
                 case "LOGOUT":
                     if(checkLength(requestElements.length, new int[]{1}, response)){
-                        response.setToDefaultOK();
-                        isLoggedIn=false;
-                        userLogged=null;
+                        if(isLoggedIn){
+                            response.setResponseCode(OK_CODE);
+                            response.setResponseMessage("Already logged in");
+                        }else{
+                            response.setToDefaultOK();
+                            isLoggedIn=false;
+                            userLogged=null;
+                        }
                     }
                     break;
                 case "QUIT":
@@ -293,24 +294,35 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                     break;
                 case "MPLX":
                     if(checkLength(requestElements.length, new int[]{3,4}, response)){//TODO default port?
-                        if (requestElements.length == 4) {//TODO wrong syntax
+                        if (requestElements.length == 4) {
                             if (requestElements[1].equals("DEFAULT")) {
                                 try{
-                                    configurationsConsumer.setDefaultServer(requestElements[2],
-                                            Integer.valueOf(requestElements[3]));
-                                    response.setToDefaultOK();
+                                    Integer port =  Integer.valueOf(requestElements[3]);
+                                    if( port < 0 || port > 0xFFFF){
+                                        response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
+                                        response.setResponseMessage("Port needs to be a number between 1 and FFFE");
+                                    }else{
+                                        configurationsConsumer.setDefaultServer(requestElements[2], port);
+                                        response.setToDefaultOK();
+                                    }
                                 }catch (NumberFormatException nfe){
                                     response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
-                                    response.setResponseMessage("Port needs to be numeric");
+                                    response.setResponseMessage("Port needs to be a number between 1 and FFFE");//TODO FFFE
                                 }
                             } else {
                                 try{
-                                    configurationsConsumer.multiplexUser(requestElements[1], requestElements[2],
-                                            Integer.valueOf(requestElements[3]));
-                                    response.setToDefaultOK();
+                                    Integer port =  Integer.valueOf(requestElements[3]);
+                                    if( port < 0 || port > 0xFFFF){
+                                        response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
+                                        response.setResponseMessage("Port needs to be a number between 1 and FFFE");
+                                    }else{
+                                        configurationsConsumer.multiplexUser(requestElements[1], requestElements[2],
+                                                Integer.valueOf(requestElements[3]));
+                                        response.setToDefaultOK();
+                                    }
                                 }catch (NumberFormatException nfe){
                                     response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
-                                    response.setResponseMessage("Port needs to be numeric");
+                                    response.setResponseMessage("Port needs to be a number between 1 and FFFE");
                                 }
                             }
                             break;
@@ -326,7 +338,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                                 break;
                             }
                             response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
-                            response.setResponseMessage("MUST add port or ser server to DEFAULT");
+                            response.setResponseMessage("Must add port or set server to DEFAULT");
                         }
                     }
                     break;
@@ -342,12 +354,19 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                             }
                         }
                         responseBuild.append("\nMPLX");
-                        if(configurationsConsumer.getSilencedUsers().isEmpty()){
+                        if(configurationsConsumer.getMultiplexedUsers().isEmpty()){
                             responseBuild.append(" NONE");
                         }else{
                             for(String clientJid: configurationsConsumer.getMultiplexedUsers().keySet()){
                                 responseBuild.append(" "+clientJid+" "+configurationsConsumer.getMultiplexedUsers().get(clientJid)+" * "); //TODO way of showing info
                             }
+                        }
+                        responseBuild.append("\nDEFAULT " );
+                        if(Configurations.getInstance().getDefaultServerHost()==null || Configurations.getInstance().getDefaultServerPort()==null){
+                            responseBuild.append("NONE");
+                        }else{
+                            responseBuild.append(Configurations.getInstance().getDefaultServerHost()+" "+Configurations.getInstance().getDefaultServerPort());
+
                         }
                         responseBuild.append("\nL337" );
                         responseBuild.append(Configurations.getInstance().isProcessL337()? " ON" : " OFF");
@@ -391,6 +410,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                             }
                         }
                     }
+                    break;
                 default:
                     response.setResponseMessage(DEFAULT_UNKNOWN_RESPONSE);
                     response.setResponseCode(UNKNOWN_COMMAND_CODE);
@@ -416,7 +436,6 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
 
     @Override
     public void handleWrite(SelectionKey key) {// TODO: check how we turn on and off
-
         int byteWritten = 0;
         byte[] message = null;
         if (!writeMessages.isEmpty()) {
@@ -437,7 +456,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                     do {
                         byteWritten += channel.write(outputBuffer);
                     }
-                    // TODO check if this is not blocking. In case it's blocking, we can return those bytes to the queue with a push operation (it's a deque)
+                    //TODO change to non-blocking
                     while (outputBuffer.hasRemaining()); // Continue writing if message wasn't totally written
                 } catch (IOException e) {
                     int bytesSent = outputBuffer.limit() - outputBuffer.position();
@@ -448,7 +467,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
 
         }
 
-        if (writeMessages.isEmpty() && (messageRead.isEmpty() || byteWritten==0 ) ){ //TODO check if byteWritten==0 can happen
+        if (writeMessages.isEmpty()){
             key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
             if (isClosing) {
                 handleClose(key);
@@ -505,10 +524,10 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
     public boolean handleClose(SelectionKey key) {
         try {
             key.channel().close();
-            // TODO: send some message before? Note: if yes, we can't close the peer's key now.
         } catch (IOException e) {
-
+            // TODO: what should we do here?
+            return false;
         }
-        return false; // TODO: change as specified in javadoc
+        return true;
     }
 }

@@ -36,3 +36,24 @@ Service Unavailable                                         302
 Protocol Version Not Supported                              303
 
 ""
+
+
+negociacion compleja.
+errores?
+Loggin?
+
+log4j2 async: buen ciudadano
+no ahcer la copia de byte[]
+buffer 8k
+
+desvantaja informe: regenerar todos los xml
+
+re usar string builder.
+no colas infinitas
+maquinas de estado.
+IBB
+nc dibujar vel
+
+No soportar challenge.
+
+tirar error si no responde durante neg?

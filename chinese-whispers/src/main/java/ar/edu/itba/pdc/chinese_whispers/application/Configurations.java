@@ -177,6 +177,16 @@ public class Configurations implements ConfigurationsConsumer, AuthenticationPro
         defaultServer = new HostAndPort(host, port);
     }
 
+    public String getDefaultServerHost(){
+        if(defaultServer!=null) return defaultServer.host;
+        return null;
+    }
+
+    public String getDefaultServerPort(){
+        if(defaultServer!=null) return String.valueOf(defaultServer.port);
+        return null;
+    }
+
     @Override
     public void multiplexUser(String clientJid, String host, int port) {
         if (clientJid == null) {

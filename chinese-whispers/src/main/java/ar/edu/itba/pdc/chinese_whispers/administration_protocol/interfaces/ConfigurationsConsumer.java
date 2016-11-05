@@ -94,4 +94,16 @@ public interface ConfigurationsConsumer {
      * Returns a copy of a list with all silenced users.
      */
     Map<String,String> getMultiplexedUsers();
+
+    /**
+     * Returns the current default server host.
+     * @return
+     */
+    public String getDefaultServerHost();
+
+    /**
+     * Returns the current default server port.
+     * @return
+     */
+    public String getDefaultServerPort();
 }

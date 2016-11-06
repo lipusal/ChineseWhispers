@@ -11,4 +11,6 @@ public enum ParserResponse {
     NEGOTIATION_ERROR,
 
     // TODO: I would change it to parser state
+
+    // TODO: I will separate normal parser states from negotiation states
 }

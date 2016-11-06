@@ -9,16 +9,22 @@ import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProc
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NewConnectionsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPServerNegotiator;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.XMLInterpreter;
 
 import java.nio.channels.SelectionKey;
 import java.util.Base64;
 import java.util.Map;
 
 /**
+ * This class makes the proxy act like an XMPP server, negotiating with the connected client.
+ * The process of negotiation is done by an {@link XMPPServerNegotiator}. When this process finishes,
+ * a connection with the origin server is tried. Upon success, an {@link XMPPClientHandler} is created,
+ * in order to connect to the server, and negotiate with it.
+ * Once the negotiation with the origin server ended, control is given to a new {@link XMPPReadWriteHandler},
+ * which will be in charge of reading and writing to the connected client.
+ * <p>
  * Created by jbellini on 27/10/16.
  */
-public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
+public class XMPPServerHandler extends NegotiatorHandler implements TCPHandler {
 
     /**
      * Says how many times the peer connection can be tried.
@@ -26,10 +32,6 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
     private static int MAX_PEER_CONNECTIONS_TRIES = 3; // TODO: define number ASAP
 
 
-    /**
-     * A proxy connection configurator to get server and port to which a user should establish a connection.
-     */
-    private final ConfigurationsConsumer configurationsConsumer;
     /**
      * The new connections consumer that will be notified when new connections arrive.
      */
@@ -40,117 +42,125 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
      */
     private int peerConnectionTries;
 
+    /**
+     * A string builder to create strings efficiently
+     */
+    private final StringBuilder stringBuilder;
+
 
     /**
      * Constructor.
-     * This constructor will create it's {@link XMPPClientHandler} peer.
+     * It MUST only be called by {@link XMPPAcceptorHandler}, when a client-proxy TCP connection has been established.
      *
-     * @param applicationProcessor       The application processor.
-     * @param newConnectionsConsumer     The object to be notified when new XMPP connections are established.
-     * @param configurationsConsumer The object to be queried for proxy configurations.
+     * @param applicationProcessor   An object that can process XMPP messages bodies.
+     * @param newConnectionsConsumer An object that can track new TCP connections.
+     * @param configurationsConsumer An object that can be queried about which server each user must connect to.
+     * @param metricsProvider        An object that manages the system metrics.
+     * @param key                    The {@link SelectionKey} that corresponds to this handler.
      */
     /* package */ XMPPServerHandler(ApplicationProcessor applicationProcessor,
                                     NewConnectionsConsumer newConnectionsConsumer,
                                     ConfigurationsConsumer configurationsConsumer,
-                                    MetricsProvider metricsProvider) {
-        super(applicationProcessor,metricsProvider);
+                                    MetricsProvider metricsProvider,
+                                    SelectionKey key) {
+        super(applicationProcessor, metricsProvider, configurationsConsumer);
         this.newConnectionsConsumer = newConnectionsConsumer;
-        this.peerHandler = new XMPPClientHandler(applicationProcessor, this, metricsProvider);
-        this.xmlInterpreter = new XMLInterpreter(applicationProcessor, peerHandler);
-        this.configurationsConsumer = configurationsConsumer;
         this.peerConnectionTries = 0;
+        this.key = key;
         xmppNegotiator = new XMPPServerNegotiator(this);
-    }
-
-
-    @Override
-    protected void sendProcessedStanza(byte[] message) {
-        xmlInterpreter.setSilenced(configurationsConsumer.isUserSilenced(clientJid));
-        super.sendProcessedStanza(message);
+        this.stringBuilder = new StringBuilder();
     }
 
     @Override
-    public void handleWrite(SelectionKey key) {
-        System.out.println("ServerHandler(proxy-client)");
-        super.handleWrite(key);
+    /* package */ void setKey(SelectionKey key) {
+        throw new UnsupportedOperationException("Key can't be changed to an XMPPServerHandler");
     }
 
-
-    @Override
-    protected void processReadMessage(byte[] message) {
-        if (message != null && message.length > 0) {
-
-            if (connectionState == ConnectionState.XMPP_STANZA_STREAM) {
-                sendProcessedStanza(message);
-            } else if (connectionState == ConnectionState.XMPP_NEGOTIATION) {
-
-                ParserResponse parserResponse = xmppNegotiator.feed(message);
-                handleResponse(parserResponse);
-                if (parserResponse == ParserResponse.NEGOTIATION_END) {
-
-                    //Stop reading until negotiation finish on other sides.
-                    key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
-
-                    //Initialize obtained data
-                    connectionState = ConnectionState.XMPP_STANZA_STREAM;
-                    Map<String, String> initialNegotiationParameters = xmppNegotiator.getInitialParameters();
-
-                    // TODO: These are accessing peer handler's private fields...
-
-                    peerHandler.xmppNegotiator.setAuthorization(xmppNegotiator.getAuthorization());
-                    peerHandler.xmppNegotiator.setInitialParameters(initialNegotiationParameters);
-
-                    if (!initialNegotiationParameters.containsKey("to")) {
-                        throw new IllegalStateException();
-                        //TODO send error? Send error before this?
-                    } else {
-                        String authDecoded = new String(Base64.getDecoder().decode(xmppNegotiator.getAuthorization()));
-                        String[] authParameters = authDecoded.split("\0"); //TODO check if no only 2.
-                        if (authParameters.length != 3) { //Nothing, user, pass
-                            throw new IllegalStateException();
-                            //TODO send error? Send error before this?
-                        }
-                        clientJid = authParameters[1] + "@" + initialNegotiationParameters.get("to");
-                        //Uncomment this to silence arriving msg. What should be done of clientJID of server?
-                        //otherEndHandler.clientJID=clientJID;
-                    }
-
-                    //Connect Peer
-                    connectPeer(); // TODO: Check that only once code reaches here...
-
-                    //Generates first message
-                    StringBuilder startStream = new StringBuilder();
-                    startStream.append("<stream:stream xmlns:stream=\'http://etherx.jabber.org/streams\' ")
-                            .append("xmlns=\'jabber:client\' ")
-                            .append("xmlns:xml=\'http://www.w3.org/XML/1998/namespace\'");
-                    for (String attributeKey : xmppNegotiator.getInitialParameters().keySet()) {
-                        startStream.append(" "+attributeKey)
-                                .append("=\'")
-                                .append(xmppNegotiator.getInitialParameters().get(attributeKey))
-                                .append("\'");
-                    }
-                    startStream.append(">\n");
-                    System.out.println("Proxy to Server:" + startStream);
-
-
-                    // TODO: Check this! the peer's key setting was commented.
-                    // Sends first message to otherEndHandler for him to send. Note that this sets peer's key.
-                    peerHandler.consumeNegotiationMessage(startStream.toString().getBytes());
-
-                }
-            }
-
+    /**
+     * Makes this handler's key attach a new {@link XMPPReadWriteHandler}, and start operating as a proxy.
+     * <p>
+     * Note: This method MUST only be called once proxy-server negotiation ended.
+     */
+    /* package */ void startProxying(XMPPReadWriteHandler newPeerHandler) {
+        if (newPeerHandler == null) {
+            throw new IllegalArgumentException();
         }
+        if (this.peerHandler == null || !((XMPPClientHandler) this.peerHandler).isConnected()) {
+            throw new IllegalStateException();
+        }
+
+        // TODO: check what handlers need to operate correctly
+
+        // Create a read-write handler that will receive and send messages to the client connected to the proxy.
+        XMPPReadWriteHandler xmppReadWriteHandler = new XMPPReadWriteHandler(applicationProcessor, metricsProvider,
+                configurationsConsumer, clientJid, this.key, newPeerHandler);
+        newPeerHandler.setPeerHandler(xmppReadWriteHandler);
+        this.key.attach(xmppReadWriteHandler);
+        this.key.interestOps(this.key.interestOps() | SelectionKey.OP_READ);
+    }
+
+
+    /**
+     * Finishes the XMPP negotiation process.
+     * When executing this method, first parameters are checked in order to make sure that needed params are contained.
+     * After that, an {@link XMPPClientHandler}, is created.
+     * Finally, the {@link XMPPServerHandler#connectClientHandler()} method is called,
+     * requesting a new connection with the origin server.
+     * <p>
+     * Note: This method must be called only once.
+     */
+    @Override
+    protected void finishXMPPNegotiation() {
+        // Stop reading till negotiation ends on the other side (i.e. handler connecting to origin server)
+        this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ);
+
+        // Check params
+        if (!xmppNegotiator.getInitialParameters().containsKey("to")) {
+            closeHandler();
+            return;
+        }
+
+        String authDecoded; // TODO: beware of char encoding
+        try {
+            // The authorization content might be invalid (i.e. not be a valid base64 scheme)
+            authDecoded = new String(Base64.getDecoder().decode(xmppNegotiator.getAuthorization()));
+        } catch (IllegalArgumentException e) {
+            closeHandler();
+            return;
+        }
+        String[] authParameters = authDecoded.split("\0"); //TODO check if no only 2.
+        if (authParameters.length != 3) { //Nothing, user, pass
+            closeHandler();
+            return;
+        }
+
+
+        // Create a client handler to connect to origin server
+        clientJid = authParameters[1] + "@" + xmppNegotiator.getInitialParameters().get("to"); // TODO: check if readWrite handler needs it.
+        this.peerHandler = new XMPPClientHandler(applicationProcessor, metricsProvider, configurationsConsumer, this,
+                clientJid, xmppNegotiator.getInitialParameters(), xmppNegotiator.getAuthorization());
+
+
+        // TODO: check what handler need to operate correctly
+
+        // This will create a new key with the client handler attached to it.
+        // It won't connect immediately, but mark the key as connectable and return.
+        // The selector from the connection layer will then select the key to finish the connection process.
+        connectClientHandler();
     }
 
 
     /**
      * Method to be executed to tunnel the client being connected to this server handler into the origin server.
      */
-    /* package */ void connectPeer() {
-        if (clientJid == null) {
+    /* package */ void connectClientHandler() {
+        if (this.peerHandler == null || this.peerHandler.getClass() != XMPPClientHandler.class
+                || this.clientJid == null) {
             throw new IllegalStateException();
         }
+
+        // TODO: add some timestamp...
+
         // TODO: Should we avoid trying to connect again for some seconds? We can mark the clientHandler with a timestamp and retry after some time has passed.
         // TODO: We can save the key in a Map and update those timestamps before the select.
         if (peerConnectionTries >= MAX_PEER_CONNECTIONS_TRIES) {
@@ -162,9 +172,9 @@ public class XMPPServerHandler extends XMPPHandler implements TCPHandler {
         SelectionKey peerKey = TCPSelector.getInstance().
                 addClientSocketChannel(configurationsConsumer.getServer(clientJid),
                         configurationsConsumer.getServerPort(clientJid),
-                        (XMPPClientHandler) peerHandler);
+                        (XMPPClientHandler) this.peerHandler);
         if (peerKey == null) {
-            // Connection failed ...
+            // Start of connection failed ...
             handleError(key); // Our own key
             return;
         }

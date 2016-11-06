@@ -12,10 +12,11 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 /**
- * Created by jbellini on 29/10/16.
+ * This class makes the proxy accept new connections from XMPP clients.
+ * When a new connection arrives, it will create a new {@link XMPPServerHandler}, and attach it to the
+ * {@link SelectionKey} created when registering the accepted {@link SocketChannel}.
  * <p>
- * A {@link TCPServerHandler} that only implements the {@link TCPServerHandler#handleAccept(SelectionKey)} method.
- * It can be used to separate logic of accepting and reading/writing in a {@link TCPServerHandler}.
+ * Created by jbellini on 29/10/16.
  */
 public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler {
 
@@ -24,23 +25,23 @@ public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler
      * The new connections consumer to pass it to each new {@link XMPPServerHandler}
      */
     private final NewConnectionsConsumer newConnectionsConsumer;
-    /**
-     * A proxy connection configurator to pass it to each new {@link XMPPServerHandler}.
-     */
-    private final ConfigurationsConsumer configurationsConsumer;
-    /**
-     * The metric manager to give or ask metrics.
-     */
-    protected MetricsProvider metricsProvider;
 
 
+    /**
+     * Constructor.
+     * <p/>
+     * Note: All objects passed in this constructor will be used when creating new handlers.
+     *
+     * @param applicationProcessor   An object that can process XMPP messages bodies.
+     * @param newConnectionsConsumer An object that can track new TCP connections.
+     * @param configurationsConsumer An object that can be queried about which server each user must connect to.
+     * @param metricsProvider        An object that manages the system metrics.
+     */
     public XMPPAcceptorHandler(ApplicationProcessor applicationProcessor,
                                NewConnectionsConsumer newConnectionsConsumer,
                                ConfigurationsConsumer configurationsConsumer,
                                MetricsProvider metricsProvider) {
-        super(applicationProcessor);
-        this.metricsProvider = metricsProvider;
-        this.configurationsConsumer = configurationsConsumer;
+        super(applicationProcessor, metricsProvider, configurationsConsumer);
         this.newConnectionsConsumer = newConnectionsConsumer;
     }
 
@@ -72,20 +73,22 @@ public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler
         try {
             SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
             channel.configureBlocking(false);
+
+            // The net key will be listening till the client connected to its channel sends a message
+            SelectionKey newKey = channel.register(key.selector(), SelectionKey.OP_READ);
+            // The new handler will act as an XMPP server till negotiation with client finishes.
             XMPPServerHandler handler = new XMPPServerHandler(applicationProcessor,
                     newConnectionsConsumer,
                     configurationsConsumer,
-                    metricsProvider
-                    );
-            // The handler assigned to accepted sockets won't accept new connections, it will read and write
-            // (it's writable upon creation because it might be created with data in its write messages queue)
-            SelectionKey newKey = channel.register(key.selector(),
-                    SelectionKey.OP_READ | SelectionKey.OP_WRITE, handler);
-            handler.setKey(newKey);
+                    metricsProvider,
+                    newKey);
+            newKey.attach(handler);
+
 
             // TODO: Add this new key into some set in some future class to have tracking of connections
             // TODO this should be done in a TCPCOnnecter or something.
         } catch (IOException ignored) {
+            // TODO: what should we do here? XMPP connection wasn't established yet, so it's not necessary to close nicely the connection?
         }
     }
 }

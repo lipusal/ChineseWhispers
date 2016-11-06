@@ -27,7 +27,7 @@ public class Main {
 
 		System.out.print("Trying to bind port 3333... ");
 		try {
-            selector.addServerSocketChannel(3333, acceptorHandler);
+            selector.addServerSocketChannel(5222, acceptorHandler);
 		} catch (Throwable e) {
 			System.err.println("ERROR! Couldn't bind!");
 			return;

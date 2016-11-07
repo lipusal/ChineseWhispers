@@ -27,7 +27,8 @@ import java.util.Map;
 public class XMPPClientHandler extends NegotiatorHandler implements TCPClientHandler {
 
 
-    private static final String INITIAL_MESSAGE = "<stream:stream xmlns:stream=\'http://etherx.jabber.org/streams\' " +
+    private static final String PARTIAL_INITIAL_MESSAGE = "<stream:stream " +
+            "xmlns:stream=\'http://etherx.jabber.org/streams\' " +
             "xmlns=\'jabber:client\' " +
             "xmlns:xml=\'http://www.w3.org/XML/1998/namespace\'";
 
@@ -91,8 +92,8 @@ public class XMPPClientHandler extends NegotiatorHandler implements TCPClientHan
     // TODO: shouldn't this belong on the client negotiator?
     private void startXMPPNegotiation() {
         // TODO: check that this does not have problems with char encoding
-        stringBuilder.delete(0, stringBuilder.length()); // Clears the string builder
-        stringBuilder.append(INITIAL_MESSAGE);
+        stringBuilder.setLength(0); // Clears the string builder
+        stringBuilder.append(PARTIAL_INITIAL_MESSAGE);
 
         // Adds to the initial message all parameters sent by the client connected to the proxy
         for (String attributeKey : xmppNegotiator.getInitialParameters().keySet()) {

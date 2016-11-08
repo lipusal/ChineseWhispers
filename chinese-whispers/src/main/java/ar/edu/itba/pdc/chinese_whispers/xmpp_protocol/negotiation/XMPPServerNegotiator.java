@@ -74,6 +74,7 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
                                     "<mechanism>PLAIN</mechanism> " +
                                     "</mechanisms> " +
                                     "</stream:features>\n");
+                            // TODO: Make each line as an append
                             negotiationStatus = NegotiationStatus.AUTH;
                             System.out.println(readXML);
                             negotiationConsumer.consumeNegotiationMessage(readXML.toString().getBytes());

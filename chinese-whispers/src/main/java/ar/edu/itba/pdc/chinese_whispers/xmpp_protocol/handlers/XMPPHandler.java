@@ -1,5 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
@@ -17,6 +18,10 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
+ * Base XMPP handler that defines methods for sending and writing messages.
+ * Each instance of this class will hold a {@link SelectionKey}, which in turn is holding (or will hold soon)
+ * the instance.
+ * <p>
  * Created by jbellini on 28/10/16.
  */
 public abstract class XMPPHandler extends BaseHandler implements TCPHandler, OutputConsumer, NegotiationConsumer {
@@ -69,11 +74,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
     protected boolean isClosable;
 
 
-    // XMPP stuff
-    /**
-     * State to tell the XMPP connection state.
-     */
-    protected ConnectionState connectionState;
+
     /**
      * XML Parser
      */
@@ -86,20 +87,18 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
      * The {@link XMPPNegotiator} that will handle the XMPP negotiation at the beginning of the XMPP connection.
      */
     protected XMPPNegotiator xmppNegotiator;
-    /**
-     * The metric manager to give or ask metrics.
-     */
-    protected MetricsProvider metricsProvider;
+
 
     /**
      * Constructor.
      *
-     * @param applicationProcessor The {@link ApplicationProcessor} that will process data.
+     * @param applicationProcessor   An object that can process XMPP messages bodies.
+     * @param configurationsConsumer An object that can be queried about which server each user must connect to.
+     * @param metricsProvider        An object that manages the system metrics.
      */
-    protected XMPPHandler(ApplicationProcessor applicationProcessor, MetricsProvider metricsProvider) {
-        super(applicationProcessor);
-        this.metricsProvider = metricsProvider;
-        connectionState = ConnectionState.XMPP_NEGOTIATION;
+    protected XMPPHandler(ApplicationProcessor applicationProcessor, MetricsProvider metricsProvider,
+                          ConfigurationsConsumer configurationsConsumer) {
+        super(applicationProcessor, metricsProvider, configurationsConsumer);
         this.writeMessages = new ArrayDeque<>();
         this.negotiatorWriteMessages = new ArrayDeque<>();
         this.inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
@@ -117,6 +116,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         this.key = key;
     }
 
+
     /**
      * Method to be executed once a message is received (i.e. when a message is read).
      *
@@ -124,15 +124,6 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
      */
     abstract protected void processReadMessage(byte[] message);
 
-
-    protected void sendProcessedStanza(byte[] message) {
-//		xmlInterpreter.setL337ed(Configurations.getInstance().isProcessL337());
-
-        // TODO: Un client debe chequear si el usuario esta silenciado? Con el comentario de abajo ya no chequea.
-        // TODO: Notar que este método esta overrideado en XMPPServerHandler, haciendo la llamada correspondiente para chequear si el usuario esta silenciado
-//		xmlInterpreter.setSilenced(Configurations.getInstance().isSilenced(clientJid));
-        xmlInterpreter.feed(message);
-    }
 
     /**
      * Saves the given {@code message} in this handler to be sent when possible.
@@ -180,8 +171,9 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
 
     @Override
     public void consumeNegotiationMessage(byte[] negotiationMessage) {
-        writeToNegotiator(negotiationMessage);
+        writeMessage(negotiationMessage);
     }
+
 
     /**
      * Makes this {@link XMPPHandler} to be closable (i.e. stop receiving messages, send all unsent messages,
@@ -194,7 +186,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
             return;
         }
         this.isClosable = true;
-        if(key==null) return;
+        if (key == null) return;
         // TODO: What happens if handler contains half an xmpp message?
         if (this.key.isValid()) {
             this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
@@ -204,7 +196,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         }
 
         // Close also peer handler
-        if (this.peerHandler != null ) {
+        if (this.peerHandler != null) {
             peerHandler.closeHandler();
         }
     }
@@ -247,7 +239,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         inputBuffer.clear();
         try {
             int readBytes = channel.read(inputBuffer);
-            System.out.println("readBytes : " +readBytes);
+            System.out.println("readBytes : " + readBytes);
             metricsProvider.addReadBytes(readBytes);
             if (readBytes >= 0) {
 
@@ -265,7 +257,6 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         if (message != null && message.length > 0) {
             processReadMessage(message);
         }
-        if (!writeMessages.isEmpty()) key.interestOps(key.interestOps() | SelectionKey.OP_WRITE); //TODO delete this, for testing.
     }
 
 
@@ -320,7 +311,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
                 message[i] = deque.poll();
             }
             if (message.length > 0) {
-                int writtenBytes=0;
+                int writtenBytes = 0;
                 SocketChannel channel = (SocketChannel) this.key.channel();
 
                 outputBuffer.clear();
@@ -339,6 +330,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
                     writtenBytes = outputBuffer.limit() - outputBuffer.position();//TODO check
                     byte[] restOfMessage = new byte[message.length - writtenBytes];
                     System.arraycopy(message, writtenBytes, restOfMessage, 0, restOfMessage.length);
+                    // TODO: we are not doing anything with this message
                 }
                 //TODO delete this:
                 System.out.print("written bytes: " + writtenBytes + " message: ");

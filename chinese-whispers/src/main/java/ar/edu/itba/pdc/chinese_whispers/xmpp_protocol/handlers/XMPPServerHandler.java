@@ -91,12 +91,17 @@ public class XMPPServerHandler extends NegotiatorHandler implements TCPHandler {
 
         // TODO: check what handlers need to operate correctly
 
+
         // Create a read-write handler that will receive and send messages to the client connected to the proxy.
         XMPPReadWriteHandler xmppReadWriteHandler = new XMPPReadWriteHandler(applicationProcessor, metricsProvider,
                 configurationsConsumer, clientJid, this.key, newPeerHandler);
         newPeerHandler.setPeerHandler(xmppReadWriteHandler);
         this.key.attach(xmppReadWriteHandler);
-        this.key.interestOps(this.key.interestOps() | SelectionKey.OP_READ);
+
+        String response = "<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>\n"; //TODO retry?
+        System.out.println(response); //TODO delete souts
+        xmppReadWriteHandler.consumeMessage(response.getBytes());
+        this.key.interestOps(this.key.interestOps() | SelectionKey.OP_READ | SelectionKey.OP_WRITE);
     }
 
 
@@ -115,7 +120,7 @@ public class XMPPServerHandler extends NegotiatorHandler implements TCPHandler {
         this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ);
 
         // Check params
-        if (!xmppNegotiator.getInitialParameters().containsKey("to")) {
+        if (!xmppNegotiator.getInitialParameters().containsKey("to")) { //TODO send error
             closeHandler();
             return;
         }
@@ -125,18 +130,23 @@ public class XMPPServerHandler extends NegotiatorHandler implements TCPHandler {
             // The authorization content might be invalid (i.e. not be a valid base64 scheme)
             authDecoded = new String(Base64.getDecoder().decode(xmppNegotiator.getAuthorization()));
         } catch (IllegalArgumentException e) {
-            closeHandler();
+            closeHandler(); //TODO send error
             return;
         }
-        String[] authParameters = authDecoded.split("\0"); //TODO check if no only 2.
-        if (authParameters.length != 3) { //Nothing, user, pass
-            closeHandler();
+        String[] authParameters = authDecoded.split("\0");
+        String userName;
+        if (authParameters.length == 3) {   //Nothing, user, pass
+            userName=authParameters[1];
+        }else if(authParameters.length == 2){
+            userName=authParameters[0];
+        }else{
+            closeHandler(); //TODO send error
             return;
         }
 
 
         // Create a client handler to connect to origin server
-        clientJid = authParameters[1] + "@" + xmppNegotiator.getInitialParameters().get("to"); // TODO: check if readWrite handler needs it.
+        clientJid = userName + "@" + xmppNegotiator.getInitialParameters().get("to"); // TODO: check if readWrite handler needs it.
         this.peerHandler = new XMPPClientHandler(applicationProcessor, metricsProvider, configurationsConsumer, this,
                 clientJid, xmppNegotiator.getInitialParameters(), xmppNegotiator.getAuthorization());
 

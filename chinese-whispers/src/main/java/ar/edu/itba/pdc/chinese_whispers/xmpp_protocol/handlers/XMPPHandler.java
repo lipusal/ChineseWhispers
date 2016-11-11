@@ -220,6 +220,9 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         if (parserResponse == ParserResponse.STREAM_CLOSED) {
             System.out.println("handleResponse STREAM_CLOSED: ");
         }
+        if(parserResponse== ParserResponse.NEGOTIATION_ERROR){ //message is sent in the negotiator
+            closeHandler();
+        }
     }
 
 
@@ -237,10 +240,9 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         SocketChannel channel = (SocketChannel) this.key.channel();
         byte[] message = null;
         inputBuffer.clear();
+        int readBytes=0;
         try {
-            int readBytes = channel.read(inputBuffer);
-            System.out.println("readBytes : " + readBytes);
-            metricsProvider.addReadBytes(readBytes);
+            readBytes = channel.read(inputBuffer);
             if (readBytes >= 0) {
 
                 message = new byte[readBytes];
@@ -255,6 +257,9 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
             // TODO: Check what we do here...
         }
         if (message != null && message.length > 0) {
+            System.out.print("readBytes : " + readBytes+" message: ");
+            metricsProvider.addReadBytes(readBytes);
+            System.out.println(new String(message));
             processReadMessage(message);
         }
     }

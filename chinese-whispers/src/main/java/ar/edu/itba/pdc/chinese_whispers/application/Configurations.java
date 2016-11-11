@@ -49,7 +49,7 @@ public class Configurations implements ConfigurationsConsumer, AuthenticationPro
         silencedUsers = new HashSet<>();
         processL337 = false;
         multiplexedUsers = new HashMap<>();
-        defaultServer = new HostAndPort("lenovo-ubuntu", DEFAULT_PORT);
+        defaultServer = new HostAndPort("localhost", DEFAULT_PORT);
         authorizationMap = new HashMap<>();
         authorizationMap.put("protos", "42"); //username lowercase
     }

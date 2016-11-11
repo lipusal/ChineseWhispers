@@ -203,224 +203,230 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         String string = new String(byteArray);
         System.out.println(string);
         String[] requestElements = string.split(" ");
-        String command = requestElements[0].toUpperCase();
         Response response = new Response();
+        processCommand(response,requestElements, key);
 
-        if (!isLoggedIn && authCommand.contains(command)){
-            response.setResponseMessage(DEFAULT_UNAUTHORIZED_RESPONSE);
-            response.setResponseCode(UNAUTHORIZED_CODE);
-        }
-        else {
-            switch (command) {
-                case "L337":
-                    if (checkLength(requestElements.length, new int[]{1}, response)){
-                        configurationsConsumer.setL337Processing(true);
-                        response.setToDefaultOK();
-                    }
-                    break;
-                case "UNL337":
-                    if (checkLength(requestElements.length, new int[]{1}, response)){
-                        configurationsConsumer.setL337Processing(false);
-                        response.setToDefaultOK();
-                    }
-                    break;
-                case "LANG":
-                    if (checkLength(requestElements.length, new int[]{1,2}, response)){
-                        if(requestElements.length==1){
-                            response.setResponseMessage("ENG");
-                            response.setResponseCode(OK_CODE);
-                        }
-                        if(requestElements.length==2){
-                            if(requestElements[1].equals("ENG")){
-                                response.setToDefaultOK();
-                            }else{
-                                response.setResponseCode(NOT_FOUND_CODE);
-                                response.setResponseMessage("Language not supported");
-                            }
-                        }
-                    }
-                    break;
-                case "AUTH":
-                    if (isLoggedIn) {
-                        response.setResponseMessage("Must QUIT to logIn again");
-                        response.setResponseCode(UNEXPECTED_COMMAND_CODE);
-                        break;
-                    }
-                    if(checkLength(requestElements.length, new int[]{3}, response)){
-                        if (authenticationProvider.isValidUser(requestElements[1], requestElements[2])) {
-                            response.setToDefaultOK();
-                            isLoggedIn = true;
-                        } else {
-                            response.setResponseMessage("WRONG USERNAME/PASSWORD");
-                            response.setResponseCode(FAILURE_CODE);
-                        }
-                    }
-                    break;
-                case "LOGOUT":
-                    if(checkLength(requestElements.length, new int[]{1}, response)){
-                        if(isLoggedIn){
-                            response.setResponseCode(OK_CODE);
-                            response.setResponseMessage("Already logged in");
-                        }else{
-                            response.setToDefaultOK();
-                            isLoggedIn=false;
-                            userLogged=null;
-                        }
-                    }
-                    break;
-                case "QUIT":
-                    if(checkLength(requestElements.length, new int[]{1}, response)){
-                        response.setToDefaultOK();
-                        closeHandler(key);
-                    }
-                    break;
-                case "HELP":
-                    if(checkLength(requestElements.length, new int[]{1}, response)){
-                        response.setResponseMessage("AUTH LANG HELP QUIT L337 UNL337 BLCK UNBLCK MPLX CNFG MTRC LOGOUT"); //TODO do list
-                        response.setResponseCode(OK_CODE);
-                    }
-                    break;
-                case "BLCK":
-                    if(checkLength(requestElements.length, new int[]{2}, response)){
-                        configurationsConsumer.silenceUser(requestElements[1]);
-                        response.setToDefaultOK();
-                    }
-                    break;
-                case "UNBLCK":
-                    if(checkLength(requestElements.length, new int[]{2}, response)){
-                        configurationsConsumer.unSilenceUser(requestElements[1]);
-                        response.setToDefaultOK();
-                    }
-                    break;
-                case "MPLX":
-                    if(checkLength(requestElements.length, new int[]{3,4}, response)){//TODO default port?
-                        if (requestElements.length == 4) {
-                            if (requestElements[1].equals("DEFAULT")) {
-                                try{
-                                    Integer port =  Integer.valueOf(requestElements[3]);
-                                    if( port < 0 || port > 0xFFFF){
-                                        response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
-                                        response.setResponseMessage("Port needs to be a number between 1 and FFFE");
-                                    }else{
-                                        configurationsConsumer.setDefaultServer(requestElements[2], port);
-                                        response.setToDefaultOK();
-                                    }
-                                }catch (NumberFormatException nfe){
-                                    response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
-                                    response.setResponseMessage("Port needs to be a number between 1 and FFFE");//TODO FFFE
-                                }
-                            } else {
-                                try{
-                                    Integer port =  Integer.valueOf(requestElements[3]);
-                                    if( port < 0 || port > 0xFFFF){
-                                        response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
-                                        response.setResponseMessage("Port needs to be a number between 1 and FFFE");
-                                    }else{
-                                        configurationsConsumer.multiplexUser(requestElements[1], requestElements[2],
-                                                Integer.valueOf(requestElements[3]));
-                                        response.setToDefaultOK();
-                                    }
-                                }catch (NumberFormatException nfe){
-                                    response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
-                                    response.setResponseMessage("Port needs to be a number between 1 and FFFE");
-                                }
-                            }
-                            break;
-                        }
-                        if (requestElements.length == 3) {
-                            if (requestElements[1].equals("DEFAULT")) {
-                                response.setToDefaultOK();
-                                break;
-                            }
-                            if (requestElements[2].equals("DEFAULT")) {
-                                configurationsConsumer.multiplexToDefaultServer(requestElements[1]);
-                                response.setToDefaultOK();
-                                break;
-                            }
-                            response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
-                            response.setResponseMessage("Must add port or set server to DEFAULT");
-                        }
-                    }
-                    break;
-                case "CNFG":
-                    if(checkLength(requestElements.length, new int[]{1}, response)){
-                        StringBuilder responseBuild = new StringBuilder();
-                        responseBuild.append("BLCK");
-                        if(configurationsConsumer.getSilencedUsers().isEmpty()){
-                            responseBuild.append(" NONE");
-                        }else{
-                            for(String silencedUser: configurationsConsumer.getSilencedUsers()){
-                                responseBuild.append(" "+silencedUser);
-                            }
-                        }
-                        responseBuild.append("\nMPLX");
-                        if(configurationsConsumer.getMultiplexedUsers().isEmpty()){
-                            responseBuild.append(" NONE");
-                        }else{
-                            for(String clientJid: configurationsConsumer.getMultiplexedUsers().keySet()){
-                                responseBuild.append(" "+clientJid+" "+configurationsConsumer.getMultiplexedUsers().get(clientJid)+" * "); //TODO way of showing info
-                            }
-                        }
-                        responseBuild.append("\nDEFAULT " );
-                        if(Configurations.getInstance().getDefaultServerHost()==null || Configurations.getInstance().getDefaultServerPort()==null){
-                            responseBuild.append("NONE");
-                        }else{
-                            responseBuild.append(Configurations.getInstance().getDefaultServerHost()+" "+Configurations.getInstance().getDefaultServerPort());
 
-                        }
-                        responseBuild.append("\nL337" );
-                        responseBuild.append(Configurations.getInstance().isProcessL337()? " ON" : " OFF");
-
-                        response.setResponseCode(OK_CODE);
-                        response.setResponseMessage(responseBuild.toString());
-                    }
-                    break;
-                case "MTRC":
-                    if(checkLength(requestElements.length, new int[]{1,2}, response)){
-                        if (requestElements.length == 1) {
-                            //response =  "BytesRead: "+metricsProvider.getReadBytes() + " BytesSent: "+metricsProvider.getSentBytes();
-                            Map<String,String> metrics = metricsProvider.getMetrics();
-                            StringBuilder responseBuilder = new StringBuilder(); //Reuse?
-                            for(String metringName: metrics.keySet()){
-                                responseBuilder.append(metringName);
-                                responseBuilder.append(" ");
-                            }
-                            response.setResponseMessage(responseBuilder.toString());
-                            response.setResponseCode(OK_CODE);
-                        }
-                        if (requestElements.length == 2) {
-                            Map<String,String> metrics = metricsProvider.getMetrics();
-                            if(requestElements[1].equals("ALL")){
-                                StringBuilder responseBuilder = new StringBuilder(); //TODO Reuse?
-                                for(String metringName: metrics.keySet()){
-                                    responseBuilder.append(metringName+" ");
-                                    responseBuilder.append(metrics.get(metringName)+" ");
-                                }
-                                response.setResponseMessage(responseBuilder.toString());
-                                response.setResponseCode(OK_CODE);
-                            }else{
-                                String metricName = requestElements[1];
-                                if(!metrics.containsKey(metricName)){
-                                    response.setResponseMessage("Unimplemented metric");
-                                    response.setResponseCode(NOT_FOUND_CODE);
-                                }else{
-                                    response.setResponseMessage(metrics.get(metricName));
-                                    response.setResponseCode(OK_CODE);
-                                }
-                            }
-                        }
-                    }
-                    break;
-                default:
-                    response.setResponseMessage(DEFAULT_UNKNOWN_RESPONSE);
-                    response.setResponseCode(UNKNOWN_COMMAND_CODE);
-                    break;
-            }
-        }
-        for (byte b: (response.getResponseCode()+" \""+response.getResponseMessage()+"\"").getBytes()){
+       for (byte b: (response.getResponseCode()+" \""+response.getResponseMessage()+"\"").getBytes()){
             writeMessages.offer(b);
         }
         writeMessages.offer(new Byte("10"));
+    }
+
+    private void processCommand(Response response, String[] requestElements, SelectionKey key) {
+        if(requestElements.length==0){
+            response.setResponseMessage(DEFAULT_UNKNOWN_RESPONSE);
+            response.setResponseCode(UNKNOWN_COMMAND_CODE);
+            return;
+        }
+
+        String command = requestElements[0].toUpperCase();
+        if (!isLoggedIn && authCommand.contains(command)) {
+            response.setResponseMessage(DEFAULT_UNAUTHORIZED_RESPONSE);
+            response.setResponseCode(UNAUTHORIZED_CODE);
+            return;
+        }
+
+        switch (command) {
+            case "L337":
+                if (checkLength(requestElements.length, new int[]{1}, response)) {
+                    configurationsConsumer.setL337Processing(true);
+                    response.setToDefaultOK();
+                }
+                break;
+            case "UNL337":
+                if (checkLength(requestElements.length, new int[]{1}, response)) {
+                    configurationsConsumer.setL337Processing(false);
+                    response.setToDefaultOK();
+                }
+                break;
+            case "LANG":
+                if (checkLength(requestElements.length, new int[]{1, 2}, response)) {
+                    if (requestElements.length == 1) {
+                        response.setResponseMessage("ENG");
+                        response.setResponseCode(OK_CODE);
+                    }
+                    if (requestElements.length == 2) {
+                        if (requestElements[1].equals("ENG")) {
+                            response.setToDefaultOK();
+                        } else {
+                            response.setResponseCode(NOT_FOUND_CODE);
+                            response.setResponseMessage("Language not supported");
+                        }
+                    }
+                }
+                break;
+            case "AUTH":
+                if (isLoggedIn) {
+                    response.setResponseMessage("Must QUIT to logIn again");
+                    response.setResponseCode(UNEXPECTED_COMMAND_CODE);
+                    break;
+                }
+                if (checkLength(requestElements.length, new int[]{3}, response)) {
+                    if (authenticationProvider.isValidUser(requestElements[1], requestElements[2])) {
+                        response.setToDefaultOK();
+                        isLoggedIn = true;
+                    } else {
+                        response.setResponseMessage("WRONG USERNAME/PASSWORD");
+                        response.setResponseCode(FAILURE_CODE);
+                    }
+                }
+                break;
+            case "LOGOUT":
+                if (checkLength(requestElements.length, new int[]{1}, response)) {
+                    response.setToDefaultOK();
+                    isLoggedIn = false;
+                    userLogged = null;
+                }
+                break;
+            case "QUIT":
+                if (checkLength(requestElements.length, new int[]{1}, response)) {
+                    response.setToDefaultOK();
+                    closeHandler(key);
+                }
+                break;
+            case "HELP":
+                if (checkLength(requestElements.length, new int[]{1}, response)) {
+                    response.setResponseMessage("AUTH LANG HELP QUIT L337 UNL337 BLCK UNBLCK MPLX CNFG MTRC LOGOUT"); //TODO do list
+                    response.setResponseCode(OK_CODE);
+                }
+                break;
+            case "BLCK":
+                if (checkLength(requestElements.length, new int[]{2}, response)) {
+                    configurationsConsumer.silenceUser(requestElements[1]);
+                    response.setToDefaultOK();
+                }
+                break;
+            case "UNBLCK":
+                if (checkLength(requestElements.length, new int[]{2}, response)) {
+                    configurationsConsumer.unSilenceUser(requestElements[1]);
+                    response.setToDefaultOK();
+                }
+                break;
+            case "MPLX":
+                if (checkLength(requestElements.length, new int[]{3, 4}, response)) {//TODO default port?
+                    if (requestElements.length == 4) {
+                        if (requestElements[1].equals("DEFAULT")) {
+                            try {
+                                Integer port = Integer.valueOf(requestElements[3]);
+                                if (port < 0 || port > 0xFFFF) {
+                                    response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
+                                    response.setResponseMessage("Port needs to be a number between 1 and FFFE");
+                                } else {
+                                    configurationsConsumer.setDefaultServer(requestElements[2], port);
+                                    response.setToDefaultOK();
+                                }
+                            } catch (NumberFormatException nfe) {
+                                response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
+                                response.setResponseMessage("Port needs to be a number between 1 and FFFE");//TODO FFFE
+                            }
+                        } else {
+                            try {
+                                Integer port = Integer.valueOf(requestElements[3]);
+                                if (port < 0 || port > 0xFFFF) {
+                                    response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
+                                    response.setResponseMessage("Port needs to be a number between 1 and FFFE");
+                                } else {
+                                    configurationsConsumer.multiplexUser(requestElements[1], requestElements[2],
+                                            Integer.valueOf(requestElements[3]));
+                                    response.setToDefaultOK();
+                                }
+                            } catch (NumberFormatException nfe) {
+                                response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
+                                response.setResponseMessage("Port needs to be a number between 1 and FFFE");
+                            }
+                        }
+                        break;
+                    }
+                    if (requestElements.length == 3) {
+                        if (requestElements[1].equals("DEFAULT")) {
+                            response.setToDefaultOK();
+                            break;
+                        }
+                        if (requestElements[2].equals("DEFAULT")) {
+                            configurationsConsumer.multiplexToDefaultServer(requestElements[1]);
+                            response.setToDefaultOK();
+                            break;
+                        }
+                        response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
+                        response.setResponseMessage("Must add port or set server to DEFAULT");
+                    }
+                }
+                break;
+            case "CNFG":
+                if (checkLength(requestElements.length, new int[]{1}, response)) {
+                    StringBuilder responseBuild = new StringBuilder();
+                    responseBuild.append("BLCK");
+                    if (configurationsConsumer.getSilencedUsers().isEmpty()) {
+                        responseBuild.append(" NONE");
+                    } else {
+                        for (String silencedUser : configurationsConsumer.getSilencedUsers()) {
+                            responseBuild.append(" " + silencedUser);
+                        }
+                    }
+                    responseBuild.append("\nMPLX");
+                    if (configurationsConsumer.getMultiplexedUsers().isEmpty()) {
+                        responseBuild.append(" NONE");
+                    } else {
+                        for (String clientJid : configurationsConsumer.getMultiplexedUsers().keySet()) {
+                            responseBuild.append(" " + clientJid + " " + configurationsConsumer.getMultiplexedUsers().get(clientJid) + " * "); //TODO way of showing info
+                        }
+                    }
+                    responseBuild.append("\nDEFAULT ");
+                    if (Configurations.getInstance().getDefaultServerHost() == null || Configurations.getInstance().getDefaultServerPort() == null) {
+                        responseBuild.append("NONE");
+                    } else {
+                        responseBuild.append(Configurations.getInstance().getDefaultServerHost() + " " + Configurations.getInstance().getDefaultServerPort());
+
+                    }
+                    responseBuild.append("\nL337");
+                    responseBuild.append(Configurations.getInstance().isProcessL337() ? " ON" : " OFF");
+
+                    response.setResponseCode(OK_CODE);
+                    response.setResponseMessage(responseBuild.toString());
+                }
+                break;
+            case "MTRC":
+                if (checkLength(requestElements.length, new int[]{1, 2}, response)) {
+                    if (requestElements.length == 1) {
+                        //response =  "BytesRead: "+metricsProvider.getReadBytes() + " BytesSent: "+metricsProvider.getSentBytes();
+                        Map<String, String> metrics = metricsProvider.getMetrics();
+                        StringBuilder responseBuilder = new StringBuilder(); //Reuse?
+                        for (String metringName : metrics.keySet()) {
+                            responseBuilder.append(metringName);
+                            responseBuilder.append(" ");
+                        }
+                        response.setResponseMessage(responseBuilder.toString());
+                        response.setResponseCode(OK_CODE);
+                    }
+                    if (requestElements.length == 2) {
+                        Map<String, String> metrics = metricsProvider.getMetrics();
+                        if (requestElements[1].equals("ALL")) {
+                            StringBuilder responseBuilder = new StringBuilder(); //TODO Reuse?
+                            for (String metringName : metrics.keySet()) {
+                                responseBuilder.append(metringName + " ");
+                                responseBuilder.append(metrics.get(metringName) + " ");
+                            }
+                            response.setResponseMessage(responseBuilder.toString());
+                            response.setResponseCode(OK_CODE);
+                        } else {
+                            String metricName = requestElements[1];
+                            if (!metrics.containsKey(metricName)) {
+                                response.setResponseMessage("Unimplemented metric");
+                                response.setResponseCode(NOT_FOUND_CODE);
+                            } else {
+                                response.setResponseMessage(metrics.get(metricName));
+                                response.setResponseCode(OK_CODE);
+                            }
+                        }
+                    }
+                }
+                break;
+            default:
+                response.setResponseMessage(DEFAULT_UNKNOWN_RESPONSE);
+                response.setResponseCode(UNKNOWN_COMMAND_CODE);
+                break;
+        }
     }
 
     private boolean checkLength(int length, int[] lengths, Response response) {

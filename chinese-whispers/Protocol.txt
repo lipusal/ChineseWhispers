@@ -37,6 +37,21 @@ Protocol Version Not Supported                              303
 
 ""
 
+TODO:
+check where DEFAULT host and port
+java.nio.channels.UnresolvedAddressException when error in address.
+marcar como finished cuando leamos un </stream>
+
+TODO neg:
+check if we can send an message without "from" to client.
+
+TODO PROTOCOL:
+chenge write to be nonBlcking and to work like the handlers.
+finish mtrcs.
+cnfg should be standarized (same line? mplx vs MPLX)
+set maximum size for request.
+talk in protocol about spaces to right that are not important and amout of spaces and bla bla?
+
 
 negociacion compleja.
 errores?
@@ -57,3 +72,14 @@ nc dibujar vel
 No soportar challenge.
 
 tirar error si no responde durante neg?
+
+
+
+
+
+
+
+
+
+
+

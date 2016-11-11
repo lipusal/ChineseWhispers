@@ -23,8 +23,6 @@ public class XMLInterpreter {
     private int status = 0;
     private boolean isSilenced;
     private boolean silenceRequested;
-    //	private boolean isL337ed;
-//	private boolean l337Requested;
     private boolean isInBodyTag;
     private boolean isInMessageTag;
 
@@ -164,7 +162,7 @@ public class XMLInterpreter {
                             readXML.append(parser.getPrefix()).append(":");
                         }
                         readXML.append(parser.getLocalName());
-                        readXML.append(">\n");
+                        readXML.append(">");
                     }
 
                     //Update status
@@ -200,17 +198,5 @@ public class XMLInterpreter {
         silenceRequested = silenced;
     }
 
-
-    // TODO: This is commented because it's the processor who decides if l337 processing is done
-    //	/**
-//	 * Sets whether this stream is "leeted." Leeted streams transform certain alphabetic characters inside <body>
-//	 * stanzas into similar-looking numbers.
-//	 * <b>NOTE:</b> This setting takes effect upon reaching the next <body> tag.
-//	 *
-//	 * @param l337ed Whether this stream is leeted.
-//	 */
-//	public void setL337ed(boolean l337ed) {
-//		l337Requested = l337ed;
-//	}
 
 }

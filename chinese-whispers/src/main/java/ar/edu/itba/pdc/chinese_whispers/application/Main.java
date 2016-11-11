@@ -9,45 +9,55 @@ import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.XMPPAcceptorHandl
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Date;
+
 /**
  * Created by jbellini on 28/10/16.
  */
 public class Main {
 
 
-	public static void main(String[] args) {
+    // TODO: get them from parameters
+    private static final int ADMIN_PROTOCOL_PORT = 4444;
+    private static final int XMPP_PROXY_PORT = 5223;
 
-		Logger LOG = LoggerFactory.getLogger(Main.class);
-		LOG.debug("Application started");
 
-		TCPSelector selector = TCPSelector.getInstance();
+    public static void main(String[] args) {
 
-		XMPPAcceptorHandler acceptorHandler = new XMPPAcceptorHandler(L337Processor.getInstance(),
-				ApplicationNewConnectionsConsumer.getInstance(), Configurations.getInstance(), MetricsManager.getInstance());
+        final Logger logger = LoggerFactory.getLogger(Main.class);
+        logger.info("Application started at " + new Date());
 
-		System.out.print("Trying to bind port 3333... ");
-		try {
-            selector.addServerSocketChannel(3333, acceptorHandler);
-		} catch (Throwable e) {
-			System.err.println("ERROR! Couldn't bind!");
-			return;
-		}
-		Configurations configurations = Configurations.getInstance();
+        TCPSelector selector = TCPSelector.getInstance();
 
-		AdminAcceptorHandler administrationAcceptorHandler = new AdminAcceptorHandler (MetricsManager.getInstance(), configurations, configurations);
+        XMPPAcceptorHandler acceptorHandler = new XMPPAcceptorHandler(L337Processor.getInstance(),
+                ApplicationNewConnectionsConsumer.getInstance(), Configurations.getInstance(), MetricsManager.getInstance());
 
-		System.out.print("Trying to bind port 4444... ");
-		try {
-			selector.addServerSocketChannel(4444, administrationAcceptorHandler);
-		} catch (Throwable e) {
-			System.err.println("ERROR! Couldn't bind!");
-			return;
-		}
-		System.out.println("\t[Done]");
-		while (true) {
-			// Before select tasks...
-			selector.doSelect(); // Perform select operations...
-			// After select tasks...
-		}
-	}
+        logger.info("Trying to bind port " + XMPP_PROXY_PORT + "...");
+        try {
+            selector.addServerSocketChannel(5223, acceptorHandler); // TODO: check why it's not breaking
+        } catch (Throwable e) {
+            logger.debug("Error! Couldn't bind port " + XMPP_PROXY_PORT + ". Aborting");
+            return;
+        }
+        logger.info("Successfully bond port " + XMPP_PROXY_PORT);
+        Configurations configurations = Configurations.getInstance();
+
+        AdminAcceptorHandler administrationAcceptorHandler = new AdminAcceptorHandler(MetricsManager.getInstance(), configurations, configurations);
+
+        logger.info("Trying to bind port " + ADMIN_PROTOCOL_PORT + "...");
+        try {
+            selector.addServerSocketChannel(4444, administrationAcceptorHandler);
+        } catch (Throwable e) {
+            logger.debug("Error! Couldn't bind port " + ADMIN_PROTOCOL_PORT + ". Aborting");
+            return;
+        }
+        logger.info("Successfully bond port " + ADMIN_PROTOCOL_PORT);
+
+        // Main loop
+        while (true) {
+            // Before select tasks...
+            selector.doSelect(); // Perform select operations...
+            // After select tasks...
+        }
+    }
 }

@@ -8,11 +8,9 @@ import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NewConnectionsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPServerNegotiator;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
 
 import java.nio.channels.SelectionKey;
 import java.util.Base64;
-import java.util.Map;
 
 /**
  * This class makes the proxy act like an XMPP server, negotiating with the connected client.
@@ -24,7 +22,7 @@ import java.util.Map;
  * <p>
  * Created by jbellini on 27/10/16.
  */
-public class XMPPServerHandler extends NegotiatorHandler implements TCPHandler {
+public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandler {
 
     /**
      * Says how many times the peer connection can be tried.
@@ -76,9 +74,20 @@ public class XMPPServerHandler extends NegotiatorHandler implements TCPHandler {
         throw new UnsupportedOperationException("Key can't be changed to an XMPPServerHandler");
     }
 
+
     @Override
     void beforeClose() {
+    }
 
+    @Override
+    protected void beforeRead() {
+        // TODO: check own output buffer
+        inputBuffer.clear();
+    }
+
+    @Override
+    protected void afterWrite() {
+        // Nothing to be done...
     }
 
     /**
@@ -127,10 +136,11 @@ public class XMPPServerHandler extends NegotiatorHandler implements TCPHandler {
     @Override
     protected void finishXMPPNegotiation() {
         // Stop reading till negotiation ends on the other side (i.e. handler connecting to origin server)
-        this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ);
+        disableReading();
 
         // Check params
-        if (!xmppNegotiator.getInitialParameters().containsKey("to")) { //TODO send error
+        if (!xmppNegotiator.getInitialParameters().containsKey("to")) {
+            // TODO: send error?
             closeHandler();
             return;
         }
@@ -140,28 +150,28 @@ public class XMPPServerHandler extends NegotiatorHandler implements TCPHandler {
             // The authorization content might be invalid (i.e. not be a valid base64 scheme)
             authDecoded = new String(Base64.getDecoder().decode(xmppNegotiator.getAuthorization()));
         } catch (IllegalArgumentException e) {
-            closeHandler(); //TODO send error
+            closeHandler();
+            // TODO: send bad format?
             return;
         }
         String[] authParameters = authDecoded.split("\0");
         String userName;
-        if (authParameters.length == 3) {   //Nothing, user, pass
-            userName=authParameters[1];
-        }else if(authParameters.length == 2){
-            userName=authParameters[0];
-        }else{
+        if (authParameters.length == 3) {
+            // Nothing, User, Password
+            userName = authParameters[1];
+        } else if (authParameters.length == 2) {
+            // User, Password
+            userName = authParameters[0];
+        } else {
             closeHandler(); //TODO send error
             return;
         }
-
 
         // Create a client handler to connect to origin server
         clientJid = userName + "@" + xmppNegotiator.getInitialParameters().get("to"); // TODO: check if readWrite handler needs it.
         this.peerHandler = new XMPPClientHandler(applicationProcessor, metricsProvider, configurationsConsumer, this,
                 clientJid, xmppNegotiator.getInitialParameters(), xmppNegotiator.getAuthorization());
 
-
-        // TODO: check what handler need to operate correctly
 
         // This will create a new key with the client handler attached to it.
         // It won't connect immediately, but mark the key as connectable and return.
@@ -185,7 +195,7 @@ public class XMPPServerHandler extends NegotiatorHandler implements TCPHandler {
         // TODO: We can save the key in a Map and update those timestamps before the select.
         if (peerConnectionTries >= MAX_PEER_CONNECTIONS_TRIES) {
             // TODO: Close connection?
-            peerHandler.closeHandler();
+            closeHandler();
             return;
         }
         System.out.print("Trying to connect to origin server...");

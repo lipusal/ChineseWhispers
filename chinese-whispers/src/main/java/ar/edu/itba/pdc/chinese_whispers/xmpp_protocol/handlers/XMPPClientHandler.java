@@ -20,11 +20,11 @@ import java.util.Map;
  * When that process finishes, it will create a new {@link XMPPReadWriteHandler},
  * and notify the {@link XMPPServerHandler} that created this handler that the negotiation process has finished,
  * and that the new handler that is handling the connection with the origin server is the recently created one.
- *
+ * <p>
  * <p>
  * Created by jbellini on 28/10/16.
  */
-public class XMPPClientHandler extends NegotiatorHandler implements TCPClientHandler {
+public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClientHandler {
 
 
     private static final String PARTIAL_INITIAL_MESSAGE = "<stream:stream " +
@@ -87,6 +87,32 @@ public class XMPPClientHandler extends NegotiatorHandler implements TCPClientHan
 
 
     /**
+     * Sets the given interest ops to this handler's key, if it is connected.
+     * If its not connected, nothing is done.
+     *
+     * @param interestOps The new interest ops.
+     * @return This handler.
+     */
+    @Override
+    protected XMPPHandler setKeyInterestOps(int interestOps) {
+        if (!connected) {
+            return this;
+        }
+        return super.setKeyInterestOps(interestOps);
+    }
+
+
+    @Override
+    protected void beforeRead() {
+        inputBuffer.clear(); // Clears the buffer in order to read at most its capacity.
+    }
+
+    @Override
+    protected void afterWrite() {
+        // Nothing to be done...
+    }
+
+    /**
      * Starts the XMPP negotiation process by creating the first negotiation message to be sent.
      */
     // TODO: shouldn't this belong on the client negotiator?
@@ -105,7 +131,7 @@ public class XMPPClientHandler extends NegotiatorHandler implements TCPClientHan
         }
 
         stringBuilder.append(">\n");
-        System.out.println("Proxy to Server:" + stringBuilder); // TODO: log this.
+//        System.out.println("Proxy to Server:" + stringBuilder); // TODO: log this.
         writeMessage(stringBuilder.toString().getBytes());
     }
 
@@ -154,7 +180,7 @@ public class XMPPClientHandler extends NegotiatorHandler implements TCPClientHan
         }
         if (this.connected) {
             System.out.println("Connect established! Now listening messages"); // TODO: log this?
-            this.key.interestOps(key.interestOps() | SelectionKey.OP_READ); // Makes the key readable TODO: check this!!
+            this.key.interestOps(SelectionKey.OP_READ); // Makes the key readable TODO: check this!!
             startXMPPNegotiation();
         } else {
             System.out.println("Connection failed! Not Connected!"); // TODO: log this?

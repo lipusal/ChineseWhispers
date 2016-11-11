@@ -10,7 +10,7 @@ import java.nio.channels.SelectionKey;
 
 /**
  * This class is in charge of reading and writing with the client or server connected to the channel in the
- * handler's {@link SelectionKey}.
+ * handler's {@link SelectionKey}. Basically, this handler is in charge of proxying.
  * When reading data, it will parse it using an XMLInterpreter, process it with an {@link ApplicationProcessor},
  * and send it to its peerHandler (another {@link XMPPReadWriteHandler}).
  * When receiving a message from its peerHandler, it will write that message to the socket channel
@@ -19,7 +19,7 @@ import java.nio.channels.SelectionKey;
  * <p>
  * Created by jbellini on 3/11/16.
  */
-public class XMPPReadWriteHandler extends XMPPHandler implements TCPHandler {
+/* package */ class XMPPReadWriteHandler extends XMPPHandler implements TCPHandler {
 
 
     /* package */ XMPPReadWriteHandler(ApplicationProcessor applicationProcessor,
@@ -52,18 +52,49 @@ public class XMPPReadWriteHandler extends XMPPHandler implements TCPHandler {
     }
 
     @Override
-    protected void processReadMessage(byte[] message) {
+    protected void processReadMessage(byte[] message, int length) {
         if (peerHandler == null) {
-            throw new IllegalArgumentException();
+            throw new IllegalStateException();
         }
-        if (message != null && message.length > 0) {
+        if (message != null && length > 0) {
             xmlInterpreter.setSilenced(configurationsConsumer.isUserSilenced(clientJid));
-            xmlInterpreter.feed(message);
+            handleResponse(xmlInterpreter.feed(message, length));
         }
     }
 
     @Override
     void beforeClose() {
+    }
+
+    protected void beforeRead() {
+
+        if (this.peerHandler == null) {
+            throw new IllegalStateException(); // Can't proxy if no peer handler.
+        }
+
+        // This handler can read at most the amount of data its XMLInterpreter can hold
+        int maxAmountOfRead = xmlInterpreter.remainingSpace();
+
+        // If the XMLInterpreter does not have space...
+        if (maxAmountOfRead == 0) {
+            disableReading(); // Stops reading if there is no space in its peer handler's output buffer
+        }
+        inputBuffer.position(0);
+        inputBuffer.limit(maxAmountOfRead);
+    }
+
+    @Override
+    protected void afterWrite() {
+        if (this.peerHandler == null) {
+            throw new IllegalStateException(); // Can't proxy if no peer handler.
+        }
+
+        // The handle write method call flip on outputBuffer, which sets its position to 0
+        // If the position is greater than 0, it means that, at least, one byte was written.
+        // So, the peer handler can read again
+        if (outputBuffer.position() > 0) {
+            peerHandler.enableReading();
+        }
 
     }
 

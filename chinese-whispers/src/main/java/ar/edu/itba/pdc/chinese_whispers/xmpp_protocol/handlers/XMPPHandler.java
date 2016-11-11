@@ -4,9 +4,7 @@ import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.Confi
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NegotiationConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPNegotiator;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.XMLInterpreter;
 
@@ -14,8 +12,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayDeque;
-import java.util.Deque;
 
 /**
  * Base XMPP handler that defines methods for sending and writing messages.
@@ -24,34 +20,16 @@ import java.util.Deque;
  * <p>
  * Created by jbellini on 28/10/16.
  */
-public abstract class XMPPHandler extends BaseHandler implements TCPHandler, OutputConsumer, NegotiationConsumer {
+/* package */ abstract class XMPPHandler extends BaseHandler implements TCPHandler, OutputConsumer {
 
     // Constants
     /**
      * The buffers size.
      */
-    protected static final int BUFFER_SIZE = 1024;
-    /**
-     * String to be sent when detecting error.
-     * It does not contain </stream:stream> because close_message is always sent when closing.
-     */
-    private final static String XML_ERROR_RESPONSE = "<stream:error>\n<bad-format\n" +
-            "xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>\n</stream:error>\n";
-    /**
-     * String to be sent to finish communication
-     */
-    private final static String CLOSE_MESSAGE = "</stream:stream>\n";
+    protected static final int BUFFER_SIZE = 8 * 1024; // We use an 8 KiB buffer
 
 
     // Communication stuff
-    /**
-     * Contains messages to be written by this handler.
-     */
-    protected final Deque<Byte> writeMessages;
-    /**
-     * Contains messages to be written by the negotiator.
-     */
-    protected final Deque<Byte> negotiatorWriteMessages;
     /**
      * Buffer to fill with read data.
      */
@@ -74,11 +52,12 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
     protected SelectionKey key;
     /**
      * Tells if this handler must be closed.
+     * If true, it will be closed on the next writing operation.
      */
-    protected boolean isClosable;
+    private boolean mustClose;
 
 
-
+    // XMPP Stuff
     /**
      * XML Parser
      */
@@ -87,10 +66,13 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
      * Client JID
      */
     protected String clientJid; // Will be initialized when XMPP client sends "Auth" tag.
+
+
+    // Other stuff
     /**
-     * The {@link XMPPNegotiator} that will handle the XMPP negotiation at the beginning of the XMPP connection.
+     * Tells which is this handler's state.
      */
-    protected XMPPNegotiator xmppNegotiator;
+    private HandlerState handlerState;
 
 
     /**
@@ -103,22 +85,166 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
     protected XMPPHandler(ApplicationProcessor applicationProcessor, MetricsProvider metricsProvider,
                           ConfigurationsConsumer configurationsConsumer) {
         super(applicationProcessor, metricsProvider, configurationsConsumer);
-        this.writeMessages = new ArrayDeque<>();
-        this.negotiatorWriteMessages = new ArrayDeque<>();
         this.inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
-        this.outputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
-        this.isClosable = false;
+        this.outputBuffer = ByteBuffer.allocate((BUFFER_SIZE * 4 > XMLInterpreter.MAX_AMOUNT_OF_BYTES) ?
+                BUFFER_SIZE * 4 : XMLInterpreter.MAX_AMOUNT_OF_BYTES);
+        this.mustClose = false;
         firstMessage =true;
+        this.handlerState = HandlerState.NORMAL;
     }
 
 
     /**
      * Sets the {@link SelectionKey} for this handler.
+     * <p>
+     * Note: The given key must not have attached anything but this handler
+     * (i.e. it's attachment must be null or this handler)
      *
-     * @param key
+     * @param key The new key for this handler.
      */
     /* package */ void setKey(SelectionKey key) {
+        if (key == null) {
+            throw new IllegalArgumentException();
+        }
+        if (key.attachment() != null && key.attachment() != this) {
+            // A handler must not hold a key that has attached another thing than itself
+            throw new IllegalStateException();
+        }
         this.key = key;
+        // TODO: check if writing must be enabled for this key (as messages could have arrived to this handler)
+    }
+
+
+    /**
+     * Makes this handler be able to read from its key's channel.
+     *
+     * @return This handler if reading could be enabled, or null otherwise.
+     */
+    /* package */ XMPPHandler enableReading() {
+        if (this.key != null && this.key.isValid()) {
+            return setKeyInterestOps(this.key.interestOps() | SelectionKey.OP_READ);
+        }
+        return null;
+    }
+
+    /**
+     * Makes this handler be able to write to its key's channel.
+     *
+     * @return This handler if writing could be enabled, or null otherwise.
+     */
+    /* package */ XMPPHandler enableWriting() {
+        if (this.key != null && this.key.isValid()) {
+            return setKeyInterestOps(this.key.interestOps() | SelectionKey.OP_WRITE);
+        }
+        return null;
+    }
+
+    /**
+     * Makes this handler not be able to read from its key's channel.
+     *
+     * @return This handler.
+     */
+    /* package */ XMPPHandler disableReading() {
+        if (this.key != null && this.key.isValid()) {
+            return setKeyInterestOps(this.key.interestOps() & ~SelectionKey.OP_READ);
+        }
+        return this;
+    }
+
+    /**
+     * Makes this handler not be able to write to its key's channel.
+     *
+     * @return This handler.
+     */
+    /* package */ XMPPHandler disableWriting() {
+        if (this.key != null && this.key.isValid()) {
+            return setKeyInterestOps(this.key.interestOps() & ~SelectionKey.OP_WRITE);
+        }
+        return this;
+    }
+
+
+    /**
+     * Wrapper method to set this handler's key interest ops.
+     *
+     * @param interestOps The new interest ops.
+     * @return This handler.
+     */
+    protected XMPPHandler setKeyInterestOps(int interestOps) {
+        this.key.interestOps(interestOps);
+        return this;
+    }
+
+//    private void writeDeque(Deque<Byte> deque, byte[] message) {
+//        if(firstMessage) firstMessage=false;
+//        if (deque == null || message == null) {
+
+    /**
+     * Sets this handler state in error state.
+     * This method can only be called if the handler's state is {@link HandlerState#NORMAL}.
+     *
+     * @param error The error this handler has experienced.
+     */
+    public void notifyError(XMPPErrors error) {
+        if (error == null) {
+            throw new IllegalArgumentException();
+        }
+        if (handlerState != HandlerState.NORMAL) {
+            return;
+        }
+        handlerState = HandlerState.ERROR;
+        disableReading(); // Can't read anymore
+        if (peerHandler != null) {
+            peerHandler.notifyClose(); // Notify the peer handler that it must close.
+        }
+        ErrorManager.getInstance().notifyError(this, error); // Notify the errors manager that an error occurred.
+    }
+
+    /**
+     * Sets this handler state in close state.
+     * In case this handlers state is already {@link HandlerState#CLOSE}, it will not do anything.
+     */
+    public void notifyClose() {
+        if (handlerState == HandlerState.CLOSE) {
+            return;
+        }
+        if (this.key == null) {
+            return; // Nothing can be done if there is no key in this handler.
+        }
+        handlerState = HandlerState.CLOSE;
+        disableReading(); // Stop reading, since this handler must be closed.
+        if (peerHandler != null) {
+            peerHandler.notifyClose();
+        }
+        ClosingManager.getInstance().notifyClose(this);
+    }
+
+
+    /**
+     * Request this handler to be closed when possible.
+     * If it's not in a close state, it will notify the closing.
+     */
+    /* package*/ void requestClose() {
+        if (this.key == null) {
+            return; // Can't close a handler if it does not contain a Selection Key
+        }
+        if (!this.key.isValid()) {
+            handleClose(this.key); // As the key is not valid, just close the connection
+        }
+        notifyClose(); // In case it wasn't notified
+        mustClose = true;
+    }
+
+
+    /**
+     * Returns how many bytes are allowed to be written into this handler.
+     *
+     * @return The amount of bytes allowed to be written into this handler.
+     */
+    @Override
+    public int remainingSpace() {
+        // After each write, the buffer's limit is set to its capacity, and its position to the next free element.
+        return outputBuffer.limit() - outputBuffer.position();
     }
 
 
@@ -127,57 +253,56 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
      *
      * @param message The recently read message.
      */
-    abstract protected void processReadMessage(byte[] message);
+    abstract protected void processReadMessage(byte[] message, int length);
 
 
     /**
      * Saves the given {@code message} in this handler to be sent when possible.
+     * If there is no space for the all the message to be sent, it is stored only
+     * the amount of space that is allowed in.
+     * <p>
+     * Note: In case there this handler has its {@link SelectionKey} invalidated, it will close the connection.
      *
      * @param message The message to be sent.
+     * @return How many bytes could be saved in this handler, or -1 if the handler had an invalidated key.
      */
-    /* package */ void writeMessage(byte[] message) {
-        writeDeque(writeMessages, message);
-    }
-
-    /**
-     * Saves the given {@code message} in the negotiator queue to be sent when possible.
-     *
-     * @param message The message to be sent.
-     */
-    /* package */ void writeToNegotiator(byte[] message) {
-        writeDeque(negotiatorWriteMessages, message);
-    }
-
-    /**
-     * Writes the given {@code message} in the given {@code deque}.
-     *
-     * @param deque   The {@link Deque} in which the message must be stored.
-     * @param message The message to be stored.
-     */
-    private void writeDeque(Deque<Byte> deque, byte[] message) {
-        if(firstMessage) firstMessage=false;
-        if (deque == null || message == null) {
+    /* package */ int writeMessage(byte[] message) {
+        if (message == null) {
             throw new IllegalArgumentException();
         }
-        for (Byte b : message) {
-            deque.offer(b);
+        if (message.length == 0) {
+            return 0; // Do nothing if message is empty
         }
-        // Note that if the key is invalidated before writing the message,
-        // the queue will store the message until the key is a valid one.
-        if (key.isValid() && message.length > 0) {
-            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        // TODO: check if necessary
+        if (this.key != null && !this.key.isValid()) {
+            handleClose(this.key); // In case the key was invalidated, make this handler close
+            return -1;
         }
+        if(firstMessage) firstMessage=false; // TODO: check this!
+        int writtenBytes = message.length;
+        int remainingSpace = remainingSpace();
+        if (remainingSpace == 0) {
+            return message.length;
+        }
+        // Store what can be stored
+        if (message.length > remainingSpace) {
+            byte[] aux = new byte[remainingSpace];
+            System.arraycopy(message, 0, aux, 0, remainingSpace);
+            message = aux;
+            writtenBytes = remainingSpace;
+        }
+        outputBuffer.put(message); // Stores the message in the output buffer.
+        enableWriting();
+        return writtenBytes;
     }
 
 
     @Override
-    public void consumeMessage(byte[] message) {
-        writeMessage(message);
-    }
-
-    @Override
-    public void consumeNegotiationMessage(byte[] negotiationMessage) {
-        writeMessage(negotiationMessage);
+    public int consumeMessage(byte[] message) {
+        if (handlerState == HandlerState.NORMAL) {
+            return writeMessage(message);
+        }
+        return 0; // If this handler's state is not normal, it can't consume more messages.
     }
 
     /**
@@ -191,17 +316,16 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
      * It also closes the peer handler.
      * Note: Once this method is executed, there is no chance to go back.
      */
+    @Deprecated
     /* package */ void closeHandler() {
-        if (isClosable) {
-            return;
-        }
-        this.isClosable = true;
+        // TODO: remove this method ASAP
         if (key == null) return;
         beforeClose();
         // TODO: What happens if handler contains half an xmpp message?
         if (this.key.isValid()) {
-            this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
-            writeMessage(CLOSE_MESSAGE.getBytes()); //TODO send error when doing this because there was an error.
+            disableReading();
+            // TODO: what if my buffer is full?
+//            writeMessage(CLOSE_MESSAGE.getBytes()); //TODO send error when doing this because there was an error.
         } else {
             handleClose(this.key); // If key is not valid, proceed to close the handler without writing anything
         }
@@ -219,23 +343,37 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
      * @param parserResponse The parser's response.
      */
     protected void handleResponse(ParserResponse parserResponse) { //TODO mandarme ERROR al que lo envio, no al que recibe.
-        if (parserResponse == ParserResponse.EVERYTHING_NORMAL) {
-            return;
-        }
-        if (parserResponse == ParserResponse.XML_ERROR) {
-            System.out.println("handleResponse XML_ERROR: ");
-            byte[] message = XML_ERROR_RESPONSE.getBytes(); //TODO check.
-            if(firstMessage) writeMessage("<stream:stream>".getBytes()); //test
-            writeMessage(message); //TODO change this to send to Q.
-            closeHandler();
-        }
-        if (parserResponse == ParserResponse.STREAM_CLOSED) {
-            System.out.println("handleResponse STREAM_CLOSED: ");
+
+        switch (parserResponse) {
+            case XML_ERROR:
+                if(firstMessage) writeMessage("<stream:stream>".getBytes()); // TODO: test
+                notifyError(XMPPErrors.BAD_FORMAT);
+                break;
+            case POLICY_VIOLATION:
+                notifyError(XMPPErrors.POLICY_VIOLATION);
+                break;
+            case STREAM_CLOSED:
+                notifyClose();
+                // TODO: notify peer also?
+                break;
+            default:
+                // Any other case, do nothing...
         }
         if(parserResponse== ParserResponse.NEGOTIATION_ERROR){ //message is sent in the negotiator
-            closeHandler();
+            closeHandler(); // TODO: fix this
         }
     }
+
+    /**
+     * Actions to be done before reading from this handler's key channel.
+     * This method must prepare the buffer in order to read.
+     */
+    protected abstract void beforeRead();
+
+    /**
+     * Actions to be done after writing into this handler's key channel.
+     */
+    protected abstract void afterWrite();
 
 
     @Override
@@ -248,32 +386,37 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         if (key == null || key != this.key) {
             throw new IllegalArgumentException();
         }
+        if (this.handlerState != HandlerState.NORMAL) {
+            // It can happen that the state was changed after being selected but before reading
+            // because the peer handler notified a close or an error situation
+            // In those cases, nothing more is read.
+            disableReading(); // In case reading wasn't disabled
+            return; // If this handler is not in normal state, it must not read anymore
+        }
+
+        beforeRead(); // Will state how many bytes can be read
+
+        // TODO: make position be zero and limit be capacity when its empty
 
         SocketChannel channel = (SocketChannel) this.key.channel();
-        byte[] message = null;
-        inputBuffer.clear();
-        int readBytes=0;
+        int readBytes = 0;
         try {
             readBytes = channel.read(inputBuffer);
-            if (readBytes >= 0) {
-
-                message = new byte[readBytes];
-                if (readBytes > 0) { // If a message was actually read ...
-                    System.arraycopy(inputBuffer.array(), 0, message, 0, readBytes);
-                }
-            } else if (readBytes == -1) {
-                handleClose(this.key);
-            }
-        } catch (IOException ignored) {
+        } catch (IOException e) {
             // I/O error (for example, connection reset by peer)
-            // TODO: Check what we do here...
+            handleClose(this.key); // TODO: close peer also
         }
-        if (message != null && message.length > 0) {
-            System.out.print("readBytes : " + readBytes+" message: ");
+        if (readBytes > 0) {
+
+            processReadMessage(inputBuffer.array(), inputBuffer.position());
+
             metricsProvider.addReadBytes(readBytes);
-            System.out.println(new String(message));
-            processReadMessage(message);
+            // TODO: log amount of read bytes?
+
+        } else if (readBytes == -1) {
+            handleClose(this.key);
         }
+        // TODO: should we clear the buffer? note that this method already sets the position and limit
     }
 
 
@@ -288,78 +431,39 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
             throw new IllegalArgumentException();
         }
 
-
-        doWriteMessage(writeMessages);
-        doWriteMessage(negotiatorWriteMessages);
-
-
-        if (writeMessages.isEmpty() && negotiatorWriteMessages.isEmpty()) {
-            // Turns off the write bit if there are no more messages to write
-            this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_WRITE);
-            if (isClosable) {
-                handleClose(key);
+        outputBuffer.flip(); // Makes the buffer's limit be set to its position, and it position, to 0
+        int writtenBytes = 0;
+        SocketChannel channel = (SocketChannel) this.key.channel();
+        try {
+            writtenBytes = channel.write(outputBuffer);
+        } catch (IOException e) {
+            handleClose(this.key);
+        }
+        if (!outputBuffer.hasRemaining()) {
+            // Disables writing if there is no more data to write
+            disableWriting();
+            if (mustClose) {
+                // If this handler mustClose field is true, it means that it has been requested to close
+                // Up to this point, all stored data was already sent, so it's ready to be closed.
+                handleClose(this.key);
             }
         }
-        outputBuffer.clear(); // TODO: remove if we'll use the buffer to store not sent data.
-    }
+        // Makes the buffer's position be set to limit - position, and its limit, to its capacity
+        // If no data remaining, it just set the position to 0 and the limit to its capacity.
+        outputBuffer.compact();
 
+        // TODO: log amount of written bytes?
+        metricsProvider.addSentBytes(writtenBytes);
 
-    /**
-     * Method that writes the content in the given {@code deque} in the handler's channel.
-     *
-     * @param deque The deque containing the bytes to be transmited.
-     */
-    private void doWriteMessage(Deque<Byte> deque) {
-        if (deque == null) {
-            throw new IllegalArgumentException();
-        }
-        if (this.key == null) {
-            throw new IllegalStateException();
-        }
+        afterWrite();
 
-        if (!deque.isEmpty()) {
-            byte[] message;
-            if (deque.size() > BUFFER_SIZE) {
-                message = new byte[BUFFER_SIZE];
-            } else {
-                message = new byte[deque.size()];
-            }
-            for (int i = 0; i < message.length; i++) {
-                message[i] = deque.poll();
-            }
-            if (message.length > 0) {
-                int writtenBytes = 0;
-                SocketChannel channel = (SocketChannel) this.key.channel();
-
-                outputBuffer.clear();
-                outputBuffer.put(message);
-                outputBuffer.flip();
-                try {
-                    writtenBytes = channel.write(outputBuffer);
-
-
-                    // Return the rest of the message to the deque... TODO: Use the buffer
-                    if (writtenBytes < message.length) {
-                        for (int i = message.length - 1; i >= writtenBytes; i--)
-                            deque.push(message[i]);
-                    }
-                } catch (IOException e) {
-                    writtenBytes = outputBuffer.limit() - outputBuffer.position();//TODO check
-                    byte[] restOfMessage = new byte[message.length - writtenBytes];
-                    System.arraycopy(message, writtenBytes, restOfMessage, 0, restOfMessage.length);
-                    // TODO: we are not doing anything with this message
-                }
-                //TODO delete this:
-                System.out.print("written bytes: " + writtenBytes + " message: ");
-                System.out.println(new String(message));
-                metricsProvider.addSentBytes(writtenBytes);
-            }
-        }
     }
 
 
     @Override
     public boolean handleError(SelectionKey key) {
+
+
         return false; // TODO: change as specified in javadoc
     }
 
@@ -371,10 +475,16 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         try {
             this.key.channel().close();
         } catch (IOException e) {
-            // TODO: what should we do here?
             return false;
         }
         return true;
+    }
+
+
+    private enum HandlerState {
+        NORMAL,
+        ERROR,
+        CLOSE
     }
 
 }

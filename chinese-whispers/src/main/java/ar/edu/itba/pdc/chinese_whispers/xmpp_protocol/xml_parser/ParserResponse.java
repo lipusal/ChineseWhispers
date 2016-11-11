@@ -7,6 +7,7 @@ public enum ParserResponse {
     EVERYTHING_NORMAL,
     STREAM_CLOSED,
     XML_ERROR,
+    POLICY_VIOLATION,
     NEGOTIATION_END,
     NEGOTIATION_ERROR,
 

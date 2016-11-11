@@ -1,6 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation;
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NegotiationConsumer;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
 import com.fasterxml.aalto.AsyncByteArrayFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
@@ -15,8 +15,17 @@ import java.util.Map;
  * Created by Droche on 30/10/2016.
  */
 public abstract class XMPPNegotiator {
+
+    /**
+     * Says how many bytes this interpreter can hold at most.
+     */
+    public final static int MAX_AMOUNT_OF_BYTES = 10 * 1024; // We allow up to 10 KiB data inside the parser.
+
+
     protected final AsyncXMLInputFactory inputFactory;
     protected final AsyncXMLStreamReader<AsyncByteArrayFeeder> parser;
+
+
 
     /**
      * TODO: Complete JAVADOC
@@ -38,23 +47,29 @@ public abstract class XMPPNegotiator {
 
 
     /**
+     * Holds how many bytes the parser has in its internal buffer.
+     */
+    protected int amountOfStoredBytes;
+
+
+    /**
      * The object that will consume negotiation messages.
      */
-    protected final NegotiationConsumer negotiationConsumer;
+    protected final OutputConsumer outputConsumer;
 
 
     /**
      * Constructs a new XMPP negotiator.
      *
-     * @param negotiationConsumer The object that will consume negotiation messages.
+     * @param outputConsumer The object that will consume output messages.
      */
-    public XMPPNegotiator(NegotiationConsumer negotiationConsumer) {
-        if (negotiationConsumer == null) {
+    public XMPPNegotiator(OutputConsumer outputConsumer) {
+        if (outputConsumer == null) {
             throw new IllegalArgumentException();
         }
         inputFactory = new InputFactoryImpl();
         parser = inputFactory.createAsyncForByteArray();
-        this.negotiationConsumer = negotiationConsumer;
+        this.outputConsumer = outputConsumer;
         this.initialParameters = new HashMap<>();
     }
 
@@ -77,22 +92,61 @@ public abstract class XMPPNegotiator {
 
 
     /**
+     * Returns how many bytes can be fed to this interpreter.
+     *
+     * @return The amount of bytes that can be fed to this interpreter
+     */
+    public int remainingSpace() {
+        return (outputConsumer.remainingSpace() - amountOfStoredBytes) / 4;
+    }
+
+
+    /**
      * Adds bytes to be processed by the interpreter.
      *
      * @param data The data to process.
      */
-    public ParserResponse feed(byte[] data) {
+    public ParserResponse feed(byte[] data, int length) {
+
+        // Send all bytes
+//        // TODO: check repeated code.
+//        try {
+//            parser.getInputFeeder().feedInput(data, 0, length);
+//            return process();
+//        } catch (XMLStreamException e) {
+//            return ParserResponse.XML_ERROR;
+//        }
+
+
+        // Send one byte
+
+        if (data == null || length < 0 || length > data.length) {
+            throw new IllegalArgumentException();
+        }
+        if (length > remainingSpace()) {
+            return ParserResponse.POLICY_VIOLATION;
+        }
 
         // TODO: check repeated code.
+        ParserResponse response = ParserResponse.EVERYTHING_NORMAL;
         try {
-            parser.getInputFeeder().feedInput(data, 0, data.length);
-            return process();
+            for (int offset = 0; offset < length; offset++) {
+                parser.getInputFeeder().feedInput(data, offset, 1);
+                response = process();
+                // TODO: check order of this lines...
+                if (amountOfStoredBytes >= MAX_AMOUNT_OF_BYTES || parser.getDepth() > 10000) {
+                    return ParserResponse.POLICY_VIOLATION;
+                }
+            }
         } catch (XMLStreamException e) {
             return ParserResponse.XML_ERROR;
         }
+        return response;
 
 
     }
+
+
 
 
     protected abstract ParserResponse process() throws XMLStreamException;

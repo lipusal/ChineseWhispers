@@ -70,8 +70,15 @@ public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler
 
     @Override
     public void handleAccept(SelectionKey key) {
+        if (key == null) {
+            throw new IllegalArgumentException();
+        }
         try {
             SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
+            if (channel == null) {
+                // TODO: what should we do?
+                return;
+            }
             channel.configureBlocking(false);
 
             // The net key will be listening till the client connected to its channel sends a message

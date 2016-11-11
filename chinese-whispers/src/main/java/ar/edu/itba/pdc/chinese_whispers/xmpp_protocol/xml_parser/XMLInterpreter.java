@@ -1,5 +1,7 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser;
 
+import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
+import ar.edu.itba.pdc.chinese_whispers.application.MetricsManager;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import com.fasterxml.aalto.AsyncByteArrayFeeder;
@@ -145,6 +147,10 @@ public class XMLInterpreter {
                             }
                         }
                         readXML.append(">");
+                    }else{
+                        if(parser.getLocalName().equals("message")){
+                            MetricsManager.getInstance().addNumSilencedMessages(1); //TODO user producer
+                        }
                     }
                     break;
                 case AsyncXMLStreamReader.CHARACTERS:

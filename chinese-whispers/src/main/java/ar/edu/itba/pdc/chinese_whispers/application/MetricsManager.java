@@ -21,6 +21,21 @@ public class MetricsManager implements MetricsProvider {
     private long sentBytes;//TODO wat if more?
 
     /**
+     * Number of bytes read by the proxy for the administration protocol
+     */
+    private long administrationReadBytes;
+
+    /**
+     * Number of bytes sent by the proxy for the administration protocol
+     */
+    private long administrationSentBytes;//TODO wat if more?
+
+    /**
+     * Number of messages silenced by the proxy
+     */
+    private long numMessagesSilenced;
+
+    /**
      * Total number of connexion to proxy
      */
     private long numAccesses;//TODO check if this was it?
@@ -48,6 +63,9 @@ public class MetricsManager implements MetricsProvider {
         metrics.put("numAccesses",String.valueOf(numAccesses));
         metrics.put("sentBytes",String.valueOf(sentBytes));
         metrics.put("readBytes",String.valueOf(readBytes));
+        metrics.put("administrationReadBytes",String.valueOf(administrationReadBytes));
+        metrics.put("administrationSentBytes",String.valueOf(administrationSentBytes));
+        metrics.put("numSilencedMessages",String.valueOf(numMessagesSilenced));
         return metrics;
     }
 
@@ -61,5 +79,17 @@ public class MetricsManager implements MetricsProvider {
 
     public void addAccesses(long numAccesses){
         this.numAccesses+=numAccesses;
+    }
+
+    public void addAdministrationReadBytes(long administrationReadBytes){
+        this.administrationReadBytes+=administrationReadBytes;
+    }
+
+    public void addAdministrationSentBytes(long administrationSentBytes){
+        this.administrationSentBytes+=administrationSentBytes;
+    }
+
+    public void addNumSilencedMessages(long numMessagesSilenced){
+        this.numMessagesSilenced+=numMessagesSilenced;
     }
 }

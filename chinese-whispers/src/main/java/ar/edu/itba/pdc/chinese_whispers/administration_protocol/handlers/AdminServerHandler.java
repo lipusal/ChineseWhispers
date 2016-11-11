@@ -168,7 +168,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         try {
             int readBytes = channel.read(inputBuffer);
             System.out.println("ReadBytes= " + readBytes);
-            metricsProvider.addReadBytes(readBytes);
+            metricsProvider.addAdministrationReadBytes(readBytes);
             if (readBytes >= 0) {
                 for (int i = 0; i < readBytes; i++) {
                     byte b = inputBuffer.get(i);
@@ -483,9 +483,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         System.out.print("Bytes written by administrator: " + byteWritten);
         if(message!=null) System.out.println(" Message: " + new String(message));
         else System.out.println("");
-        metricsProvider.addSentBytes(byteWritten);
-
-
+       metricsProvider.addAdministrationSentBytes(byteWritten);
     }
 
     private static class Response{

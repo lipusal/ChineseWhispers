@@ -19,6 +19,12 @@ public interface MetricsProvider {
 
     public void addAccesses(long numAccesses);
 
+    public void addAdministrationReadBytes(long administrationReadBytes);
+
+    public void addAdministrationSentBytes(long administrationSentBytes);
+
+    public void addNumSilencedMessages(long numMessagesSilenced);
+
     /**
      * Returns a list of silenced users (i.e. users that can receive messages but can not send them).
      * @return A list of silenced users' JIDs.

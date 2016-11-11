@@ -5,6 +5,7 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces;
  *
  * Interface that defines method to inform abount the use of the system.
  */
+@Deprecated
 public interface MetricsConsumer {
 
 

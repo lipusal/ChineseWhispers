@@ -42,10 +42,13 @@ check where DEFAULT host and port
 java.nio.channels.UnresolvedAddressException when error in address.
 marcar como finished cuando leamos un </stream>
 check to send correct error and to send them and close correctly.
+re use all stringBuilders
+TODO RANDOM GENERATED ID
 
 TODO neg:
-check if we can send an message without "from" to client.
-give succes to client only after succes with server.
+check if we can send an message without "from" to client. (if he didn't gave us to)
+check bullshit (no password)
+Stream Errors Can Occur During Setup
 
 TODO PROTOCOL:
 chenge write to be nonBlcking and to work like the handlers.

@@ -99,6 +99,10 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
      */
     private boolean isClosing;
 
+    /**
+     * boolean telling if this is the first message
+     */
+    private boolean firstMessage;
 
     /**
      * Object that provides the handler with metrics.
@@ -127,6 +131,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         this.configurationsConsumer = configurationsConsumer;
         this.authenticationProvider = authenticationProvider;
         language = "ENG";
+        firstMessage = true;
         isLoggedIn = false;
         //Commands that need authorization:
         authCommand = new HashSet<>();
@@ -181,8 +186,11 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
             } else if (readBytes == -1) {
                 closeHandler(key);
             }
-        } catch (IOException ignored) {//TODO why ignored?
-            // I/O error (for example, connection reset by peer)
+        } catch (Exception e) {//TODO why ignored?
+            String message = INTERNAL_SERVER_ERROR_CODE + " Internal server error";
+            for(byte b: message.getBytes()) writeMessages.offer(b);
+            writeMessages.offer(new Byte("10"));
+            closeHandler(key);
         }
         //Do NOT remove this if this is merged with XMPPHandler. Needs to be adapted in that case.
         if (!writeMessages.isEmpty()) key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
@@ -221,6 +229,26 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         }
 
         String command = requestElements[0].toUpperCase();
+
+        if(firstMessage){
+            firstMessage=false;
+            if(command.equals("PRCL")){
+                if (checkLength(requestElements.length, new int[]{2}, response)) {
+                    if(!requestElements[1].equals("100")){
+                        response.setResponseMessage("Unsupported protocol");
+                        response.setResponseCode(PROTOCOL_VERSION_NOT_SUPPORTED_CODE);
+                        firstMessage=true;
+                    }else{
+                        response.setToDefaultOK();
+                    }
+                    return;
+                }else{
+                    firstMessage=true;
+                    return;
+                }
+            }
+        }
+
         if (!isLoggedIn && authCommand.contains(command)) {
             response.setResponseMessage(DEFAULT_UNAUTHORIZED_RESPONSE);
             response.setResponseCode(UNAUTHORIZED_CODE);
@@ -228,6 +256,10 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         }
 
         switch (command) {
+            case "PRCL":
+                response.setResponseCode(UNEXPECTED_COMMAND_CODE);
+                response.setResponseMessage("Protocol need to be defined at the start of the connexion");
+                break;
             case "L337":
                 if (checkLength(requestElements.length, new int[]{1}, response)) {
                     configurationsConsumer.setL337Processing(true);

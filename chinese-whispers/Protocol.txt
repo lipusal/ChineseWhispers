@@ -38,24 +38,29 @@ Protocol Version Not Supported                              303
 ""
 
 TODO:
+Close inactive connexions
+Do not accept multiple conexion from same host?
+Measure max connexion, etc...
 check where DEFAULT host and port
 java.nio.channels.UnresolvedAddressException when error in address.
-marcar como finished cuando leamos un </stream>
+
 check to send correct error and to send them and close correctly.
 
 TODO neg:
-check if we can send an message without "from" to client.
+
 give succes to client only after succes with server.
 
 TODO PROTOCOL:
 chenge write to be nonBlcking and to work like the handlers.
-finish mtrcs.
-cnfg should be standarized (same line? mplx vs MPLX)
+finish mtrcs.                                                       X
 set maximum size for request.
 talk in protocol about spaces to right that are not important and amout of spaces and bla bla?
-block one user to other interation?
-administrator version
-set lang server default?
+block one user to other interation?                                 X
+administrator version                                               X
+set lang server default?                                            X
+
+marcar como finished cuando leamos un </stream>                     X
+check if we can send an message without "from" to client.           X
 
 negociacion compleja.
 errores?

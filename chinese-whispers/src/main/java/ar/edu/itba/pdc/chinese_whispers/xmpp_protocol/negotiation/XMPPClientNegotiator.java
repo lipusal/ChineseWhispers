@@ -68,30 +68,40 @@ public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no
                     if (parser.getLocalName().equals("challenge")) {
                         return ParserResponse.NEGOTIATION_ERROR;//TODO unsupported operation?
                     }
+                    if (negotiationStatus == NegotiationStatus.AUTH) {
+                        if(parser.getLocalName().equals("mechanism")){
+                            negotiationStatus=NegotiationStatus.AUTH_2;
+                        }
+                    }
                     break;
                 case AsyncXMLStreamReader.CHARACTERS:
-                    if (negotiationStatus == NegotiationStatus.AUTH) {
+                    if (negotiationStatus == NegotiationStatus.AUTH_2) {
                         //Update status when starting a non-nested element
-                        String text = parser.getText();
-                        if (text.equals("PLAIN")) {//TODO contains vs equals. Do we even check this?
+                        authorizationBuilder.append(parser.getText());
+                    }
+                    break;
+                case AsyncXMLStreamReader.END_ELEMENT:
+                    if(negotiationStatus == NegotiationStatus.AUTH_2){
+                        if (authorizationBuilder.toString().contains("PLAIN")) {//TODO contains vs equals. Do we even check this?
                             String response = "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' " +
                                     "mechanism='PLAIN'>" + authorization + "</auth>\n";
                             negotiationStatus = NegotiationStatus.CHALLENGE;
 //                            System.out.println("Proxy to Server:" + response);
                             outputConsumer.consumeMessage(response.getBytes());
+                        }else{
+                            //TODO mechanism not suported?
                         }
                     }
                     break;
+
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     return ParserResponse.EVERYTHING_NORMAL;
                 case -1:
                     //TODO throw exception? Remove sout
-//                    System.out.println("XML interpreter entered error state (invalid XML)");
+                    System.out.println("XML interpreter entered error state (invalid XML)");
                     return ParserResponse.XML_ERROR;
 
-
             }
-
         }
 //        System.out.println(readXML);
         outputConsumer.consumeMessage(readXML.toString().getBytes());

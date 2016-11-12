@@ -1,6 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation;
 
-//<<<<<<< 2a208fef4234855d3346792f9276a1ffaf3e220e
+//<<<<<<< 2a208fef4234855d3346792f9276a1ffaf3e220e TODO
 
 import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
 //=======
@@ -16,7 +16,6 @@ import javax.xml.stream.XMLStreamException;
  */
 public class XMPPServerNegotiator extends XMPPNegotiator {
 
-    StringBuilder authorizationBuilder;
 
     /**
      * Constructs a new XMPP Server Negotiator.
@@ -26,7 +25,7 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
     public XMPPServerNegotiator(OutputConsumer outputConsumer) {
         super(outputConsumer);
         this.negotiationStatus = NegotiationStatus.START;
-        authorizationBuilder = new StringBuilder();
+
     }
 
 

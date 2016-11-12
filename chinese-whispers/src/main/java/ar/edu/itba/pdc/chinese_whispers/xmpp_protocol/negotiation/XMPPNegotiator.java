@@ -58,6 +58,9 @@ public abstract class XMPPNegotiator {
     protected final OutputConsumer outputConsumer;
 
 
+
+    protected final StringBuilder authorizationBuilder;
+
     /**
      * Constructs a new XMPP negotiator.
      *
@@ -71,6 +74,7 @@ public abstract class XMPPNegotiator {
         parser = inputFactory.createAsyncForByteArray();
         this.outputConsumer = outputConsumer;
         this.initialParameters = new HashMap<>();
+        authorizationBuilder = new StringBuilder();
     }
 
 

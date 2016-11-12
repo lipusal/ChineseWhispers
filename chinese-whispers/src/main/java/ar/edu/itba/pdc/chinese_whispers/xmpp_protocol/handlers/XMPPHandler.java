@@ -408,6 +408,13 @@ import java.nio.channels.SocketChannel;
         }
         if (readBytes > 0) {
 
+            //TODO delete this
+            byte[] message = new byte[readBytes];
+            for(int i =0; i<readBytes; i++){
+                message[i]=inputBuffer.array()[i];
+            }
+            System.out.println(new String(message));
+
             processReadMessage(inputBuffer.array(), inputBuffer.position());
 
             metricsProvider.addReadBytes(readBytes);

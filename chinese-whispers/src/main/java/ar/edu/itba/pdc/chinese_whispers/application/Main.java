@@ -19,7 +19,7 @@ public class Main {
 
     // TODO: get them from parameters
     private static final int ADMIN_PROTOCOL_PORT = 4444;
-    private static final int XMPP_PROXY_PORT = 5223;
+    private static final int XMPP_PROXY_PORT = 3333;
 
 
     public static void main(String[] args) {
@@ -34,7 +34,7 @@ public class Main {
 
         logger.info("Trying to bind port " + XMPP_PROXY_PORT + "...");
         try {
-            selector.addServerSocketChannel(5223, acceptorHandler); // TODO: check why it's not breaking
+            selector.addServerSocketChannel(XMPP_PROXY_PORT, acceptorHandler); // TODO: check why it's not breaking
         } catch (Throwable e) {
             logger.debug("Error! Couldn't bind port " + XMPP_PROXY_PORT + ". Aborting");
             return;
@@ -46,7 +46,7 @@ public class Main {
 
         logger.info("Trying to bind port " + ADMIN_PROTOCOL_PORT + "...");
         try {
-            selector.addServerSocketChannel(4444, administrationAcceptorHandler);
+            selector.addServerSocketChannel(ADMIN_PROTOCOL_PORT, administrationAcceptorHandler);
         } catch (Throwable e) {
             logger.debug("Error! Couldn't bind port " + ADMIN_PROTOCOL_PORT + ". Aborting");
             return;

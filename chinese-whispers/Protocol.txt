@@ -54,6 +54,8 @@ cnfg should be standarized (same line? mplx vs MPLX)
 set maximum size for request.
 talk in protocol about spaces to right that are not important and amout of spaces and bla bla?
 block one user to other interation?
+administrator version
+set lang server default?
 
 negociacion compleja.
 errores?

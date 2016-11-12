@@ -39,22 +39,22 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
      */
     private static final int BUFFER_SIZE = 1024;
 
-    private static final int OK_CODE = 100;
+    private static final String OK_CODE = "A00";
 
-    private static final int UNAUTHORIZED_CODE = 200;
-    private static final int FORBIDDEN_CODE = 201;
-    private static final int FAILURE_CODE = 202;
-    private static final int UNEXPECTED_COMMAND_CODE = 203;
-    private static final int WRONG_NUMBER_OF_PARAMETERS_CODE = 204;
-    private static final int WRONG_SYNTAX_OF_PARAMETERS_CODE = 205;
-    private static final int UNKNOWN_COMMAND_CODE = 206;
-    private static final int TOO_MANY_REQUEST_CODE = 207;
-    private static final int NOT_FOUND_CODE = 208;
+    private static final String UNAUTHORIZED_CODE = "B00";
+    private static final String FORBIDDEN_CODE = "B01";
+    private static final String FAILURE_CODE = "B02";
+    private static final String UNEXPECTED_COMMAND_CODE = "B03";
+    private static final String WRONG_NUMBER_OF_PARAMETERS_CODE = "B04";
+    private static final String WRONG_SYNTAX_OF_PARAMETERS_CODE = "B05";
+    private static final String UNKNOWN_COMMAND_CODE = "B06";
+    private static final String TOO_MANY_REQUEST_CODE = "B07";
+    private static final String NOT_FOUND_CODE = "B08";
 
-    private static final int INTERNAL_SERVER_ERROR_CODE = 300;
-    private static final int SERVICE_UNAVAILABLE__CODE = 301;
-    private static final int PROTOCOL_VERSION_NOT_SUPPORTED_CODE = 302;
-    private static final int COMMAND_NOT_IMPLEMENTED_CODE = 303;
+    private static final String INTERNAL_SERVER_ERROR_CODE = "C00";
+    private static final String SERVICE_UNAVAILABLE__CODE = "C01";
+    private static final String PROTOCOL_VERSION_NOT_SUPPORTED_CODE = "C02";
+    private static final String COMMAND_NOT_IMPLEMENTED_CODE = "C03";
 
 
 
@@ -339,12 +339,10 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                         break;
                     }
                     if (requestElements.length == 3) {
-                        if (requestElements[1].equals("DEFAULT")) {
-                            response.setToDefaultOK();
-                            break;
-                        }
                         if (requestElements[2].equals("DEFAULT")) {
-                            configurationsConsumer.multiplexToDefaultServer(requestElements[1]);
+                            if(!requestElements[1].equals("DEFAULT")){
+                                configurationsConsumer.multiplexToDefaultServer(requestElements[1]);
+                            }
                             response.setToDefaultOK();
                             break;
                         }
@@ -364,7 +362,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                             responseBuild.append(" " + silencedUser);
                         }
                     }
-                    responseBuild.append("\nMPLX");
+                    responseBuild.append(" * MPLX");
                     if (configurationsConsumer.getMultiplexedUsers().isEmpty()) {
                         responseBuild.append(" NONE");
                     } else {
@@ -372,14 +370,14 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                             responseBuild.append(" " + clientJid + " " + configurationsConsumer.getMultiplexedUsers().get(clientJid) + " * "); //TODO way of showing info
                         }
                     }
-                    responseBuild.append("\nDEFAULT ");
+                    responseBuild.append(" * DEFAULT ");
                     if (Configurations.getInstance().getDefaultServerHost() == null || Configurations.getInstance().getDefaultServerPort() == null) {
                         responseBuild.append("NONE");
                     } else {
                         responseBuild.append(Configurations.getInstance().getDefaultServerHost() + " " + Configurations.getInstance().getDefaultServerPort());
 
                     }
-                    responseBuild.append("\nL337");
+                    responseBuild.append(" * L337");
                     responseBuild.append(Configurations.getInstance().isProcessL337() ? " ON" : " OFF");
 
                     response.setResponseCode(OK_CODE);
@@ -490,7 +488,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
 
         private String responseMessage;
 
-        private int responseCode;
+        private String responseCode;
 
         public Response(){
             responseCode= COMMAND_NOT_IMPLEMENTED_CODE;
@@ -505,11 +503,11 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
             this.responseMessage = responseMessage;
         }
 
-        public int getResponseCode() {
+        public String getResponseCode() {
             return responseCode;
         }
 
-        public void setResponseCode(int responseCode) {
+        public void setResponseCode(String responseCode) {
             this.responseCode = responseCode;
         }
 

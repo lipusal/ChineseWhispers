@@ -62,5 +62,10 @@ public class XMPPReadWriteHandler extends XMPPHandler implements TCPHandler {
         }
     }
 
+    @Override
+    void beforeClose() {
+
+    }
+
 
 }

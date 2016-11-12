@@ -8,7 +8,7 @@
 
 //<?xml version='1.0' encoding='UTF-8'?><stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" from="pc" id="1msrp9tlux" xml:lang="es" version="1.0"><stream:features><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"></starttls><mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><mechanism>PLAIN</mechanism><mechanism>ANONYMOUS</mechanism><mechanism>SCRAM-SHA-1</mechanism><mechanism>CRAM-MD5</mechanism><mechanism>DIGEST-MD5</mechanism></mechanisms><compression xmlns="http://jabber.org/features/compress"><method>zlib</method></compression><auth xmlns="http://jabber.org/features/iq-auth"/><register xmlns="http://jabber.org/features/iq-register"/></stream:features>
 
-<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="PLAIN"></auth>
+<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="PLAIN">AGZlZGUAZmVkZQ==</auth>
 
 <challenge xmlns="urn:ietf:params:xml:ns:xmpp-sasl">cmVhbG09InBjIixub25jZT0iL0hOQVpyd1Z6eXZENUZpaWFPcGd0Wit3Y3J2bTBRQ3I5cmRLKytxZyIscW9wPSJhdXRoIixjaGFyc2V0PXV0Zi04LGFsZ29yaXRobT1tZDUtc2Vzcw==</challenge>
 

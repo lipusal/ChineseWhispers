@@ -16,6 +16,6 @@ public interface NewConnectionsConsumer {
      *
      * @param clientJid The user's JID
      */
-    void consumeNewConnection(String clientJid);
+    void consumeNewConnection(String clientJid);//TODO se usa esto?
 
 }

@@ -61,6 +61,10 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
      */
     protected final ByteBuffer outputBuffer;
     /**
+     *
+     */
+    protected boolean firstMessage;
+    /**
      * The handler of the other end of the connection.
      */
     protected XMPPHandler peerHandler;
@@ -104,6 +108,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         this.inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
         this.outputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
         this.isClosable = false;
+        firstMessage =true;
     }
 
 
@@ -150,6 +155,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
      * @param message The message to be stored.
      */
     private void writeDeque(Deque<Byte> deque, byte[] message) {
+        if(firstMessage) firstMessage=false;
         if (deque == null || message == null) {
             throw new IllegalArgumentException();
         }
@@ -174,6 +180,10 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         writeMessage(negotiationMessage);
     }
 
+    /**
+     * Do stuff before being closed
+     */
+    /* package */ abstract void beforeClose();
 
     /**
      * Makes this {@link XMPPHandler} to be closable (i.e. stop receiving messages, send all unsent messages,
@@ -187,6 +197,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         }
         this.isClosable = true;
         if (key == null) return;
+        beforeClose();
         // TODO: What happens if handler contains half an xmpp message?
         if (this.key.isValid()) {
             this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
@@ -214,6 +225,7 @@ public abstract class XMPPHandler extends BaseHandler implements TCPHandler, Out
         if (parserResponse == ParserResponse.XML_ERROR) {
             System.out.println("handleResponse XML_ERROR: ");
             byte[] message = XML_ERROR_RESPONSE.getBytes(); //TODO check.
+            if(firstMessage) writeMessage("<stream:stream>".getBytes()); //test
             writeMessage(message); //TODO change this to send to Q.
             closeHandler();
         }

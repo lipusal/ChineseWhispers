@@ -165,6 +165,12 @@ public class XMPPClientHandler extends NegotiatorHandler implements TCPClientHan
     }
 
     @Override
+    void beforeClose() {
+        ((XMPPServerHandler)peerHandler).handleFailure();
+    }
+
+
+    @Override
     public boolean handleError(SelectionKey key) {
         return false;
     }

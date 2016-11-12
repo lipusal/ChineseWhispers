@@ -76,6 +76,11 @@ public class XMPPServerHandler extends NegotiatorHandler implements TCPHandler {
         throw new UnsupportedOperationException("Key can't be changed to an XMPPServerHandler");
     }
 
+    @Override
+    void beforeClose() {
+
+    }
+
     /**
      * Makes this handler's key attach a new {@link XMPPReadWriteHandler}, and start operating as a proxy.
      * <p>
@@ -102,6 +107,11 @@ public class XMPPServerHandler extends NegotiatorHandler implements TCPHandler {
         System.out.println(response); //TODO delete souts
         xmppReadWriteHandler.consumeMessage(response.getBytes());
         this.key.interestOps(this.key.interestOps() | SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+    }
+
+    /* package */ void handleFailure(){
+       String response = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>";
+       consumeMessage(response.getBytes());
     }
 
 
@@ -175,7 +185,7 @@ public class XMPPServerHandler extends NegotiatorHandler implements TCPHandler {
         // TODO: We can save the key in a Map and update those timestamps before the select.
         if (peerConnectionTries >= MAX_PEER_CONNECTIONS_TRIES) {
             // TODO: Close connection?
-            closeHandler();
+            peerHandler.closeHandler();
             return;
         }
         System.out.print("Trying to connect to origin server...");

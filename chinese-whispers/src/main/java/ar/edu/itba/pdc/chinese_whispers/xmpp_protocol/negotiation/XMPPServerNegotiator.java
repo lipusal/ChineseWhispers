@@ -11,6 +11,7 @@ import javax.xml.stream.XMLStreamException;
  */
 public class XMPPServerNegotiator extends XMPPNegotiator {
 
+    StringBuilder authorizationBuilder;
 
     /**
      * Constructs a new XMPP Server Negotiator.
@@ -20,6 +21,7 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
     public XMPPServerNegotiator(NegotiationConsumer negotiationConsumer) {
         super(negotiationConsumer);
         this.negotiationStatus = NegotiationStatus.START;
+        authorizationBuilder = new StringBuilder();
     }
 
 
@@ -129,17 +131,22 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
             }else if(negotiationStatus== NegotiationStatus.AUTH_2){
                 switch (status) {
                     case AsyncXMLStreamReader.CHARACTERS:
-                        authorization = parser.getText();
+                        authorizationBuilder.append(parser.getText());
+                        break;
+                    case AsyncXMLStreamReader.END_ELEMENT:
+                        if(authorizationBuilder.toString().isEmpty()){//TODO maybe not here?
+                            String negotiationError = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>\n" +
+                                    "        <malformed-request/>\n" +
+                                    "      </failure>";
+                            negotiationConsumer.consumeNegotiationMessage(negotiationError.getBytes());
+                            return ParserResponse.NEGOTIATION_ERROR;
+                        }
                         System.out.println("Connection with client was a SUCCESS");
+                        authorization=authorizationBuilder.toString();
                         while (parser.hasNext() && status != AsyncXMLStreamReader.EVENT_INCOMPLETE)
                             next();
                         return ParserResponse.NEGOTIATION_END;
-                    case AsyncXMLStreamReader.END_ELEMENT:
-                        String negotiationError = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>\n" +
-                                "        <malformed-request/>\n" +
-                                "      </failure>";
-                        negotiationConsumer.consumeNegotiationMessage(negotiationError.getBytes());
-                        return ParserResponse.NEGOTIATION_ERROR;
+
                 }
             }
 

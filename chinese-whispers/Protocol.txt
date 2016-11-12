@@ -56,7 +56,6 @@ finish mtrcs.                                                       X
 set maximum size for request.
 talk in protocol about spaces to right that are not important and amout of spaces and bla bla?
 block one user to other interation?                                 X
-administrator version                                               X
 set lang server default?                                            X
 
 marcar como finished cuando leamos un </stream>                     X

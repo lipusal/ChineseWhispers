@@ -57,9 +57,6 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
     private static final String COMMAND_NOT_IMPLEMENTED_CODE = "C03";
 
 
-
-
-
     /**
      * Boolean telling if user has loggedIn
      */
@@ -179,7 +176,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                     byte b = inputBuffer.get(i);
                     if (b == 10) {
                         process(messageRead, key);
-                    } else if(b!=13){
+                    } else if (b != 13) {
                         messageRead.offer(b);
                     }
                 }
@@ -188,7 +185,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
             }
         } catch (Exception e) {//TODO why ignored?
             String message = INTERNAL_SERVER_ERROR_CODE + " Internal server error";
-            for(byte b: message.getBytes()) writeMessages.offer(b);
+            for (byte b : message.getBytes()) writeMessages.offer(b);
             writeMessages.offer(new Byte("10"));
             closeHandler(key);
         }
@@ -212,17 +209,17 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         System.out.println(string);
         String[] requestElements = string.split(" ");
         Response response = new Response();
-        processCommand(response,requestElements, key);
+        processCommand(response, requestElements, key);
 
 
-       for (byte b: (response.getResponseCode()+" \""+response.getResponseMessage()+"\"").getBytes()){
+        for (byte b : (response.getResponseCode() + " \"" + response.getResponseMessage() + "\"").getBytes()) {
             writeMessages.offer(b);
         }
         writeMessages.offer(new Byte("10"));
     }
 
     private void processCommand(Response response, String[] requestElements, SelectionKey key) {
-        if(requestElements.length==0){
+        if (requestElements.length == 0) {
             response.setResponseMessage(DEFAULT_UNKNOWN_RESPONSE);
             response.setResponseCode(UNKNOWN_COMMAND_CODE);
             return;
@@ -230,20 +227,20 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
 
         String command = requestElements[0].toUpperCase();
 
-        if(firstMessage){
-            firstMessage=false;
-            if(command.equals("PRCL")){
+        if (firstMessage) {
+            firstMessage = false;
+            if (command.equals("PRCL")) {
                 if (checkLength(requestElements.length, new int[]{2}, response)) {
-                    if(!requestElements[1].equals("100")){
+                    if (!requestElements[1].equals("100")) {
                         response.setResponseMessage("Unsupported protocol");
                         response.setResponseCode(PROTOCOL_VERSION_NOT_SUPPORTED_CODE);
-                        firstMessage=true;
-                    }else{
+                        firstMessage = true;
+                    } else {
                         response.setToDefaultOK();
                     }
                     return;
-                }else{
-                    firstMessage=true;
+                } else {
+                    firstMessage = true;
                     return;
                 }
             }
@@ -273,20 +270,32 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                 }
                 break;
             case "LANG":
-                if (checkLength(requestElements.length, new int[]{1, 2}, response)) {
-                    if (requestElements.length == 1) {
-                        response.setResponseMessage("ENG");
-                        response.setResponseCode(OK_CODE);
+                if (requestElements.length == 1) {
+                    response.setResponseMessage("ENG");
+                    response.setResponseCode(OK_CODE);
+                    return;
+                }
+                if(requestElements[1].equals("DEFAULT")){
+                    //Change default Only ENG supported
+                    for (int langIndex = 2; langIndex < requestElements.length; langIndex++) {
+                        if (requestElements[langIndex].equals("ENG") || requestElements[langIndex].equals("DEFAULT") ) {
+                            response.setResponseCode(OK_CODE);
+                            response.setResponseMessage("ENG");
+                            return;
+                        }
                     }
-                    if (requestElements.length == 2) {
-                        if (requestElements[1].equals("ENG")) {
-                            response.setToDefaultOK();
-                        } else {
-                            response.setResponseCode(NOT_FOUND_CODE);
-                            response.setResponseMessage("Language not supported");
+                }else{
+                    for (int langIndex = 1; langIndex < requestElements.length; langIndex++) {
+                        if (requestElements[langIndex].equals("ENG") || requestElements[langIndex].equals("DEFAULT")) {
+                            response.setResponseCode(OK_CODE);
+                            response.setResponseMessage("ENG");
+                            return;
                         }
                     }
                 }
+                response.setResponseCode(NOT_FOUND_CODE);
+                response.setResponseMessage("Languages not supported");
+
                 break;
             case "AUTH":
                 if (isLoggedIn) {
@@ -372,7 +381,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                     }
                     if (requestElements.length == 3) {
                         if (requestElements[2].equals("DEFAULT")) {
-                            if(!requestElements[1].equals("DEFAULT")){
+                            if (!requestElements[1].equals("DEFAULT")) {
                                 configurationsConsumer.multiplexToDefaultServer(requestElements[1]);
                             }
                             response.setToDefaultOK();
@@ -460,8 +469,8 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
     }
 
     private boolean checkLength(int length, int[] lengths, Response response) {
-        for(int posibleLength: lengths){
-            if(posibleLength==length){
+        for (int posibleLength : lengths) {
+            if (posibleLength == length) {
                 return true;
             }
         }
@@ -503,7 +512,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
 
         }
 
-        if (writeMessages.isEmpty()){
+        if (writeMessages.isEmpty()) {
             key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
             if (isClosing) {
                 handleClose(key);
@@ -511,20 +520,20 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         }
 
         System.out.print("Bytes written by administrator: " + byteWritten);
-        if(message!=null) System.out.println(" Message: " + new String(message));
+        if (message != null) System.out.println(" Message: " + new String(message));
         else System.out.println("");
-       metricsProvider.addAdministrationSentBytes(byteWritten);
+        metricsProvider.addAdministrationSentBytes(byteWritten);
     }
 
-    private static class Response{
+    private static class Response {
 
         private String responseMessage;
 
         private String responseCode;
 
-        public Response(){
-            responseCode= COMMAND_NOT_IMPLEMENTED_CODE;
-            responseMessage="NOT IMPLEMENTED YET";
+        public Response() {
+            responseCode = COMMAND_NOT_IMPLEMENTED_CODE;
+            responseMessage = "NOT IMPLEMENTED YET";
         }
 
         public String getResponseMessage() {
@@ -543,7 +552,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
             this.responseCode = responseCode;
         }
 
-        protected void setToDefaultOK(){
+        protected void setToDefaultOK() {
             this.responseMessage = DEFAULT_OK_RESPONSE;
             this.responseCode = OK_CODE;
         }

@@ -53,6 +53,7 @@ public class Configurations implements ConfigurationsConsumer, AuthenticationPro
         defaultServer = new HostAndPort("localhost", DEFAULT_PORT);
         authorizationMap = new HashMap<>();
         authorizationMap.put("protos", "42"); //username lowercase
+
     }
 
     public long getNewId(){

@@ -1,5 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation;
 
+import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NegotiationConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -68,7 +69,8 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
                                     }
                                 }
                             }
-                            readXML.append(" id='randomgenerated' xmlns:stream=\'http://etherx.jabber.org/streams\' xmlns=\'jabber:client\' xmlns:xml=\'http://www.w3.org/XML/1998/namespace\'>\n"); //TODO random
+                            long newId = Configurations.getInstance().getNewId(); //TODO change this.
+                            readXML.append(" id='").append(newId).append("' xmlns:stream=\'http://etherx.jabber.org/streams\' xmlns=\'jabber:client\' xmlns:xml=\'http://www.w3.org/XML/1998/namespace\'>\n");
                             readXML.append("<stream:features> " +
                                     "<mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'> " +
                                     "<mechanism>PLAIN</mechanism> " +

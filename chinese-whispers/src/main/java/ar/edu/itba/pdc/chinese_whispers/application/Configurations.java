@@ -41,6 +41,7 @@ public class Configurations implements ConfigurationsConsumer, AuthenticationPro
      */
     private static Configurations configurationsInstance;
 
+    private long numId = 0;
 
     /**
      * Private constructor to implement singleton pattern.
@@ -54,6 +55,9 @@ public class Configurations implements ConfigurationsConsumer, AuthenticationPro
         authorizationMap.put("protos", "42"); //username lowercase
     }
 
+    public long getNewId(){
+        return numId++;
+    }
 
     /**
      * Gets the singleton instance.

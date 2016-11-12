@@ -12,6 +12,7 @@ import javax.xml.stream.XMLStreamException;
  */
 public class XMPPServerNegotiator extends XMPPNegotiator {
 
+    StringBuilder authorizationBuilder;
 
     /**
      * Constructs a new XMPP Server Negotiator.
@@ -21,10 +22,9 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
     public XMPPServerNegotiator(NegotiationConsumer negotiationConsumer) {
         super(negotiationConsumer);
         this.negotiationStatus = NegotiationStatus.START;
+        authorizationBuilder = new StringBuilder();
     }
 
-
-    // TODO: Esto mete leeted tambien?
 
     /**
      * Processes all fed data. Transforms messages if leeted, ignores messages if silenced, and sets an error state on
@@ -40,11 +40,18 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
         StringBuilder readXML = new StringBuilder();
         while (parser.hasNext()) {
             next();
+            if(status== AsyncXMLStreamReader.EVENT_INCOMPLETE){
+                return ParserResponse.EVERYTHING_NORMAL;
+            }
+            if(status==-1){
+                //TODO throw exception? Remove sout
+                System.out.println("XML interpreter entered error state (invalid XML)");
+                return ParserResponse.XML_ERROR;
+            }
             if (negotiationStatus == NegotiationStatus.START) {
                 switch (status) {
                     case AsyncXMLStreamReader.START_ELEMENT:
                         //Update status when starting a non-nested element
-
                         if (parser.getLocalName().equals("stream")) {
                             readXML.append("<stream:stream");
                             int attrCount = parser.getAttributeCount();
@@ -75,10 +82,9 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
                                     "<mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'> " +
                                     "<mechanism>PLAIN</mechanism> " +
                                     "</mechanisms> " +
-                                    "</stream:features>\n");
+                                    "</stream:features>");
                             // TODO: Make each line as an append
                             negotiationStatus = NegotiationStatus.AUTH;
-                            System.out.println(readXML);
                             negotiationConsumer.consumeNegotiationMessage(readXML.toString().getBytes());
                             while (parser.hasNext() && status != AsyncXMLStreamReader.EVENT_INCOMPLETE)
                                 next(); //TODO handle more?
@@ -87,36 +93,66 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
                             //TODO handle error?
                         }
                         break;
-                    case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                        return ParserResponse.EVERYTHING_NORMAL;
-                    case -1:
-                        //TODO throw exception? Remove sout
-                        System.out.println("XML interpreter entered error state (invalid XML)");
-                        return ParserResponse.XML_ERROR;
                 }
             } else if (negotiationStatus == NegotiationStatus.AUTH) {
-                switch (status) { //TODO check it is really plain and the authorization
-                    case AsyncXMLStreamReader.CHARACTERS:
-                        authorization = parser.getText(); //TODO If it is bullshit, and not a base64 it explode afterwards.
-                        String response = "<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>\n"; //TODO retry?
-                        System.out.println(response);
-                        System.out.println("Connection with client was a SUCCESS");
-                        negotiationConsumer.consumeNegotiationMessage(response.getBytes());
-                        while (parser.hasNext() && status != AsyncXMLStreamReader.EVENT_INCOMPLETE)
-                            next(); //TODO handle more?
-                        return ParserResponse.NEGOTIATION_END;
-                    case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                        return ParserResponse.EVERYTHING_NORMAL;
-                    case -1:
-                        //TODO throw exception? Remove sout
-                        System.out.println("XML interpreter entered error state (invalid XML)");
-                        return ParserResponse.XML_ERROR;
-                }
+                switch (status){
+                    case AsyncXMLStreamReader.START_ELEMENT:
+                        boolean validMechanism = false;
+                        if(parser.getLocalName().equals("auth")){
+                            int attrCount = parser.getAttributeCount();
+                            if (attrCount > 0) {
+                                for (int i = 0; i < attrCount; i++) {
+                                    StringBuilder attributeFullName = new StringBuilder();
+                                    if (!parser.getAttributePrefix(i).isEmpty()) {
+                                        attributeFullName.append(parser.getAttributePrefix(i))
+                                                .append(":");
+                                    }
+                                    attributeFullName.append(parser.getAttributeLocalName(i));
 
+                                    if(attributeFullName.toString().equals("mechanism")){
+                                        String mechanismValue = parser.getAttributeValue(i);
+                                        if(mechanismValue.equals("PLAIN")){
+                                            validMechanism = true;
+                                        }
+                                    }
+                                }
+                            }
+                            if(validMechanism){
+                                negotiationStatus=NegotiationStatus.AUTH_2;
+                            }else{
+                                String negotiationError = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>" +
+                                        "        <invalid-mechanism/>" +
+                                        "      </failure>";
+                                negotiationConsumer.consumeNegotiationMessage(negotiationError.getBytes());
+                                return ParserResponse.NEGOTIATION_ERROR;
+                            }
+                        }
+
+                        break;
+                }
+            }else if(negotiationStatus== NegotiationStatus.AUTH_2){
+                switch (status) {
+                    case AsyncXMLStreamReader.CHARACTERS:
+                        authorizationBuilder.append(parser.getText());
+                        break;
+                    case AsyncXMLStreamReader.END_ELEMENT:
+                        if(authorizationBuilder.toString().isEmpty()){//TODO maybe not here?
+                            String negotiationError = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>\n" +
+                                    "        <malformed-request/>\n" +
+                                    "      </failure>";
+                            negotiationConsumer.consumeNegotiationMessage(negotiationError.getBytes());
+                            return ParserResponse.NEGOTIATION_ERROR;
+                        }
+                        System.out.println("Connection with client was a SUCCESS");
+                        authorization=authorizationBuilder.toString();
+                        while (parser.hasNext() && status != AsyncXMLStreamReader.EVENT_INCOMPLETE)
+                            next();
+                        return ParserResponse.NEGOTIATION_END;
+
+                }
             }
 
         }
-        System.out.println(readXML);
         negotiationConsumer.consumeNegotiationMessage(readXML.toString().getBytes());
         return ParserResponse.EVERYTHING_NORMAL;
     }

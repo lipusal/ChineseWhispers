@@ -11,6 +11,7 @@ import java.util.Map;
 /**
  * Created by Droche on 30/10/2016.
  */
+@Deprecated
 public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no hay que mandar el STLTST paa que ande.
 
 

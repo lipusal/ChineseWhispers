@@ -1,5 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors;
 
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.ErrorManager;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
 import com.fasterxml.aalto.AsyncByteArrayFeeder;
@@ -72,21 +73,25 @@ public abstract class BaseXMLInterpreter {
             return ParserResponse.POLICY_VIOLATION;
         }
 
+        ParserResponse response = ParserResponse.EVERYTHING_NORMAL;
 
         // TODO: check repeated code
         try {
             for (int offset = 0; offset < length; offset++) {
                 parser.getInputFeeder().feedInput(data, offset, 1);
-                process();
+                response = process();
                 // TODO: check order of this lines...
                 if (amountOfStoredBytes >= MAX_AMOUNT_OF_BYTES || parser.getDepth() > 10000) {
                     return ParserResponse.POLICY_VIOLATION;
                 }
+                if (ErrorManager.getInstance().parserResponseErrors().contains(response)) {
+                    break;
+                }
             }
         } catch (XMLStreamException e) {
-            return ParserResponse.XML_ERROR;
+            response = ParserResponse.XML_ERROR;
         }
-        return ParserResponse.EVERYTHING_NORMAL;
+        return response;
     }
 
 
@@ -103,8 +108,25 @@ public abstract class BaseXMLInterpreter {
         return parserStatus;
     }
 
+    /**
+     * Gets the status of the parser
+     *
+     * @return The parser's status.
+     */
     protected int getParserStatus() {
         return parserStatus;
+    }
+
+    /**
+     * Makes the parser move along
+     *
+     * @throws XMLStreamException If this interpreter has unprocessed data. Be sure to call {@link #process()} between
+     *                            calls to this method, which ensures that all data is consumed.
+     */
+    protected void ignoreText() throws XMLStreamException {
+        while (parserStatus == AsyncXMLStreamReader.CHARACTERS && parser.hasNext()) {
+            next();
+        }
     }
 
 

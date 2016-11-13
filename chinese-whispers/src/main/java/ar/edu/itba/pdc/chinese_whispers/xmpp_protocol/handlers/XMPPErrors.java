@@ -6,6 +6,9 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 public enum XMPPErrors {
     BAD_FORMAT,
     POLICY_VIOLATION,
+    HOST_UNKNOWN,
+    INVALID_AUTH_MECHANISM,
+    MALFORMED_REQUEST,
     SYSTEM_SHUTDOWN,
     INTERNAL_SERVER_ERROR
 }

@@ -14,6 +14,7 @@ import java.util.Map;
 /**
  * Created by Droche on 30/10/2016.
  */
+@Deprecated
 public abstract class XMPPNegotiator {
 
     /**
@@ -112,16 +113,6 @@ public abstract class XMPPNegotiator {
      */
     public ParserResponse feed(byte[] data, int length) {
 
-        // Send all bytes
-//        // TODO: check repeated code.
-//        try {
-//            parser.getInputFeeder().feedInput(data, 0, length);
-//            return process();
-//        } catch (XMLStreamException e) {
-//            return ParserResponse.XML_ERROR;
-//        }
-
-
         // Send one byte
 
         if (data == null || length < 0 || length > data.length) {
@@ -134,7 +125,7 @@ public abstract class XMPPNegotiator {
         // TODO: check repeated code.
         ParserResponse response = ParserResponse.EVERYTHING_NORMAL;
         try {
-            for (int offset = 0; offset < length; offset++) {
+            for (int offset = 0; offset < length && response != ParserResponse.NEGOTIATION_END; offset++) {
                 parser.getInputFeeder().feedInput(data, offset, 1);
                 response = process();
                 // TODO: check order of this lines...

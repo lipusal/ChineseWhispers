@@ -1,11 +1,8 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation;
 
-//<<<<<<< 2a208fef4234855d3346792f9276a1ffaf3e220e TODO
 
 import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
-//=======
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
-//>>>>>>> Partial commit
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 
@@ -14,6 +11,7 @@ import javax.xml.stream.XMLStreamException;
 /**
  * Created by Droche on 30/10/2016.
  */
+@Deprecated
 public class XMPPServerNegotiator extends XMPPNegotiator {
 
 
@@ -53,10 +51,6 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
             }
             if (negotiationStatus == NegotiationStatus.START) {
                 switch (status) {
-//                    case AsyncXMLStreamReader.START_DOCUMENT:
-//                        System.out.println("version: " + parser.getVersion());
-//                        System.out.println("encoding: " + parser.getEncoding());
-//                        break;
                     case AsyncXMLStreamReader.START_ELEMENT:
                         //Update status when starting a non-nested element
                         if (parser.getLocalName().equals("stream")) {

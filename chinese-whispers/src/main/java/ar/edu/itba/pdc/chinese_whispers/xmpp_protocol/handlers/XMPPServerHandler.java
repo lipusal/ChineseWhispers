@@ -8,6 +8,8 @@ import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NewConnectionsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPServerNegotiator;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ServerNegotiationProcessor;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
 
 import java.nio.channels.SelectionKey;
 import java.util.Base64;
@@ -46,6 +48,9 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
     private final StringBuilder stringBuilder;
 
 
+    private final ServerNegotiationProcessor serverNegotiationProcessor;
+
+
     /**
      * Constructor.
      * It MUST only be called by {@link XMPPAcceptorHandler}, when a client-proxy TCP connection has been established.
@@ -67,11 +72,24 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
         this.key = key;
         xmppNegotiator = new XMPPServerNegotiator(this);
         this.stringBuilder = new StringBuilder();
+        this.serverNegotiationProcessor = new ServerNegotiationProcessor(this);
     }
 
     @Override
     /* package */ void setKey(SelectionKey key) {
         throw new UnsupportedOperationException("Key can't be changed to an XMPPServerHandler");
+    }
+
+
+    @Override
+    protected void processReadMessage(byte[] message, int length) {
+        if (message != null && length > 0) {
+            ParserResponse parserResponse = serverNegotiationProcessor.feed(message, length);
+            handleResponse(parserResponse);
+            if (parserResponse == ParserResponse.NEGOTIATION_END) {
+                finishXMPPNegotiation();
+            }
+        }
     }
 
 
@@ -118,11 +136,27 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
         this.key.interestOps(this.key.interestOps() | SelectionKey.OP_READ | SelectionKey.OP_WRITE);
     }
 
-    /* package */ void handleFailure(){
-       String response = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>";
-       consumeMessage(response.getBytes());
+    /* package */ void handleFailure() {
+        String response = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>";
+        consumeMessage(response.getBytes());
     }
 
+
+    @Override
+    protected void handleResponse(ParserResponse parserResponse) {
+        super.handleResponse(parserResponse);
+        switch (parserResponse) {
+            case HOST_UNKNOWN:
+                notifyError(XMPPErrors.HOST_UNKNOWN);
+                break;
+            case INVALID_AUTH_MECHANISM:
+                notifyError(XMPPErrors.INVALID_AUTH_MECHANISM);
+                break;
+            case MALFORMED_REQUEST:
+                notifyError(XMPPErrors.MALFORMED_REQUEST);
+                break;
+        }
+    }
 
     /**
      * Finishes the XMPP negotiation process.
@@ -138,39 +172,41 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
         // Stop reading till negotiation ends on the other side (i.e. handler connecting to origin server)
         disableReading();
 
-        // Check params
-        if (!xmppNegotiator.getInitialParameters().containsKey("to")) {
-            // TODO: send error?
-            closeHandler();
+        String[] authParameters;
+        try {
+            authParameters = new String(Base64.getDecoder().decode(serverNegotiationProcessor.getAuthentication()))
+                    .split("\0");
+        } catch (IllegalArgumentException e) {
+            // Shouldn't reach here, but in case...
+            authParameters = null;
+        }
+
+        if (authParameters == null) {
+            notifyError(XMPPErrors.MALFORMED_REQUEST);
             return;
         }
 
-        String authDecoded; // TODO: beware of char encoding
-        try {
-            // The authorization content might be invalid (i.e. not be a valid base64 scheme)
-            authDecoded = new String(Base64.getDecoder().decode(xmppNegotiator.getAuthorization()));
-        } catch (IllegalArgumentException e) {
-            closeHandler();
-            // TODO: send bad format?
-            return;
-        }
-        String[] authParameters = authDecoded.split("\0");
         String userName;
-        if (authParameters.length == 3) {
-            // Nothing, User, Password
-            userName = authParameters[1];
-        } else if (authParameters.length == 2) {
-            // User, Password
-            userName = authParameters[0];
-        } else {
-            closeHandler(); //TODO send error
-            return;
+        switch (authParameters.length) {
+            case 2:
+                // [username, password]
+                userName = authParameters[0];
+                break;
+            case 3:
+                // ["\0", username, password]
+                userName = authParameters[1];
+                break;
+            default:
+                // Shouldn't reach here, but in case...
+                notifyError(XMPPErrors.MALFORMED_REQUEST);
+                return;
         }
 
         // Create a client handler to connect to origin server
-        clientJid = userName + "@" + xmppNegotiator.getInitialParameters().get("to"); // TODO: check if readWrite handler needs it.
+        clientJid = userName + "@" + serverNegotiationProcessor.getInitialParameters().get("to"); // TODO: check if readWrite handler needs it.
         this.peerHandler = new XMPPClientHandler(applicationProcessor, metricsProvider, configurationsConsumer, this,
-                clientJid, xmppNegotiator.getInitialParameters(), xmppNegotiator.getAuthorization());
+                clientJid, serverNegotiationProcessor.getInitialParameters(),
+                serverNegotiationProcessor.getAuthentication());
 
 
         // This will create a new key with the client handler attached to it.
@@ -195,7 +231,8 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
         // TODO: We can save the key in a Map and update those timestamps before the select.
         if (peerConnectionTries >= MAX_PEER_CONNECTIONS_TRIES) {
             // TODO: Close connection?
-            closeHandler();
+//            closeHandler();
+            notifyClose();
             return;
         }
         System.out.print("Trying to connect to origin server...");

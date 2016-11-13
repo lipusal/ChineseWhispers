@@ -291,6 +291,7 @@ import java.nio.channels.SocketChannel;
             message = aux;
             writtenBytes = remainingSpace;
         }
+        System.out.println(new String(message));
         outputBuffer.put(message); // Stores the message in the output buffer.
         enableWriting();
         return writtenBytes;
@@ -360,7 +361,8 @@ import java.nio.channels.SocketChannel;
                 // Any other case, do nothing...
         }
         if(parserResponse== ParserResponse.NEGOTIATION_ERROR){ //message is sent in the negotiator
-            closeHandler(); // TODO: fix this
+//            closeHandler(); // TODO: fix this
+            notifyClose();
         }
     }
 

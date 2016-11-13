@@ -134,6 +134,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                               ConfigurationsConsumer configurationsConsumer,
                               AuthenticationProvider authenticationProvider) {
         logger = LogHelper.getLogger(getClass());
+
         messageRead = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
         messageRead.clear();
         inputBuffer = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
@@ -196,9 +197,10 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                 closeHandler(key);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            e.printStackTrace(); //TODO delete
             String message = INTERNAL_SERVER_ERROR_CODE + " Internal server error";
             outputBuffer.clear();
+            outputBuffer.put(new Byte("10"));
             for (byte b : message.getBytes()) outputBuffer.put(b);
             outputBuffer.put(new Byte("10"));
             closeHandler(key);
@@ -206,8 +208,6 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
         //Do NOT remove this if this is merged with XMPPHandler. Needs to be adapted in that case.
         if (outputBuffer.hasRemaining()) key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
     }
-
-
 
 
 
@@ -608,7 +608,10 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
     private void afterWrite(SelectionKey key) {
         if(outputBuffer.position()==0){
             processInput(key);
-            if(outputBuffer.position()!=0) key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+            if(outputBuffer.position()!=0) {
+                key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+            }
+
         }
     }
 

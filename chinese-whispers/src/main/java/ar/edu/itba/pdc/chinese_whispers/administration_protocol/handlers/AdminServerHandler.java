@@ -35,9 +35,13 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
      */
     private static final String DEFAULT_WRONG_PARAMETERS_RESPONSE = "WRONG PARAMETERS";
     /**
-     * The buffers size.
+     * The Input and message buffers size.
      */
-    private static final int BUFFER_SIZE = 1024;
+    private static final int INPUT_BUFFER_SIZE = 1024;
+    /**
+     * The output buffers size.
+     */
+    private static final int OUTPUT_BUFFER_SIZE = 100*1024;
 
     private static final String OK_CODE = "A00";
 
@@ -50,11 +54,14 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
     private static final String UNKNOWN_COMMAND_CODE = "B06";
     private static final String TOO_MANY_REQUEST_CODE = "B07";
     private static final String NOT_FOUND_CODE = "B08";
+    private static final String POLICY_VIOLATION_CODE = "B09";
 
     private static final String INTERNAL_SERVER_ERROR_CODE = "C00";
     private static final String SERVICE_UNAVAILABLE__CODE = "C01";
     private static final String PROTOCOL_VERSION_NOT_SUPPORTED_CODE = "C02";
     private static final String COMMAND_NOT_IMPLEMENTED_CODE = "C03";
+
+    private static final int MAX_PARAMETER_SIZE = 10;
 
 
     /**
@@ -78,11 +85,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
     /**
      * Contains parcial messages read
      */
-    private final Deque<Byte> messageRead; //TODO no cola infinita
-    /**
-     * Contains messges to be written
-     */
-    protected final Deque<Byte> writeMessages;
+    private final ByteBuffer messageRead;
     /**
      * Buffer from to fill when reading
      */
@@ -94,12 +97,17 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
     /**
      * boolean to tell if the handler is already closing
      */
-    private boolean isClosing;
+    private boolean mustClose;
 
     /**
      * boolean telling if this is the first message
      */
     private boolean firstMessage;
+
+    /**
+     * boolean telling if we are in a policy violating message
+     */
+    private boolean isMessageViolatingPolicy;
 
     /**
      * Object that provides the handler with metrics.
@@ -120,14 +128,16 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
     public AdminServerHandler(MetricsProvider metricsProvider,
                               ConfigurationsConsumer configurationsConsumer,
                               AuthenticationProvider authenticationProvider) {
-        messageRead = new ArrayDeque<>();
-        writeMessages = new ArrayDeque<>();
-        inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
-        outputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
+        messageRead = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
+        messageRead.clear();
+        inputBuffer = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
+        inputBuffer.flip();
+        outputBuffer = ByteBuffer.allocate(OUTPUT_BUFFER_SIZE);
         this.metricsProvider = metricsProvider;
         this.configurationsConsumer = configurationsConsumer;
         this.authenticationProvider = authenticationProvider;
         language = "ENG";
+        isMessageViolatingPolicy = false;
         firstMessage = true;
         isLoggedIn = false;
         //Commands that need authorization:
@@ -139,6 +149,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         authCommand.add("MPLX");
         authCommand.add("CNFG");
         authCommand.add("MTRC");
+        authCommand.add("USER");
     }
 
 
@@ -148,9 +159,9 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
      * Note: Once this method is executed, there is no chance to go back.
      */
     /* package */ void closeHandler(SelectionKey key) {
-        if (isClosing) return;
+        if (mustClose) return;
         System.out.println("Close AdminServerHandler");
-        isClosing = true;
+        mustClose = true;
         if (key.isValid()) {
             key.interestOps(key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
         } else {
@@ -170,42 +181,72 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         try {
             int readBytes = channel.read(inputBuffer);
             System.out.println("ReadBytes= " + readBytes);
+            inputBuffer.flip();
             metricsProvider.addAdministrationReadBytes(readBytes);
             if (readBytes >= 0) {
-                for (int i = 0; i < readBytes; i++) {
-                    byte b = inputBuffer.get(i);
-                    if (b == 10) {
-                        process(messageRead, key);
-                    } else if (b != 13) {
-                        messageRead.offer(b);
-                    }
-                }
+                processInput(key);
             } else if (readBytes == -1) {
                 closeHandler(key);
             }
-        } catch (Exception e) {//TODO why ignored?
+        } catch (Exception e) {
+            e.printStackTrace(); //TODO delete
             String message = INTERNAL_SERVER_ERROR_CODE + " Internal server error";
-            for (byte b : message.getBytes()) writeMessages.offer(b);
-            writeMessages.offer(new Byte("10"));
+            outputBuffer.clear();
+            outputBuffer.put(new Byte("10"));
+            for (byte b : message.getBytes()) outputBuffer.put(b);
+            outputBuffer.put(new Byte("10"));
             closeHandler(key);
         }
         //Do NOT remove this if this is merged with XMPPHandler. Needs to be adapted in that case.
-        if (!writeMessages.isEmpty()) key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        if (outputBuffer.hasRemaining()) key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
     }
 
-    private void process(Deque<Byte> messageRead, SelectionKey key) {
-
-        //TODO what if message is not well formed?
-        byte[] byteArray = new byte[messageRead.size()];
+    private void processInput(SelectionKey key) {
 
 
-        int i = 0;
-        while (!messageRead.isEmpty()) {
-            byteArray[i] = messageRead.poll();
-            i++;
+        if(isMessageViolatingPolicy){
+
         }
+        key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+        while (inputBuffer.hasRemaining()){
+            byte b = inputBuffer.get();
 
-        String string = new String(byteArray);
+            //Clean message if it was refused because of a message policy without reading it complete
+            if(isMessageViolatingPolicy){
+                while(b!=10 && inputBuffer.hasRemaining()) b=inputBuffer.get();
+                if(b==10) isMessageViolatingPolicy=false;
+                if(inputBuffer.hasRemaining()) b=inputBuffer.get();
+                else break;
+            }
+            System.out.println(b);
+            if (b == 10) {
+                process(key);
+                messageRead.clear();
+                return;
+            } else if (b != 13) {
+                System.out.println(messageRead.hasRemaining());
+                messageRead.put(b);
+                if(!messageRead.hasRemaining()){
+                    String message = POLICY_VIOLATION_CODE + " Request too big";
+                    for (byte messageB : message.getBytes()) outputBuffer.put(messageB);
+                    outputBuffer.put(new Byte("10"));
+                    messageRead.clear();
+                    //Clean rest of message until \n. If a \n wasn't found, the rest will be cleaned next time.
+                    while(b!=10 && inputBuffer.hasRemaining()) b=inputBuffer.get();
+                    isMessageViolatingPolicy=(b!=10);
+                    return;
+                }
+            }
+        }
+        if(!mustClose) key.interestOps(key.interestOps() | SelectionKey.OP_READ);
+    }
+
+    private void process(SelectionKey key) {
+
+        messageRead.flip();
+
+
+        String string = new  String(messageRead.array(),0,messageRead.limit());
         System.out.println(string);
         String[] requestElements = string.split(" ");
         Response response = new Response();
@@ -213,9 +254,9 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
 
 
         for (byte b : (response.getResponseCode() + " \"" + response.getResponseMessage() + "\"").getBytes()) {
-            writeMessages.offer(b);
+            outputBuffer.put(b);
         }
-        writeMessages.offer(new Byte("10"));
+        outputBuffer.put(new Byte("10"));
     }
 
     private void processCommand(Response response, String[] requestElements, SelectionKey key) {
@@ -224,12 +265,19 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
             response.setResponseCode(UNKNOWN_COMMAND_CODE);
             return;
         }
+        for(String parameter: requestElements){
+            if(parameter.length()>=MAX_PARAMETER_SIZE){
+                response.setResponseCode(POLICY_VIOLATION_CODE);
+                response.setResponseMessage("PARAMETERS SIZE TOO BIG");
+                return;
+            }
+        }
 
         String command = requestElements[0].toUpperCase();
 
         if (firstMessage) {
             firstMessage = false;
-            if (command.equals("PRCL")) {
+            if (command.equals("PTCL")) {
                 if (checkLength(requestElements.length, new int[]{2}, response)) {
                     if (!requestElements[1].equals("100")) {
                         response.setResponseMessage("Unsupported protocol");
@@ -253,9 +301,20 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         }
 
         switch (command) {
-            case "PRCL":
+            case "PTCL":
                 response.setResponseCode(UNEXPECTED_COMMAND_CODE);
                 response.setResponseMessage("Protocol need to be defined at the start of the connexion");
+                break;
+            case "USER":
+                if (checkLength(requestElements.length, new int[]{4,5}, response)) {
+                    response.setResponseCode(FORBIDDEN_CODE);
+                    response.setResponseMessage("User doesn't have enough privileges to create, delete or modify users");
+//                    if(requestElements[1].equals("CREATE")||requestElements[1].equals("DELETE")){
+//
+//                    }
+//                    response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
+//                    response.setResponseMessage("Operation needs to be CREATE or DELETE");
+                }
                 break;
             case "L337":
                 if (checkLength(requestElements.length, new int[]{1}, response)) {
@@ -334,8 +393,14 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                 break;
             case "BLCK":
                 if (checkLength(requestElements.length, new int[]{2}, response)) {
-                    configurationsConsumer.silenceUser(requestElements[1]);
-                    response.setToDefaultOK();
+                    if(hasCnfgSpace()){
+                        configurationsConsumer.silenceUser(requestElements[1]);
+                        response.setToDefaultOK();
+                    }else{
+                        response.setResponseCode(POLICY_VIOLATION_CODE);
+                        response.setResponseMessage("Maximum number of silenced/multiplexed users");
+                    }
+
                 }
                 break;
             case "UNBLCK":
@@ -368,9 +433,14 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                                     response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
                                     response.setResponseMessage("Port needs to be a number between 1 and FFFE");
                                 } else {
-                                    configurationsConsumer.multiplexUser(requestElements[1], requestElements[2],
-                                            Integer.valueOf(requestElements[3]));
-                                    response.setToDefaultOK();
+                                    if(hasCnfgSpace()){
+                                        configurationsConsumer.multiplexUser(requestElements[1], requestElements[2],
+                                                Integer.valueOf(requestElements[3]));
+                                        response.setToDefaultOK();
+                                    }else{
+                                        response.setResponseCode(POLICY_VIOLATION_CODE);
+                                        response.setResponseMessage("Maximum number of silenced/multiplexed users");
+                                    }
                                 }
                             } catch (NumberFormatException nfe) {
                                 response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
@@ -403,22 +473,25 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                             responseBuild.append(" " + silencedUser);
                         }
                     }
-                    responseBuild.append(" * MPLX");
+                    responseBuild.append(" # MPLX");
                     if (configurationsConsumer.getMultiplexedUsers().isEmpty()) {
                         responseBuild.append(" NONE");
                     } else {
-                        for (String clientJid : configurationsConsumer.getMultiplexedUsers().keySet()) {
-                            responseBuild.append(" " + clientJid + " " + configurationsConsumer.getMultiplexedUsers().get(clientJid) + " * "); //TODO way of showing info
+                        Iterator<String> iterator = configurationsConsumer.getMultiplexedUsers().keySet().iterator();
+                        while(iterator.hasNext()){
+                            String clientJid = iterator.next();
+                            responseBuild.append(" ").append(clientJid).append(" ").append(configurationsConsumer.getMultiplexedUsers().get(clientJid)); //TODO way of showing info
+                            if(iterator.hasNext()) responseBuild.append(" *");
                         }
                     }
-                    responseBuild.append(" * DEFAULT ");
+                    responseBuild.append(" # DEFAULT ");
                     if (Configurations.getInstance().getDefaultServerHost() == null || Configurations.getInstance().getDefaultServerPort() == null) {
                         responseBuild.append("NONE");
                     } else {
                         responseBuild.append(Configurations.getInstance().getDefaultServerHost() + " " + Configurations.getInstance().getDefaultServerPort());
 
                     }
-                    responseBuild.append(" * L337");
+                    responseBuild.append(" # L337");
                     responseBuild.append(Configurations.getInstance().isProcessL337() ? " ON" : " OFF");
 
                     response.setResponseCode(OK_CODE);
@@ -468,6 +541,10 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         }
     }
 
+    private boolean hasCnfgSpace() {
+        return MAX_PARAMETER_SIZE+configurationsConsumer.getSilencedUsers().size()*(MAX_PARAMETER_SIZE+2)+configurationsConsumer.getMultiplexedUsers().keySet().size()*(2*MAX_PARAMETER_SIZE+20)<OUTPUT_BUFFER_SIZE-MAX_PARAMETER_SIZE*2;
+    }
+
     private boolean checkLength(int length, int[] lengths, Response response) {
         for (int posibleLength : lengths) {
             if (posibleLength == length) {
@@ -481,49 +558,54 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
 
     @Override
     public void handleWrite(SelectionKey key) {// TODO: check how we turn on and off
-        int byteWritten = 0;
-        byte[] message = null;
-        if (!writeMessages.isEmpty()) {
-            if (writeMessages.size() > BUFFER_SIZE) {
-                message = new byte[BUFFER_SIZE];
-            } else {
-                message = new byte[writeMessages.size()];
-            }
-            for (int i = 0; i < message.length; i++) {
-                message[i] = writeMessages.poll();
-            }
-            if (message.length > 0) {
-                SocketChannel channel = (SocketChannel) key.channel();
-                outputBuffer.clear();
-                outputBuffer.put(message);
-                outputBuffer.flip();
-                try {
-                    do {
-                        byteWritten += channel.write(outputBuffer);
-                    }
-                    //TODO change to non-blocking
-                    while (outputBuffer.hasRemaining()); // Continue writing if message wasn't totally written
-                } catch (IOException e) {
-                    int bytesSent = outputBuffer.limit() - outputBuffer.position();
-                    byte[] restOfMessage = new byte[message.length - bytesSent];
-                    System.arraycopy(message, bytesSent, restOfMessage, 0, restOfMessage.length);
-                }
-            }
 
+        // Before trying to write, a key must be set to this handler.
+        if (key == null) {
+            throw new IllegalStateException();
         }
 
-        if (writeMessages.isEmpty()) {
-            key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-            if (isClosing) {
+        outputBuffer.flip(); // Makes the buffer's limit be set to its position, and it position, to 0
+        int writtenBytes = 0;
+        SocketChannel channel = (SocketChannel) key.channel();
+        try {
+            writtenBytes = channel.write(outputBuffer);
+        } catch (IOException e) {
+            handleClose(key);
+        }
+        if (!outputBuffer.hasRemaining()) {
+            // Disables writing if there is no more data to write
+            disableWriting(key);
+            if (mustClose) {
+                // If this handler mustClose field is true, it means that it has been requested to close
+                // Up to this point, all stored data was already sent, so it's ready to be closed.
                 handleClose(key);
             }
         }
+        // Makes the buffer's position be set to limit - position, and its limit, to its capacity
+        // If no data remaining, it just set the position to 0 and the limit to its capacity.
+        outputBuffer.compact();
 
-        System.out.print("Bytes written by administrator: " + byteWritten);
-        if (message != null) System.out.println(" Message: " + new String(message));
-        else System.out.println("");
-        metricsProvider.addAdministrationSentBytes(byteWritten);
+
+        System.out.print("Bytes written by administrator: " + writtenBytes);
+        metricsProvider.addAdministrationSentBytes(writtenBytes);
+
+        afterWrite(key);
+
     }
+
+    private void afterWrite(SelectionKey key) {
+        if(outputBuffer.position()==0){
+            processInput(key);
+        }
+    }
+
+    void disableWriting(SelectionKey key) {
+        if (key != null && key.isValid()) {
+            key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+        }
+    }
+
+
 
     private static class Response {
 

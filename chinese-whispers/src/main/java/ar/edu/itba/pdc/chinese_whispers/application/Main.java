@@ -39,7 +39,7 @@ public class Main {
             logger.error("Couldn't bind port {}. Aborting.", XMPP_PROXY_PORT);
             return;
         }
-        logger.info("Successfully bond port {}", XMPP_PROXY_PORT);
+        logger.info("Successfully bound port {}", XMPP_PROXY_PORT);
         Configurations configurations = Configurations.getInstance();
 
         AdminAcceptorHandler administrationAcceptorHandler = new AdminAcceptorHandler(MetricsManager.getInstance(), configurations, configurations);
@@ -51,7 +51,7 @@ public class Main {
             logger.error("Couldn't bind port {}. Aborting", ADMIN_PROTOCOL_PORT);
             return;
         }
-        logger.info("Successfully bond port {}", ADMIN_PROTOCOL_PORT);
+        logger.info("Successfully bound port {}", ADMIN_PROTOCOL_PORT);
 
         //Initialize tasks
         ClosingManager.getInstance();

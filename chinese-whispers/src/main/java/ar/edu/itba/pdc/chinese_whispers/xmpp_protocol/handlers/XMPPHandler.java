@@ -3,15 +3,11 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.application.LogHelper;
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPReadWriteHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.XMLInterpreter;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPNegotiator;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.XMLInterpreter;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -339,7 +335,6 @@ import java.nio.channels.SocketChannel;
         }
         return 0; // If this handler's state is not normal, it can't consume more messages.
     }
-
 
 
     /**

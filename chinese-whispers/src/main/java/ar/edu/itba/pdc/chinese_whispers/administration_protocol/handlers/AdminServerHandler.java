@@ -194,7 +194,6 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
             e.printStackTrace();
             String message = INTERNAL_SERVER_ERROR_CODE + " Internal server error";
             outputBuffer.clear();
-            outputBuffer.put(new Byte("10"));
             for (byte b : message.getBytes()) outputBuffer.put(b);
             outputBuffer.put(new Byte("10"));
             closeHandler(key);

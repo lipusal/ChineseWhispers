@@ -57,11 +57,8 @@ public class XMLInterpreter extends BaseXMLInterpreter {
         StringBuilder readXML = new StringBuilder();
         while (parser.hasNext()) {
             status = parser.next();
-//            if (status != AsyncXMLStreamReader.EVENT_INCOMPLETE) {
-//                amountOfStoredBytes = -1;
-//            }else{
-//                amountOfStoredBytes++;
-//            }
+            updateStoredBytes(status);
+
 
             switch (status) {
                 case AsyncXMLStreamReader.START_ELEMENT:
@@ -161,6 +158,7 @@ public class XMLInterpreter extends BaseXMLInterpreter {
         outputConsumer.consumeMessage(bytes);
         return ParserResponse.EVERYTHING_NORMAL;
     }
+
 
     /**
      * Sets whether this stream is silenced. Silenced streams discard all <message> stanzas.

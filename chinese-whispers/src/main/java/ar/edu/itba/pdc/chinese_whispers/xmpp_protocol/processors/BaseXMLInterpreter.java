@@ -82,11 +82,7 @@ public abstract class BaseXMLInterpreter {
             for (int offset = 0; offset < length; offset++) {
                 parser.getInputFeeder().feedInput(data, offset, 1);
                 response = process();
-                if (response != ParserResponse.EVENT_INCOMPLETE) {
-                    amountOfStoredBytes = -1;
-                }else{
-                    amountOfStoredBytes++;
-                }
+
                 // TODO: check order of this lines...
                 if (amountOfStoredBytes >= MAX_AMOUNT_OF_BYTES || parser.getDepth() > 10000) {
                     return ParserResponse.POLICY_VIOLATION;
@@ -101,6 +97,14 @@ public abstract class BaseXMLInterpreter {
         return response;
     }
 
+
+    protected void updateStoredBytes(int status) {
+        if (status != AsyncXMLStreamReader.EVENT_INCOMPLETE) {
+            amountOfStoredBytes = -1;
+        }else{
+            amountOfStoredBytes++;
+        }
+    }
 
     protected abstract ParserResponse process() throws XMLStreamException;
 

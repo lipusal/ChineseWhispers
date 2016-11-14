@@ -1,5 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors;
 
+import ar.edu.itba.pdc.chinese_whispers.application.LogHelper;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 
@@ -144,13 +145,13 @@ public class ClientNegotiationProcessor extends BaseNegotiationProcessor {
                         String streamVersion = getParser().getVersion();
                         // If streamVersion is null, we assume 1.0 version.
                         if (streamVersion != null && !streamVersion.equals("1.0")) {
-                            System.out.println("Warning: stream version is " + streamVersion); // TODO: use logger
+                            LogHelper.getLogger(ClientNegotiationProcessor.class).warn("Stream version is {}", streamVersion);
                         }
 
                         String streamEncoding = getParser().getEncoding();
                         // If streamEncoding is null, we assume UTF-8 encoding.
                         if (streamEncoding != null && !streamEncoding.equals("UTF-8")) {
-                            System.out.println("Warning: stream encoding is " + streamEncoding); // TODO: use logger
+                            LogHelper.getLogger(ClientNegotiationProcessor.class).warn("Stream encoding is {}", streamEncoding);
                         }
                         break;
                     case AsyncXMLStreamReader.START_ELEMENT:
@@ -161,7 +162,7 @@ public class ClientNegotiationProcessor extends BaseNegotiationProcessor {
                             case "host-gone":
                             case "host-unknown":
                                 response = ParserResponse.HOST_UNKNOWN;
-                                System.out.println("host unknown");
+                                LogHelper.getLogger(ClientNegotiationProcessor.class).trace("host unknown");    //TODO for which connection?
                                 break;
                             case "mechanism":
                                 isMechanism = true;

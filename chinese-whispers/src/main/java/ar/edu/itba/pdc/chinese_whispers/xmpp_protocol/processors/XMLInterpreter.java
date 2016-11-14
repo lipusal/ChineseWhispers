@@ -1,11 +1,11 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors;
 
+import ar.edu.itba.pdc.chinese_whispers.application.LogHelper;
 import ar.edu.itba.pdc.chinese_whispers.application.MetricsManager;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.BaseXMLInterpreter;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
+import org.slf4j.Logger;
 
 import javax.xml.stream.XMLStreamException;
 
@@ -29,6 +29,8 @@ public class XMLInterpreter extends BaseXMLInterpreter {
     private final ApplicationProcessor applicationProcessor;
 
 
+    private Logger logger;
+
     /**
      * Constructs a new interpreter.
      *
@@ -38,6 +40,7 @@ public class XMLInterpreter extends BaseXMLInterpreter {
     public XMLInterpreter(ApplicationProcessor applicationProcessor, OutputConsumer outputConsumer) {
         super(outputConsumer);
         this.applicationProcessor = applicationProcessor;
+        logger = LogHelper.getLogger(getClass());
     }
 
 
@@ -147,10 +150,13 @@ public class XMLInterpreter extends BaseXMLInterpreter {
                     }
                     break;
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                    byte[] bytes = readXML.toString().getBytes();
+                    String processedXML = readXML.toString();
+                    if(!processedXML.isEmpty()) logger.trace(processedXML);
+                    byte[] bytes = processedXML.getBytes();
                     outputConsumer.consumeMessage(bytes);
                     return ParserResponse.EVENT_INCOMPLETE;
                 case -1:
+                    logger.warn("XML interpreter entered error state (invalid XML)");   //TODO for which connection?
                     return ParserResponse.XML_ERROR;
             }
         }

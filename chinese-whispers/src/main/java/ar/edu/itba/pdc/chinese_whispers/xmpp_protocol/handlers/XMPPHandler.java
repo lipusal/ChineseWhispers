@@ -2,12 +2,13 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
+import ar.edu.itba.pdc.chinese_whispers.application.LogHelper;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPReadWriteHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.XMLInterpreter;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -76,6 +77,11 @@ import java.nio.channels.SocketChannel;
      */
     protected HandlerState handlerState;
 
+    /**
+     * Logger
+     */
+    protected final Logger logger;
+
 
     /**
      * Constructor.
@@ -93,6 +99,7 @@ import java.nio.channels.SocketChannel;
         this.mustClose = false;
         firstMessage = true;
         this.handlerState = HandlerState.NORMAL;
+        logger = LogHelper.getLogger(getClass());
     }
 
 
@@ -330,7 +337,6 @@ import java.nio.channels.SocketChannel;
     }
 
 
-
     /**
      * Performs actions based on the given {@link ParserResponse}
      *
@@ -396,11 +402,9 @@ import java.nio.channels.SocketChannel;
             handleClose(this.key); // TODO: close peer also
         }
         if (readBytes > 0) {
-            System.out.println("Read: " + new String(inputBuffer.array(), 0, readBytes)); // TODO: log? remove?
+            logger.trace("Read {} bytes: {}", readBytes, new String(inputBuffer.array(), 0, readBytes)); // TODO: remove?
             processReadMessage(inputBuffer.array(), inputBuffer.position());
             metricsProvider.addReadBytes(readBytes);
-            // TODO: log amount of read bytes?
-
         } else if (readBytes == -1) {
             notifyClose();
         }
@@ -436,16 +440,14 @@ import java.nio.channels.SocketChannel;
                 handleClose(this.key);
             }
         }
-        System.out.println("Written bytes: " + writtenBytes + " Message: " + new String(outputBuffer.array(), 0, writtenBytes));
+        logger.trace("Wrote {} bytes: {}", writtenBytes, new String(outputBuffer.array(), 0, writtenBytes));
         // Makes the buffer's position be set to limit - position, and its limit, to its capacity
         // If no data remaining, it just set the position to 0 and the limit to its capacity.
         outputBuffer.compact();
 
-        // TODO: log amount of written bytes?
         metricsProvider.addSentBytes(writtenBytes);
 
         afterWrite();
-
     }
 
     @Override

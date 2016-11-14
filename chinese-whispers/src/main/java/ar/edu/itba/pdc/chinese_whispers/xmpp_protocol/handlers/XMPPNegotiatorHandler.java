@@ -2,9 +2,11 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
+import ar.edu.itba.pdc.chinese_whispers.application.LogHelper;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.BaseNegotiationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
+import org.slf4j.Logger;
 
 /**
  * Created by jbellini on 4/11/16.
@@ -16,7 +18,6 @@ import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
      * The {@link BaseNegotiationProcessor} that will perform the negotiation process with xmpp entities.
      */
     private BaseNegotiationProcessor negotiationProcessor;
-
 
     /**
      * Constructor

@@ -4,8 +4,10 @@ import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.Authe
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
+import ar.edu.itba.pdc.chinese_whispers.application.LogHelper;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPReadWriteHandler;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -125,10 +127,13 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
      */
     private final AuthenticationProvider authenticationProvider;
 
+    private final Logger logger;
+
 
     public AdminServerHandler(MetricsProvider metricsProvider,
                               ConfigurationsConsumer configurationsConsumer,
                               AuthenticationProvider authenticationProvider) {
+        logger = LogHelper.getLogger(getClass());
         messageRead = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
         messageRead.clear();
         inputBuffer = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
@@ -161,7 +166,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
      */
     /* package */ void closeHandler(SelectionKey key) {
         if (mustClose) return;
-        System.out.println("Close AdminServerHandler");
+        logger.trace("Close AdminServerHandler");   //TODO for which connection?
         mustClose = true;
         if (key.isValid()) {
             key.interestOps(key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
@@ -181,8 +186,8 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
         inputBuffer.clear();
         try {
             int readBytes = channel.read(inputBuffer);
-            System.out.println("ReadBytes= " + readBytes);
-            System.out.println("Read by administrator: " + new String(inputBuffer.array(),0,readBytes));
+            logger.trace("Read bytes = {}", readBytes);
+            logger.trace("Read by administrator: {}", new String(inputBuffer.array(), 0, readBytes));
             inputBuffer.flip();
             metricsProvider.addAdministrationReadBytes(readBytes);
             if (readBytes >= 0) {
@@ -250,7 +255,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
 
 
         String string = new  String(messageRead.array(),0,messageRead.limit());
-        System.out.println("Message to process: " + string);
+        logger.trace("Message to process: {}", string);
         String[] requestElements = string.split(" ");
         Response response = new Response();
         processCommand(response, requestElements, key);
@@ -586,8 +591,8 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                 handleClose(key);
             }
         }
-        System.out.print("Bytes written by administrator: " + writtenBytes);
-        System.out.println(" Message: "+new String(outputBuffer.array(),0,writtenBytes));
+        logger.trace("Bytes written by administrator: {}", writtenBytes);
+        logger.trace("Message: {}", new String(outputBuffer.array(),0,writtenBytes));
         // Makes the buffer's position be set to limit - position, and its limit, to its capacity
         // If no data remaining, it just set the position to 0 and the limit to its capacity.
         outputBuffer.compact();

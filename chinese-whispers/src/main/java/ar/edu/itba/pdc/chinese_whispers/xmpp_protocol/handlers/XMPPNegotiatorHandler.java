@@ -19,8 +19,6 @@ import org.slf4j.Logger;
      */
     private BaseNegotiationProcessor negotiationProcessor;
 
-    protected final Logger logger;
-
     /**
      * Constructor
      *
@@ -33,7 +31,6 @@ import org.slf4j.Logger;
                                     ConfigurationsConsumer configurationsConsumer) {
         super(applicationProcessor, metricsProvider, configurationsConsumer);
         this.negotiationProcessor = null;
-        this.logger = LogHelper.getLogger(getClass());
     }
 
     /**

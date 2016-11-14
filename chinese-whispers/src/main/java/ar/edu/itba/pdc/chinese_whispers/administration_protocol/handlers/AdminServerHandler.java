@@ -387,7 +387,6 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                             response.setToDefaultOK();
                             break;
                         }
-                        response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
                         response.setResponseMessage("Must add port or set server to DEFAULT");
                     }
                 }
@@ -395,20 +394,18 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
             case "CNFG":
                 if (checkLength(requestElements.length, new int[]{1}, response)) {
                     StringBuilder responseBuild = new StringBuilder();
-                    responseBuild.append("BLCK");
+                    responseBuild.append("L337");
+                    responseBuild.append(Configurations.getInstance().isProcessL337() ? " ON" : " OFF");
+
+                    response.setResponseCode(OK_CODE);
+                    response.setResponseMessage(responseBuild.toString());
+
+                    responseBuild.append(" * BLCK");
                     if (configurationsConsumer.getSilencedUsers().isEmpty()) {
                         responseBuild.append(" NONE");
                     } else {
                         for (String silencedUser : configurationsConsumer.getSilencedUsers()) {
                             responseBuild.append(" " + silencedUser);
-                        }
-                    }
-                    responseBuild.append(" * MPLX");
-                    if (configurationsConsumer.getMultiplexedUsers().isEmpty()) {
-                        responseBuild.append(" NONE");
-                    } else {
-                        for (String clientJid : configurationsConsumer.getMultiplexedUsers().keySet()) {
-                            responseBuild.append(" " + clientJid + " " + configurationsConsumer.getMultiplexedUsers().get(clientJid) + " * "); //TODO way of showing info
                         }
                     }
                     responseBuild.append(" * DEFAULT ");
@@ -418,11 +415,15 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                         responseBuild.append(Configurations.getInstance().getDefaultServerHost() + " " + Configurations.getInstance().getDefaultServerPort());
 
                     }
-                    responseBuild.append(" * L337");
-                    responseBuild.append(Configurations.getInstance().isProcessL337() ? " ON" : " OFF");
+                    responseBuild.append(" * MPLX");
+                    if (configurationsConsumer.getMultiplexedUsers().isEmpty()) {
+                        responseBuild.append(" NONE");
+                    } else {
+                        for (String clientJid : configurationsConsumer.getMultiplexedUsers().keySet()) {
+                            responseBuild.append(" " + clientJid + " " + configurationsConsumer.getMultiplexedUsers().get(clientJid) + " * "); //TODO way of showing info
+                        }
+                    }
 
-                    response.setResponseCode(OK_CODE);
-                    response.setResponseMessage(responseBuild.toString());
                 }
                 break;
             case "MTRC":

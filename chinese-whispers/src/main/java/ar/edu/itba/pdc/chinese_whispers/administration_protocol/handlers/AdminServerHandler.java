@@ -181,6 +181,7 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
         try {
             int readBytes = channel.read(inputBuffer);
             System.out.println("ReadBytes= " + readBytes);
+            System.out.println("Read by administrator: " + new String(inputBuffer.array(),0,readBytes));
             inputBuffer.flip();
             metricsProvider.addAdministrationReadBytes(readBytes);
             if (readBytes >= 0) {
@@ -218,13 +219,11 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                 if(inputBuffer.hasRemaining()) b=inputBuffer.get();
                 else break;
             }
-            System.out.println(b);
             if (b == 10) {
                 process(key);
                 messageRead.clear();
                 return;
             } else if (b != 13) {
-                System.out.println(messageRead.hasRemaining());
                 messageRead.put(b);
                 if(!messageRead.hasRemaining()){
                     String message = POLICY_VIOLATION_CODE + " Request too big";
@@ -581,12 +580,14 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
                 handleClose(key);
             }
         }
+        System.out.print("Bytes written by administrator: " + writtenBytes);
+        System.out.println(" Message: "+new String(outputBuffer.array(),0,writtenBytes));
         // Makes the buffer's position be set to limit - position, and its limit, to its capacity
         // If no data remaining, it just set the position to 0 and the limit to its capacity.
         outputBuffer.compact();
 
 
-        System.out.print("Bytes written by administrator: " + writtenBytes);
+
         metricsProvider.addAdministrationSentBytes(writtenBytes);
 
         afterWrite(key);

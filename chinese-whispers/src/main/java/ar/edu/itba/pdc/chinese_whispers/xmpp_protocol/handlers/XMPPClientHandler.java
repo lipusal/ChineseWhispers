@@ -151,6 +151,7 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
         ((XMPPServerHandler) peerHandler).startProxying(xmppReadWriteHandler);
         this.key.attach(xmppReadWriteHandler);
         this.key.interestOps(peerHandler.key.interestOps() | SelectionKey.OP_READ); // TODO: check if it's better to check the peer handler's write buffer before.
+        //TODO why peerHandler.key????
     }
 
 

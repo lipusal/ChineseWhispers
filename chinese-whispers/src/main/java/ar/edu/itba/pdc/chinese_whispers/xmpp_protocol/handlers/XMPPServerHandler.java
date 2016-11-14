@@ -131,8 +131,8 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
         this.key.attach(xmppReadWriteHandler);
 
         String response = "<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>\n"; //TODO retry?
-        System.out.println(response); //TODO delete souts
         xmppReadWriteHandler.consumeMessage(response.getBytes());
+
         this.key.interestOps(this.key.interestOps() | SelectionKey.OP_READ | SelectionKey.OP_WRITE);
     }
 

@@ -20,7 +20,13 @@
 <stream:stream xmlns:stream="http://etherx.jabber.org/streams" version="1.0" xmlns="jabber:client" to="pc" xml:lang="es" xmlns:xml="http://www.w3.org/XML/1998/namespace">
 
 
+xmlns:stream="http://etherx.jabber.org/streams" version="1.0" xmlns="jabber:client" xml:lang="es" xmlns:xml="http://www.w3.org/XML/1998/namespace"
+
 //////
+
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" version="1.0" xmlns="jabber:client" xml:lang="es" xmlns:xml="http://www.w3.org/XML/1998/namespace">
+
+
 <stream:stream version='1.0' from='pc' xml:lang='es' id='randomgenerated' xmlns:stream='http://etherx.jabber.org/streams' xmlns='jabber:client' xmlns:xml='http://www.w3.org/XML/1998/namespace'>
 <stream:features> <mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'> <mechanism>PLAIN</mechanism> </mechanisms> </stream:features>
 

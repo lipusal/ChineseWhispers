@@ -80,7 +80,7 @@ import java.nio.channels.SelectionKey;
             disableReading(); // Stops reading if there is no space in its peer handler's output buffer
         }
         inputBuffer.position(0);
-        inputBuffer.limit(maxAmountOfRead);
+        inputBuffer.limit(maxAmountOfRead>inputBuffer.capacity()?inputBuffer.capacity():maxAmountOfRead);
     }
 
     @Override

@@ -291,7 +291,6 @@ import java.nio.channels.SocketChannel;
             message = aux;
             writtenBytes = remainingSpace;
         }
-        System.out.println(new String(message));
         outputBuffer.put(message); // Stores the message in the output buffer.
         enableWriting();
         return writtenBytes;
@@ -410,12 +409,8 @@ import java.nio.channels.SocketChannel;
         }
         if (readBytes > 0) {
 
-            //TODO delete this
-            byte[] message = new byte[readBytes];
-            for(int i =0; i<readBytes; i++){
-                message[i]=inputBuffer.array()[i];
-            }
-            System.out.println(new String(message));
+            System.out.print("Read: ");
+            System.out.println(new String(inputBuffer.array(),0,readBytes));
 
             processReadMessage(inputBuffer.array(), inputBuffer.position());
 
@@ -457,6 +452,7 @@ import java.nio.channels.SocketChannel;
                 handleClose(this.key);
             }
         }
+        System.out.println("Written bytes: "+writtenBytes+" Message: "+new String(outputBuffer.array(),0,writtenBytes));
         // Makes the buffer's position be set to limit - position, and its limit, to its capacity
         // If no data remaining, it just set the position to 0 and the limit to its capacity.
         outputBuffer.compact();

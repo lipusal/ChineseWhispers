@@ -2,10 +2,14 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation;
 
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.application.LogHelper;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NegotiationConsumer;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
 import com.fasterxml.aalto.AsyncByteArrayFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
+import org.slf4j.Logger;
 
 import javax.xml.stream.XMLStreamException;
 import java.util.HashMap;
@@ -63,6 +67,12 @@ public abstract class XMPPNegotiator {
     protected final StringBuilder authorizationBuilder;
 
     /**
+     * Logger instance.
+     */
+    protected final Logger logger;
+
+
+    /**
      * Constructs a new XMPP negotiator.
      *
      * @param outputConsumer The object that will consume output messages.
@@ -76,6 +86,7 @@ public abstract class XMPPNegotiator {
         this.outputConsumer = outputConsumer;
         this.initialParameters = new HashMap<>();
         authorizationBuilder = new StringBuilder();
+        this.logger = LogHelper.getLogger(getClass());
     }
 
 

@@ -6,7 +6,8 @@ import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.ClosingManager;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.ErrorManager;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.XMPPAcceptorHandler;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import java.time.LocalDateTime;
 
 import java.util.Date;
 
@@ -23,34 +24,34 @@ public class Main {
 
     public static void main(String[] args) {
 
-        final Logger logger = LoggerFactory.getLogger(Main.class);
-        logger.info("Application started at " + new Date());
+		Logger logger = LogHelper.getLogger(Main.class);
+		logger.info("Application started at {}", LocalDateTime.now());
 
         TCPSelector selector = TCPSelector.getInstance();
 
         XMPPAcceptorHandler acceptorHandler = new XMPPAcceptorHandler(L337Processor.getInstance(),
                 ApplicationNewConnectionsConsumer.getInstance(), Configurations.getInstance(), MetricsManager.getInstance());
 
-        logger.info("Trying to bind port " + XMPP_PROXY_PORT + "...");
+        logger.info("Trying to bind port {}...", XMPP_PROXY_PORT);
         try {
             selector.addServerSocketChannel(XMPP_PROXY_PORT, acceptorHandler); // TODO: check why it's not breaking
         } catch (Throwable e) {
-            logger.debug("Error! Couldn't bind port " + XMPP_PROXY_PORT + ". Aborting");
+            logger.error("Couldn't bind port {}. Aborting.", XMPP_PROXY_PORT);
             return;
         }
-        logger.info("Successfully bond port " + XMPP_PROXY_PORT);
+        logger.info("Successfully bond port {}", XMPP_PROXY_PORT);
         Configurations configurations = Configurations.getInstance();
 
         AdminAcceptorHandler administrationAcceptorHandler = new AdminAcceptorHandler(MetricsManager.getInstance(), configurations, configurations);
 
-        logger.info("Trying to bind port " + ADMIN_PROTOCOL_PORT + "...");
+        logger.info("Trying to bind port {}...", ADMIN_PROTOCOL_PORT);
         try {
             selector.addServerSocketChannel(ADMIN_PROTOCOL_PORT, administrationAcceptorHandler);
         } catch (Throwable e) {
-            logger.debug("Error! Couldn't bind port " + ADMIN_PROTOCOL_PORT + ". Aborting");
+            logger.error("Couldn't bind port {}. Aborting", ADMIN_PROTOCOL_PORT);
             return;
         }
-        logger.info("Successfully bond port " + ADMIN_PROTOCOL_PORT);
+        logger.info("Successfully bond port {}", ADMIN_PROTOCOL_PORT);
 
         //Initialize tasks
         ClosingManager.getInstance();

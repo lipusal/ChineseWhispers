@@ -464,7 +464,13 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
             case "CNFG":
                 if (checkLength(requestElements.length, new int[]{1}, response)) {
                     StringBuilder responseBuild = new StringBuilder();
-                    responseBuild.append("BLCK");
+                    responseBuild.append("L337");
+                    responseBuild.append(Configurations.getInstance().isProcessL337() ? " ON" : " OFF");
+
+                    response.setResponseCode(OK_CODE);
+                    response.setResponseMessage(responseBuild.toString());
+
+                    responseBuild.append(" # BLCK");
                     if (configurationsConsumer.getSilencedUsers().isEmpty()) {
                         responseBuild.append(" NONE");
                     } else {
@@ -490,11 +496,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                         responseBuild.append(Configurations.getInstance().getDefaultServerHost() + " " + Configurations.getInstance().getDefaultServerPort());
 
                     }
-                    responseBuild.append(" # L337");
-                    responseBuild.append(Configurations.getInstance().isProcessL337() ? " ON" : " OFF");
 
-                    response.setResponseCode(OK_CODE);
-                    response.setResponseMessage(responseBuild.toString());
                 }
                 break;
             case "MTRC":

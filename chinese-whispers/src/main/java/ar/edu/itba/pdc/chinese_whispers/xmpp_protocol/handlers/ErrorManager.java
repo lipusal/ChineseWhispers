@@ -1,17 +1,13 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import static ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse.*;
-import static ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse.NEGOTIATION_ERROR;
-
-// TODO: make it extend from another manager to share code with ClosingManager!!!!
 
 /**
  * This class is in charge of sending error messages according to the error situation each
@@ -28,6 +24,13 @@ import static ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserRe
  */
 public class ErrorManager {
 
+
+    private final static String INITIAL_TAG = "<?xml version='1.0' encoding='UTF-8'?>" +
+            "<stream:stream version='1.0' id='AnyId " +
+            "xmlns:stream=\'http://etherx.jabber.org/streams\' " +
+            "xmlns=\'jabber:client\' " +
+            "xmlns:xml=\'http://www.w3.org/XML/1998/namespace\'>";
+
     // XML errors
     private final static String BAD_FORMAT = "<stream:error>" +
             "<bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
@@ -37,16 +40,31 @@ public class ErrorManager {
             "</stream:error>";
 
 
+    // TCP level errors
+    private final static String CONNECTION_REFUSED = "<stream:error>" +
+            "<remote-connection-failed xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
+            "</stream:error>";
+    private final static String CONNECTION_TIMEOUT = "<stream:error>" +
+            "<connection-timeout xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
+            "</stream:error>";
+
     // Negotiation errors
     private final static String HOST_UNKNOWN = "<stream:error>" +
             "<host-unknown xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
             "</stream:error>";
+    private final static String HOST_UNKNOWN_FROM_SERVER = CONNECTION_REFUSED; // Same XMPP response
     private final static String INVALID_MECHANISM_FAILURE = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>" +
             "<invalid-mechanism/>" +
             "</failure>";
     private final static String MALFORMED_REQUEST = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>" +
             "<malformed-request/>" +
             "</failure>";
+    private final static String UNSUPPORTED_NEGOTIATION_MECHANISM = "<abort xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>";
+    private final static String UNSUPPORTED_NEGOTIATION_MECHANISM_FOR_CLIENT = CONNECTION_REFUSED; // Same XMPP response
+    private final static String FAILED_NEGOTIATION = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>" +
+            "<not-authorized/>" +
+            "</failure>";
+    private final static String FAILED_NEGOTIATION_FOR_SERVER = UNSUPPORTED_NEGOTIATION_MECHANISM; // Same XMPP response
 
 
     // System errors
@@ -73,9 +91,6 @@ public class ErrorManager {
     private final Map<XMPPHandler, byte[]> errorHandlers;
 
 
-
-
-
     /**
      * Holds the singleton.
      */
@@ -91,14 +106,23 @@ public class ErrorManager {
         parserResponseErrors.add(ParserResponse.HOST_UNKNOWN);
         parserResponseErrors.add(ParserResponse.INVALID_AUTH_MECHANISM);
         parserResponseErrors.add(ParserResponse.MALFORMED_REQUEST);
-        parserResponseErrors.add(ParserResponse.NEGOTIATION_ERROR);
+        parserResponseErrors.add(ParserResponse.UNSUPPORTED_NEGOTIATION_MECHANISM);
+        parserResponseErrors.add(ParserResponse.FAILED_NEGOTIATION);
 
         this.errorMessages = new HashMap<>();
         this.errorMessages.put(XMPPErrors.BAD_FORMAT, BAD_FORMAT);
         this.errorMessages.put(XMPPErrors.POLICY_VIOLATION, POLICY_VIOLATION);
+        this.errorMessages.put(XMPPErrors.CONNECTION_REFUSED, CONNECTION_REFUSED);
+        this.errorMessages.put(XMPPErrors.CONNECTION_TIMEOUT, CONNECTION_TIMEOUT);
         this.errorMessages.put(XMPPErrors.HOST_UNKNOWN, HOST_UNKNOWN);
+        this.errorMessages.put(XMPPErrors.HOST_UNKNOWN_FROM_SERVER, HOST_UNKNOWN_FROM_SERVER);
         this.errorMessages.put(XMPPErrors.INVALID_AUTH_MECHANISM, INVALID_MECHANISM_FAILURE);
         this.errorMessages.put(XMPPErrors.MALFORMED_REQUEST, MALFORMED_REQUEST);
+        this.errorMessages.put(XMPPErrors.UNSUPPORTED_NEGOTIATION_MECHANISM, UNSUPPORTED_NEGOTIATION_MECHANISM);
+        this.errorMessages.put(XMPPErrors.UNSUPPORTED_NEGOTIATION_MECHANISM_FOR_CLIENT,
+                UNSUPPORTED_NEGOTIATION_MECHANISM_FOR_CLIENT);
+        this.errorMessages.put(XMPPErrors.FAILED_NEGOTIATION, FAILED_NEGOTIATION);
+        this.errorMessages.put(XMPPErrors.FAILED_NEGOTIATION_FOR_SERVER, FAILED_NEGOTIATION_FOR_SERVER);
         this.errorMessages.put(XMPPErrors.SYSTEM_SHUTDOWN, SYSTEM_SHUTDOWN);
         this.errorMessages.put(XMPPErrors.INTERNAL_SERVER_ERROR, INTERNAL_SERVER_ERROR);
 
@@ -106,14 +130,20 @@ public class ErrorManager {
         // Stores in the TCP Selector "always run" set a task that is in charge of sending error messages.
         TCPSelector.getInstance().addAlwaysRunTask(() -> {
 
-            // TODO: before sending error, all remaining data must be sent
-
             // Stores those messages that must be removed from the map
             // (i.e. those whose message has been completely written).
             Set<XMPPHandler> toRemoveHandlers = new HashSet<>();
             for (XMPPHandler each : errorHandlers.keySet()) {
                 byte[] message = errorHandlers.get(each);
-                int writtenData = each.writeMessage(errorHandlers.get(each));
+                // If no message was sent, the <stream:stream> tag is prepended
+                if (each.firstMessage()) {
+                    byte[] initialTag = INITIAL_TAG.getBytes();
+                    byte[] aux = new byte[initialTag.length + message.length];
+                    System.arraycopy(initialTag, 0, aux, 0, initialTag.length);
+                    System.arraycopy(message, 0, aux, initialTag.length, message.length);
+                    message = aux;
+                }
+                int writtenData = each.writeMessage(message);
                 // If no bytes could be stored, finish this iteration step
                 if (writtenData == 0) {
                     continue;
@@ -127,7 +157,7 @@ public class ErrorManager {
                 } else {
                     toRemoveHandlers.add(each); // Message was completely written
                     // Once the error message is completely written, the corresponding handler must be closed.
-                    each.notifyClose();
+                    each.notifyErrorWasSent();
                 }
             }
             // Remove all handlers whose message has been completely written

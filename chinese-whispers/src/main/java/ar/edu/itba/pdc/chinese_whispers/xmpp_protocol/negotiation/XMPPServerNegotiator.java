@@ -3,7 +3,7 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation;
 
 import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 
 import javax.xml.stream.XMLStreamException;
@@ -126,7 +126,7 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
                                         "        <invalid-mechanism/>" +
                                         "      </failure>";
                                 outputConsumer.consumeMessage(negotiationError.getBytes());
-                                return ParserResponse.NEGOTIATION_ERROR;
+                                return ParserResponse.INVALID_AUTH_MECHANISM;
                             }
                         }
 
@@ -143,7 +143,7 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
                                     "        <malformed-request/>\n" +
                                     "      </failure>";
                             outputConsumer.consumeMessage(negotiationError.getBytes());
-                            return ParserResponse.NEGOTIATION_ERROR;
+                            return ParserResponse.MALFORMED_REQUEST;
                         }
                         System.out.println("Connection with client was a SUCCESS");
                         authorization = authorizationBuilder.toString();

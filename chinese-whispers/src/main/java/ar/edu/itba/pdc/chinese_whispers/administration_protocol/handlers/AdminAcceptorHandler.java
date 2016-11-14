@@ -3,20 +3,15 @@ package ar.edu.itba.pdc.chinese_whispers.administration_protocol.handlers;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.AuthenticationProvider;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPServerHandler;
+import ar.edu.itba.pdc.chinese_whispers.connection.TCPAcceptorHandler;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
-/**
- * Created by jbellini on 29/10/16.
- * <p>
- * A {@link TCPServerHandler} that only implements the {@link TCPServerHandler#handleAccept(SelectionKey)} method.
- * It can be used to separate logic of accepting and reading/writing in a {@link TCPServerHandler}.
- */
-public class AdminAcceptorHandler implements TCPServerHandler {
+
+public class AdminAcceptorHandler implements TCPAcceptorHandler {
 
 
 	/**
@@ -36,7 +31,7 @@ public class AdminAcceptorHandler implements TCPServerHandler {
 
 
 	public AdminAcceptorHandler(MetricsProvider metricsProvider,
-								ConfigurationsConsumer configurationsConsumer,
+                                ConfigurationsConsumer configurationsConsumer,
                                 AuthenticationProvider authenticationProvider) {
 		this.metricsProvider = metricsProvider;
 		this.configurationsConsumer = configurationsConsumer;
@@ -44,15 +39,6 @@ public class AdminAcceptorHandler implements TCPServerHandler {
 	}
 
 
-	@Override
-	public void handleRead(SelectionKey key) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public void handleWrite(SelectionKey key) {
-		throw new UnsupportedOperationException();
-	}
 
 	@Override
 	public boolean handleError(SelectionKey key) {
@@ -67,7 +53,7 @@ public class AdminAcceptorHandler implements TCPServerHandler {
 	}
 
 	@Override
-	public void handleAccept(SelectionKey key) {
+	public SelectionKey handleAccept(SelectionKey key) {
 		try {
 			SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
 			channel.configureBlocking(false);
@@ -77,10 +63,11 @@ public class AdminAcceptorHandler implements TCPServerHandler {
 			// (it's writable upon creation because it might be created with data in its write messages queue)
 			SelectionKey newKey = channel.register(key.selector(),
 					SelectionKey.OP_READ | SelectionKey.OP_WRITE, handler);
-
+			return newKey;
 			// TODO: Add this new key into some set in some future class to have tracking of connections
 			// TODO this should be done in a TCPCOnnecter or something.
 		} catch (IOException ignored) {
 		}
+		return null;
 	}
 }

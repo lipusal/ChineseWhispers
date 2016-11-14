@@ -24,13 +24,5 @@ public interface ApplicationProcessor {
      */
     void processMessageBody(StringBuilder stringBuilder, char[] message, boolean isInBodyTag);
 
-    /**
-     * Method to be executed when parsing content that is part of a body.
-     *
-     * @param message The message to be processed.
-     */
-    @Deprecated
-    byte[] processMessageBody(byte[] message);
-
 
 }

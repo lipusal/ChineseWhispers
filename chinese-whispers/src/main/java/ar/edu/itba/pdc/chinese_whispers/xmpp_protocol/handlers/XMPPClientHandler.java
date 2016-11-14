@@ -4,7 +4,8 @@ import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.Confi
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPClientHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPClientNegotiator;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ClientNegotiationProcessor;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -27,22 +28,11 @@ import java.util.Map;
 public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClientHandler {
 
 
-    private static final String PARTIAL_INITIAL_MESSAGE = "<stream:stream " +
-            "xmlns:stream=\'http://etherx.jabber.org/streams\' " +
-            "xmlns=\'jabber:client\' " +
-            "xmlns:xml=\'http://www.w3.org/XML/1998/namespace\'";
-
-
-    /**
-     * A string builder to create strings efficiently
-     */
-    private static final StringBuilder stringBuilder = new StringBuilder();
-
-
     /**
      * Says if this handler has established a TCP connection with the origin server
      */
     private boolean connected;
+
 
 
     /**
@@ -57,7 +47,7 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
      * @param clientJid                   The User's JID (The user that connected to the proxy).
      * @param negotiatorInitialParameters The negotiation initial parameters that were read by the
      *                                    {@link XMPPServerHandler} that is creating this new {@link XMPPClientHandler}
-     * @param authorization               The authorization. // TODO: specify a bit more
+     * @param authentication              The authentication string (i.e. text between the auth tags).
      */
     /* package */ XMPPClientHandler(ApplicationProcessor applicationProcessor,
                                     MetricsProvider metricsProvider,
@@ -65,15 +55,15 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
                                     XMPPServerHandler xmppServerHandler,
                                     String clientJid,
                                     Map<String, String> negotiatorInitialParameters,
-                                    String authorization) {
+                                    String authentication) {
         super(applicationProcessor, metricsProvider, configurationsConsumer);
+        setNegotiationProcessor(new ClientNegotiationProcessor(this, authentication, negotiatorInitialParameters));
         if (xmppServerHandler == null) {
             throw new IllegalArgumentException();
         }
         this.peerHandler = xmppServerHandler;
         this.clientJid = clientJid;
         connected = false;
-        xmppNegotiator = new XMPPClientNegotiator(this, authorization, negotiatorInitialParameters);
     }
 
     /**
@@ -112,27 +102,37 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
         // Nothing to be done...
     }
 
+
+    @Override
+    protected void handleResponse(ParserResponse parserResponse) {
+        super.handleResponse(parserResponse);
+        switch (parserResponse) {
+            case XML_ERROR:
+                // super class method just calls the own notify error method (which does not notify the peer handler)
+                peerHandler.notifyError(XMPPErrors.INTERNAL_SERVER_ERROR); // Not our proxy, but the origin server
+                break;
+            case HOST_UNKNOWN:
+                peerHandler.notifyError(XMPPErrors.HOST_UNKNOWN_FROM_SERVER); // Make peer handler send error
+                notifyClose(); // Close this handler
+                break;
+            case UNSUPPORTED_NEGOTIATION_MECHANISM:
+                // Tells the client that connection couldn't be established
+                peerHandler.notifyError(XMPPErrors.UNSUPPORTED_NEGOTIATION_MECHANISM_FOR_CLIENT);
+                // Tells the server that the authentication process is aborted
+                notifyError(XMPPErrors.UNSUPPORTED_NEGOTIATION_MECHANISM);
+                break;
+            case FAILED_NEGOTIATION:
+                peerHandler.notifyError(XMPPErrors.FAILED_NEGOTIATION);
+                notifyError(XMPPErrors.FAILED_NEGOTIATION_FOR_SERVER);
+                break;
+        }
+    }
+
     /**
      * Starts the XMPP negotiation process by creating the first negotiation message to be sent.
      */
-    // TODO: shouldn't this belong on the client negotiator?
     private void startXMPPNegotiation() {
-        // TODO: check that this does not have problems with char encoding
-        stringBuilder.setLength(0); // Clears the string builder
-        stringBuilder.append(PARTIAL_INITIAL_MESSAGE);
-
-        // Adds to the initial message all parameters sent by the client connected to the proxy
-        for (String attributeKey : xmppNegotiator.getInitialParameters().keySet()) {
-            stringBuilder.append(" ")
-                    .append(attributeKey)
-                    .append("=\'")
-                    .append(xmppNegotiator.getInitialParameters().get(attributeKey))
-                    .append("\'");
-        }
-
-        stringBuilder.append(">\n");
-//        System.out.println("Proxy to Server:" + stringBuilder); // TODO: log this.
-        writeMessage(stringBuilder.toString().getBytes());
+        ((ClientNegotiationProcessor) getNegotiationProcessor()).sendInitialMessage();
     }
 
 
@@ -150,8 +150,7 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
                 configurationsConsumer, clientJid, this.key);
         ((XMPPServerHandler) peerHandler).startProxying(xmppReadWriteHandler);
         this.key.attach(xmppReadWriteHandler);
-        this.key.interestOps(peerHandler.key.interestOps() | SelectionKey.OP_READ); // TODO: check if it's better to check the peer handler's write buffer before.
-        //TODO why peerHandler.key????
+        enableReading();
     }
 
 
@@ -181,7 +180,8 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
         }
         if (this.connected) {
             System.out.println("Connect established! Now listening messages"); // TODO: log this?
-            this.key.interestOps(SelectionKey.OP_READ); // Makes the key readable TODO: check this!!
+            this.key.interestOps(0); // Turn off all keys
+            enableReading();
             startXMPPNegotiation();
         } else {
             System.out.println("Connection failed! Not Connected!"); // TODO: log this?
@@ -191,10 +191,6 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
         // TODO: Add this key when connected into some set in some future class to have tracking of connections
     }
 
-    @Override
-    void beforeClose() {
-        ((XMPPServerHandler)peerHandler).handleFailure();
-    }
 
 
     @Override

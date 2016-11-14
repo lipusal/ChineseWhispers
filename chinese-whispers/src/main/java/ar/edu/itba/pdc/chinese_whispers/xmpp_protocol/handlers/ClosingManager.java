@@ -45,8 +45,6 @@ public class ClosingManager {
         TCPSelector.getInstance().addAlwaysRunTask(() -> {
 
 
-            // TODO: before closing, all remaining data must be sent
-
             // Stores those messages that must be removed from the map
             // (i.e. those whose message has been completely written).
             Set<XMPPHandler> toRemoveHandlers = new HashSet<>();
@@ -66,7 +64,6 @@ public class ClosingManager {
                 } else {
                     toRemoveHandlers.add(each); // Message was completely written
                     each.requestClose(); // Now it is ready for being closed.
-                    // TODO: make handler close
                 }
             }
             // Remove all handlers whose message has been completely written

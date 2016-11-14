@@ -5,6 +5,7 @@ import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.Confi
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
+import ar.edu.itba.pdc.chinese_whispers.connection.TCPReadWriteHandler;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -15,7 +16,7 @@ import java.util.*;
 /**
  * Created by Droche on 30/10/16.
  */
-public class AdminServerHandler implements TCPHandler { //TODO Make case insensitive for users admins? Make errors responses follow codes. Error msj between "".
+public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make case insensitive for users admins? Make errors responses follow codes. Error msj between "".
 
     // Constants
     /**
@@ -639,6 +640,11 @@ public class AdminServerHandler implements TCPHandler { //TODO Make case insensi
             this.responseMessage = DEFAULT_OK_RESPONSE;
             this.responseCode = OK_CODE;
         }
+    }
+
+    @Override
+    public void handleTimeout(SelectionKey key) {
+
     }
 
     @Override

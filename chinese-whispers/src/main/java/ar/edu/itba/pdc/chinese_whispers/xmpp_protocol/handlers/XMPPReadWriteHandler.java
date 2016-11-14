@@ -3,8 +3,9 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
+import ar.edu.itba.pdc.chinese_whispers.connection.TCPReadWriteHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.XMLInterpreter;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.XMLInterpreter;
 
 import java.nio.channels.SelectionKey;
 
@@ -19,7 +20,7 @@ import java.nio.channels.SelectionKey;
  * <p>
  * Created by jbellini on 3/11/16.
  */
-/* package */ class XMPPReadWriteHandler extends XMPPHandler implements TCPHandler {
+/* package */ class XMPPReadWriteHandler extends XMPPHandler {
 
 
     /* package */ XMPPReadWriteHandler(ApplicationProcessor applicationProcessor,
@@ -62,9 +63,7 @@ import java.nio.channels.SelectionKey;
         }
     }
 
-    @Override
-    void beforeClose() {
-    }
+
 
     protected void beforeRead() {
 
@@ -96,6 +95,20 @@ import java.nio.channels.SelectionKey;
             peerHandler.enableReading();
         }
 
+    }
+
+    @Override
+    protected void afterNotifyingError() {
+        if (peerHandler != null) {
+            peerHandler.notifyError(XMPPErrors.INTERNAL_SERVER_ERROR); // TODO: If server sends error?
+        }
+    }
+
+    @Override
+    protected void afterNotifyingClose() {
+        if (peerHandler != null) {
+            peerHandler.notifyClose();
+        }
     }
 
 

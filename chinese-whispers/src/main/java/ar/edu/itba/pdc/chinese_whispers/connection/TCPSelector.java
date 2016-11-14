@@ -23,7 +23,11 @@ public final class TCPSelector {
     /**
      * Timeout for the select operation.
      */
-    private static final int TIMEOUT = 3000;
+    private static final int SELECT_TIMEOUT = 3000;
+    /**
+     * Timeout till the connection is closed.
+     */
+    private static final int CONNECTION_TIMEOUT = 60000; // one minute till timeout.
     /**
      * Amount of connection tries till key is cancelled.
      */
@@ -34,7 +38,13 @@ public final class TCPSelector {
      * The selector to perform IO operations.
      */
     private final Selector selector;
-
+    /**
+     * Contains when the last activity took place.
+     */
+    private final Map<SelectionKey, Long> lastActivities;
+    /**
+     * Tasks that are performed always before the select operation.
+     */
     private final Set<Runnable> alwaysRunTasks;
     /**
      * Contains nothingToDoTasks to be run when channel selection times out without selecting anything.
@@ -59,9 +69,38 @@ public final class TCPSelector {
      */
     private TCPSelector() throws IOException {
         this.selector = Selector.open();
+        this.lastActivities = new HashMap<>();
         this.alwaysRunTasks = new HashSet<>();
         this.nothingToDoTasks = new HashSet<>();
         this.connectionTries = new HashMap<>();
+        alwaysRunTasks.add(() -> {
+
+            Set<SelectionKey> updatablesKeys = new HashSet<SelectionKey>();
+            for (SelectionKey key : selector.keys()) {
+                if (key.attachment() instanceof TCPAcceptorHandler) {
+                    continue; // Don't check acceptor handlers
+                }
+                if (!(key.attachment() instanceof TCPTimeoutCancellableHandler)) {
+                    // Shouldn't reach this point
+                    // In case one attachment is not a TCPHandler, that key is cancelled
+                    key.cancel();
+                    continue;
+                }
+                TCPTimeoutCancellableHandler handler = (TCPTimeoutCancellableHandler) key.attachment();
+                Long lastActivity = lastActivities.get(key);
+                if (lastActivity == null) {
+                    // The key's first activity was not registered...
+                    handler.handleError(key);
+                    continue;
+                }
+                if (System.currentTimeMillis() - lastActivity >= CONNECTION_TIMEOUT) {
+                    handler.handleTimeout(key);
+                    // Updates the last activity timestamp
+                    lastActivities.put(key, System.currentTimeMillis());
+                }
+            }
+
+        });
     }
 
 
@@ -94,7 +133,7 @@ public final class TCPSelector {
     /**
      * Removes the given task from the set of nothingToDoTasks to be performed when no IO operations where selected.
      *
-     * @param task
+     * @param task The task to be removed.
      */
     public void removeAlwaysRunTask(Runnable task) {
         alwaysRunTasks.remove(task);
@@ -112,7 +151,7 @@ public final class TCPSelector {
     /**
      * Removes the given task from the set of nothingToDoTasks to be performed when no IO operations where selected.
      *
-     * @param task
+     * @param task The task to be removed.
      */
     public void removeNothingToDoTask(Runnable task) {
         nothingToDoTasks.remove(task);
@@ -121,12 +160,12 @@ public final class TCPSelector {
     /**
      * Adds a server socket channel to this selector.
      *
-     * @param port    The port in which the server socket channel will be bound and listen for incoming connections.
-     * @param handler A {@link TCPServerHandler} to handle selected IO operations.
+     * @param port    The port in which the server socket channel will be bond and listen for incoming connections.
+     * @param handler A {@link TCPAcceptorHandler} to handle the accept operation.
      * @return The {@link SelectionKey} representing the new connection if the socket channel was bound,
      * or {@code null} otherwise.
      */
-    public SelectionKey addServerSocketChannel(int port, TCPServerHandler handler) {
+    public SelectionKey addServerSocketChannel(int port, TCPAcceptorHandler handler) {
         if (port < 0 || port > 0xFFFF || handler == null) {
             throw new IllegalArgumentException();
         }
@@ -167,7 +206,10 @@ public final class TCPSelector {
             // Will throw exception if connection couldn't start, or name can't be resolved
             channel.connect(new InetSocketAddress(host, port));
             // Will throw exception if the channel was closed (can't happen this)
-            return channel.register(selector, SelectionKey.OP_CONNECT, handler);
+            SelectionKey key = channel.register(selector, SelectionKey.OP_CONNECT, handler);
+            // Saves the first activity for the new key
+            lastActivities.put(key, System.currentTimeMillis());
+            return key;
         } catch (IOException | UnresolvedAddressException e) {
             return null;
         }
@@ -183,7 +225,7 @@ public final class TCPSelector {
     public boolean doSelect() {
         alwaysRunTasks.forEach(Runnable::run); // Run all tasks that are required to run always
         try {
-            if (selector.select(TIMEOUT) == 0) {
+            if (selector.select(SELECT_TIMEOUT) == 0) {
                 // No IO operation ...
                 nothingToDoTasks.forEach(Runnable::run);
                 return false;
@@ -194,6 +236,7 @@ public final class TCPSelector {
 
         // If control reached here, there are IO Operations pending to be handled
         for (SelectionKey key : selector.selectedKeys()) {
+            lastActivities.put(key, System.currentTimeMillis());
             try {
                 TCPHandler handler = (TCPHandler) key.attachment();
 
@@ -206,7 +249,11 @@ public final class TCPSelector {
                 // Only valid keys with a TCPHandler as an attachment will reach this point...
                 if (key.isAcceptable()) {
                     // Key can only be acceptable if it's channel is a server socket channel
-                    ((TCPServerHandler) handler).handleAccept(key);
+                    SelectionKey newKey = ((TCPAcceptorHandler) handler).handleAccept(key);
+                    if (newKey != null) {
+                        // Saves the first activity for the new connection
+                        lastActivities.put(newKey, System.currentTimeMillis());
+                    }
                 } else if (key.isConnectable()) {
                     // Key can only be connectable if it's channel is a client socket channel
                     ((TCPClientHandler) handler).handleConnect(key);
@@ -215,16 +262,18 @@ public final class TCPSelector {
                         afterTryingConnection(key); // Check if connection was established
                     }
                 } else {
-                    // TODO: check valid!!
                     // If key is acceptable or connectable, it mustn't reach this point...
+                    // Keys up to this point are valid, as they were selected and no method has been called.
+                    // Only ReadWriteHandlers's key will be readable or writable, or else the key will be cancelled
                     if (key.isReadable()) {
-                        handler.handleRead(key);
+                        ((TCPReadWriteHandler) handler).handleRead(key);
                     }
                     if (key.isValid() && key.isWritable()) {
-                        handler.handleWrite(key);
+                        ((TCPReadWriteHandler) handler).handleWrite(key);
                     }
                 }
             } catch (Throwable e) {
+
 
                 // If any error occurred, don't crash.
                 // Try to handle this error if the attachment is a TCPHandler

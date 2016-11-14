@@ -3,20 +3,18 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NewConnectionsConsumer;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPServerNegotiator;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ServerNegotiationProcessor;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
 
 import java.nio.channels.SelectionKey;
 import java.util.Base64;
 
 /**
  * This class makes the proxy act like an XMPP server, negotiating with the connected client.
- * The process of negotiation is done by an {@link XMPPServerNegotiator}. When this process finishes,
+ * The process of negotiation is done by a {@link ServerNegotiationProcessor}. When this process finishes,
  * a connection with the origin server is tried. Upon success, an {@link XMPPClientHandler} is created,
  * in order to connect to the server, and negotiate with it.
  * Once the negotiation with the origin server ended, control is given to a new {@link XMPPReadWriteHandler},
@@ -24,12 +22,12 @@ import java.util.Base64;
  * <p>
  * Created by jbellini on 27/10/16.
  */
-public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandler {
+public class XMPPServerHandler extends XMPPNegotiatorHandler {
 
     /**
      * Says how many times the peer connection can be tried.
      */
-    private static int MAX_PEER_CONNECTIONS_TRIES = 3; // TODO: define number ASAP
+    private static int MAX_PEER_CONNECTIONS_TRIES = 3;
 
 
     /**
@@ -48,7 +46,7 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
     private final StringBuilder stringBuilder;
 
 
-    private final ServerNegotiationProcessor serverNegotiationProcessor;
+//    private final ServerNegotiationProcessor serverNegotiationProcessor;
 
 
     /**
@@ -67,12 +65,11 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
                                     MetricsProvider metricsProvider,
                                     SelectionKey key) {
         super(applicationProcessor, metricsProvider, configurationsConsumer);
+        setNegotiationProcessor(new ServerNegotiationProcessor(this));
         this.newConnectionsConsumer = newConnectionsConsumer;
         this.peerConnectionTries = 0;
         this.key = key;
-        xmppNegotiator = new XMPPServerNegotiator(this);
         this.stringBuilder = new StringBuilder();
-        this.serverNegotiationProcessor = new ServerNegotiationProcessor(this);
     }
 
     @Override
@@ -81,21 +78,7 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
     }
 
 
-    @Override
-    protected void processReadMessage(byte[] message, int length) {
-        if (message != null && length > 0) {
-            ParserResponse parserResponse = serverNegotiationProcessor.feed(message, length);
-            handleResponse(parserResponse);
-            if (parserResponse == ParserResponse.NEGOTIATION_END) {
-                finishXMPPNegotiation();
-            }
-        }
-    }
 
-
-    @Override
-    void beforeClose() {
-    }
 
     @Override
     protected void beforeRead() {
@@ -121,25 +104,17 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
             throw new IllegalStateException();
         }
 
-        // TODO: check what handlers need to operate correctly
-
-
         // Create a read-write handler that will receive and send messages to the client connected to the proxy.
         XMPPReadWriteHandler xmppReadWriteHandler = new XMPPReadWriteHandler(applicationProcessor, metricsProvider,
                 configurationsConsumer, clientJid, this.key, newPeerHandler);
         newPeerHandler.setPeerHandler(xmppReadWriteHandler);
         this.key.attach(xmppReadWriteHandler);
 
-        String response = "<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>\n"; //TODO retry?
-        xmppReadWriteHandler.consumeMessage(response.getBytes());
-
-        this.key.interestOps(this.key.interestOps() | SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+        String response = "<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>";
+        xmppReadWriteHandler.writeMessage(response.getBytes());
+        xmppReadWriteHandler.enableReading();
     }
 
-    /* package */ void handleFailure() {
-        String response = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>";
-        consumeMessage(response.getBytes());
-    }
 
 
     @Override
@@ -174,7 +149,7 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
 
         String[] authParameters;
         try {
-            authParameters = new String(Base64.getDecoder().decode(serverNegotiationProcessor.getAuthentication()))
+            authParameters = new String(Base64.getDecoder().decode(getNegotiationProcessor().getAuthentication()))
                     .split("\0");
         } catch (IllegalArgumentException e) {
             // Shouldn't reach here, but in case...
@@ -203,10 +178,10 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
         }
 
         // Create a client handler to connect to origin server
-        clientJid = userName + "@" + serverNegotiationProcessor.getInitialParameters().get("to"); // TODO: check if readWrite handler needs it.
+        clientJid = userName + "@" + getNegotiationProcessor().getInitialParameters().get("to");
         this.peerHandler = new XMPPClientHandler(applicationProcessor, metricsProvider, configurationsConsumer, this,
-                clientJid, serverNegotiationProcessor.getInitialParameters(),
-                serverNegotiationProcessor.getAuthentication());
+                clientJid, getNegotiationProcessor().getInitialParameters(),
+                getNegotiationProcessor().getAuthentication());
 
 
         // This will create a new key with the client handler attached to it.
@@ -230,9 +205,7 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
         // TODO: Should we avoid trying to connect again for some seconds? We can mark the clientHandler with a timestamp and retry after some time has passed.
         // TODO: We can save the key in a Map and update those timestamps before the select.
         if (peerConnectionTries >= MAX_PEER_CONNECTIONS_TRIES) {
-            // TODO: Close connection?
-//            closeHandler();
-            notifyClose();
+            notifyError(XMPPErrors.CONNECTION_REFUSED);
             return;
         }
         System.out.print("Trying to connect to origin server...");
@@ -249,6 +222,18 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler implements TCPHandl
         peerConnectionTries++;
     }
 
+
+    @Override
+    public void handleTimeout(SelectionKey key) {
+        if (peerHandler == null) {
+          // Timeout when performing xmpp negotiation with the xmpp client
+            notifyError(XMPPErrors.CONNECTION_TIMEOUT);
+            return;
+        }
+        // If peer handler is not null, then the timeout even was triggered when negotiating with the xmpp server
+        notifyError(XMPPErrors.CONNECTION_REFUSED);
+        peerHandler.notifyError(XMPPErrors.CONNECTION_TIMEOUT);
+    }
 
     @Override
     public boolean handleError(SelectionKey key) {

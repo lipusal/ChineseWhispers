@@ -3,10 +3,11 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
+import ar.edu.itba.pdc.chinese_whispers.connection.TCPReadWriteHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.XMLInterpreter;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.XMLInterpreter;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -20,7 +21,7 @@ import java.nio.channels.SocketChannel;
  * <p>
  * Created by jbellini on 28/10/16.
  */
-/* package */ abstract class XMPPHandler extends BaseHandler implements TCPHandler, OutputConsumer {
+/* package */ abstract class XMPPHandler extends BaseHandler implements TCPReadWriteHandler, OutputConsumer {
 
     // Constants
     /**
@@ -39,9 +40,10 @@ import java.nio.channels.SocketChannel;
      */
     protected final ByteBuffer outputBuffer;
     /**
-     *
+     * Says if it is the first message being sent.
+     * It is used to know, in case of error, if the "stream" tag must be sent or not.
      */
-    protected boolean firstMessage;
+    private boolean firstMessage;
     /**
      * The handler of the other end of the connection.
      */
@@ -72,7 +74,7 @@ import java.nio.channels.SocketChannel;
     /**
      * Tells which is this handler's state.
      */
-    private HandlerState handlerState;
+    protected HandlerState handlerState;
 
 
     /**
@@ -89,7 +91,7 @@ import java.nio.channels.SocketChannel;
         this.outputBuffer = ByteBuffer.allocate((BUFFER_SIZE * 4 > XMLInterpreter.MAX_AMOUNT_OF_BYTES) ?
                 BUFFER_SIZE * 4 : XMLInterpreter.MAX_AMOUNT_OF_BYTES);
         this.mustClose = false;
-        firstMessage =true;
+        firstMessage = true;
         this.handlerState = HandlerState.NORMAL;
     }
 
@@ -114,6 +116,14 @@ import java.nio.channels.SocketChannel;
         // TODO: check if writing must be enabled for this key (as messages could have arrived to this handler)
     }
 
+    /**
+     * Says if the handler has already been told to send the first message.
+     *
+     * @return {@code true} if this handler's output buffer is empty, or {@code false} otherwise.
+     */
+    public boolean firstMessage() {
+        return firstMessage;
+    }
 
     /**
      * Makes this handler be able to read from its key's channel.
@@ -175,9 +185,15 @@ import java.nio.channels.SocketChannel;
         return this;
     }
 
-//    private void writeDeque(Deque<Byte> deque, byte[] message) {
-//        if(firstMessage) firstMessage=false;
-//        if (deque == null || message == null) {
+    /**
+     * Actions performed after notifying this handler has reached an error situation.
+     */
+    protected abstract void afterNotifyingError();
+
+    /**
+     * Actions performed after notifying this handler's close
+     */
+    protected abstract void afterNotifyingClose();
 
     /**
      * Sets this handler state in error state.
@@ -194,18 +210,16 @@ import java.nio.channels.SocketChannel;
         }
         handlerState = HandlerState.ERROR;
         disableReading(); // Can't read anymore
-        if (peerHandler != null) {
-            peerHandler.notifyClose(); // Notify the peer handler that it must close.
-        }
         ErrorManager.getInstance().notifyError(this, error); // Notify the errors manager that an error occurred.
+        afterNotifyingError();
     }
 
     /**
      * Sets this handler state in close state.
-     * In case this handlers state is already {@link HandlerState#CLOSE}, it will not do anything.
+     * In case this handlers state is not {@link HandlerState#NORMAL}, it will not do anything.
      */
     public void notifyClose() {
-        if (handlerState == HandlerState.CLOSE) {
+        if (handlerState != HandlerState.NORMAL) {
             return;
         }
         if (this.key == null) {
@@ -213,12 +227,20 @@ import java.nio.channels.SocketChannel;
         }
         handlerState = HandlerState.CLOSE;
         disableReading(); // Stop reading, since this handler must be closed.
-        if (peerHandler != null) {
-            peerHandler.notifyClose();
-        }
         ClosingManager.getInstance().notifyClose(this);
+        afterNotifyingClose();
     }
 
+    /**
+     * Wrapper method to notify closing after sending an error.
+     */
+    public void notifyErrorWasSent() {
+        if (this.handlerState != HandlerState.ERROR) {
+            throw new IllegalStateException();
+        }
+        this.handlerState = HandlerState.NORMAL;
+        notifyClose();
+    }
 
     /**
      * Request this handler to be closed when possible.
@@ -278,7 +300,9 @@ import java.nio.channels.SocketChannel;
             handleClose(this.key); // In case the key was invalidated, make this handler close
             return -1;
         }
-        if(firstMessage) firstMessage=false; // TODO: check this!
+        if (firstMessage) {
+            firstMessage = false; // TODO: check this!
+        }
         int writtenBytes = message.length;
         int remainingSpace = remainingSpace();
         if (remainingSpace == 0) {
@@ -291,6 +315,7 @@ import java.nio.channels.SocketChannel;
             message = aux;
             writtenBytes = remainingSpace;
         }
+        System.out.println("Sending: " + new String(message)); // TODO: log? remove?
         outputBuffer.put(message); // Stores the message in the output buffer.
         enableWriting();
         return writtenBytes;
@@ -305,48 +330,17 @@ import java.nio.channels.SocketChannel;
         return 0; // If this handler's state is not normal, it can't consume more messages.
     }
 
-    /**
-     * Do stuff before being closed
-     */
-    /* package */ abstract void beforeClose();
-
-    /**
-     * Makes this {@link XMPPHandler} to be closable (i.e. stop receiving messages, send all unsent messages,
-     * send close message, and close the corresponding key's channel).
-     * It also closes the peer handler.
-     * Note: Once this method is executed, there is no chance to go back.
-     */
-    @Deprecated
-    /* package */ void closeHandler() {
-        // TODO: remove this method ASAP
-        if (key == null) return;
-        beforeClose();
-        // TODO: What happens if handler contains half an xmpp message?
-        if (this.key.isValid()) {
-            disableReading();
-            // TODO: what if my buffer is full?
-//            writeMessage(CLOSE_MESSAGE.getBytes()); //TODO send error when doing this because there was an error.
-        } else {
-            handleClose(this.key); // If key is not valid, proceed to close the handler without writing anything
-        }
-
-        // Close also peer handler
-        if (this.peerHandler != null) {
-            peerHandler.closeHandler();
-        }
-    }
 
 
     /**
-     * // TODO: Fill this javadoc.
+     * Performs actions based on the given {@link ParserResponse}
      *
-     * @param parserResponse The parser's response.
+     * @param parserResponse The response through which a decision must be taken.
      */
     protected void handleResponse(ParserResponse parserResponse) { //TODO mandarme ERROR al que lo envio, no al que recibe.
 
         switch (parserResponse) {
             case XML_ERROR:
-                if(firstMessage) writeMessage("<stream:stream>".getBytes()); // TODO: test
                 notifyError(XMPPErrors.BAD_FORMAT);
                 break;
             case POLICY_VIOLATION:
@@ -354,14 +348,9 @@ import java.nio.channels.SocketChannel;
                 break;
             case STREAM_CLOSED:
                 notifyClose();
-                // TODO: notify peer also?
                 break;
             default:
                 // Any other case, do nothing...
-        }
-        if(parserResponse== ParserResponse.NEGOTIATION_ERROR){ //message is sent in the negotiator
-//            closeHandler(); // TODO: fix this
-            notifyClose();
         }
     }
 
@@ -408,17 +397,13 @@ import java.nio.channels.SocketChannel;
             handleClose(this.key); // TODO: close peer also
         }
         if (readBytes > 0) {
-
-            System.out.print("Read: ");
-            System.out.println(new String(inputBuffer.array(),0,readBytes));
-
+            System.out.println("Read: " + new String(inputBuffer.array(), 0, readBytes)); // TODO: log? remove?
             processReadMessage(inputBuffer.array(), inputBuffer.position());
-
             metricsProvider.addReadBytes(readBytes);
             // TODO: log amount of read bytes?
 
         } else if (readBytes == -1) {
-            handleClose(this.key);
+            notifyClose();
         }
         // TODO: should we clear the buffer? note that this method already sets the position and limit
     }
@@ -452,7 +437,7 @@ import java.nio.channels.SocketChannel;
                 handleClose(this.key);
             }
         }
-        System.out.println("Written bytes: "+writtenBytes+" Message: "+new String(outputBuffer.array(),0,writtenBytes));
+        System.out.println("Written bytes: " + writtenBytes + " Message: " + new String(outputBuffer.array(), 0, writtenBytes));
         // Makes the buffer's position be set to limit - position, and its limit, to its capacity
         // If no data remaining, it just set the position to 0 and the limit to its capacity.
         outputBuffer.compact();
@@ -464,6 +449,10 @@ import java.nio.channels.SocketChannel;
 
     }
 
+    @Override
+    public void handleTimeout(SelectionKey key) {
+
+    }
 
     @Override
     public boolean handleError(SelectionKey key) {
@@ -486,7 +475,7 @@ import java.nio.channels.SocketChannel;
     }
 
 
-    private enum HandlerState {
+    protected enum HandlerState {
         NORMAL,
         ERROR,
         CLOSE

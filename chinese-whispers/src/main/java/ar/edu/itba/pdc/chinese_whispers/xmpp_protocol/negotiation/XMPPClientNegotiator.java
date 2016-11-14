@@ -2,7 +2,7 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation;
 
 
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 
 import javax.xml.stream.XMLStreamException;
@@ -67,7 +67,7 @@ public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no
                         }
                     }
                     if (parser.getLocalName().equals("challenge")) {
-                        return ParserResponse.NEGOTIATION_ERROR;//TODO unsupported operation?
+                        return ParserResponse.UNSUPPORTED_NEGOTIATION_MECHANISM;//TODO unsupported operation?
                     }
                     if (negotiationStatus == NegotiationStatus.AUTH) {
                         if(parser.getLocalName().equals("mechanism")){

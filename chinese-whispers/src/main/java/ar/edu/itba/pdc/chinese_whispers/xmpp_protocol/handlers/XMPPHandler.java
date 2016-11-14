@@ -61,10 +61,10 @@ import java.nio.channels.SocketChannel;
 
 
     // XMPP Stuff
-    /**
-     * XML Parser
-     */
-    protected XMLInterpreter xmlInterpreter; // Should be initialized by subclass.
+//    /**
+//     * XML Parser
+//     */
+//    protected XMLInterpreter xmlInterpreter; // Should be initialized by subclass.
     /**
      * Client JID
      */
@@ -450,7 +450,7 @@ import java.nio.channels.SocketChannel;
         afterWrite();
     }
 
-    
+
     @Override
     public boolean handleError(SelectionKey key) {
 

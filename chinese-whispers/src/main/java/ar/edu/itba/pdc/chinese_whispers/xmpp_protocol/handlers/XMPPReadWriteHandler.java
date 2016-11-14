@@ -23,6 +23,12 @@ import java.nio.channels.SelectionKey;
 /* package */ class XMPPReadWriteHandler extends XMPPHandler {
 
 
+    /**
+     * XML Parser
+     */
+    protected XMLInterpreter xmlInterpreter;
+
+
     /* package */ XMPPReadWriteHandler(ApplicationProcessor applicationProcessor,
                                        MetricsProvider metricsProvider,
                                        ConfigurationsConsumer configurationsConsumer,
@@ -47,7 +53,19 @@ import java.nio.channels.SelectionKey;
     }
 
 
+    /**
+     * Sets the peer handler (an {@link XMPPReadWriteHandler} to this handler.
+     * Note: Once it's set, it can't be changed.
+     *
+     * @param peerHandler The {@link XMPPReadWriteHandler} that acts as a peer to this handler.
+     */
     /* package */ void setPeerHandler(XMPPReadWriteHandler peerHandler) {
+        if (peerHandler == null) {
+            throw new IllegalArgumentException();
+        }
+        if (this.peerHandler != null) {
+            throw new IllegalStateException("Can't change the peer handler once it's set.");
+        }
         this.peerHandler = peerHandler;
         this.xmlInterpreter = new XMLInterpreter(applicationProcessor, peerHandler);
     }
@@ -64,7 +82,7 @@ import java.nio.channels.SelectionKey;
     }
 
 
-
+    @Override
     protected void beforeRead() {
 
         if (this.peerHandler == null) {
@@ -79,7 +97,7 @@ import java.nio.channels.SelectionKey;
             disableReading(); // Stops reading if there is no space in its peer handler's output buffer
         }
         inputBuffer.position(0);
-        inputBuffer.limit(maxAmountOfRead>inputBuffer.capacity()?inputBuffer.capacity():maxAmountOfRead);
+        inputBuffer.limit(maxAmountOfRead > inputBuffer.capacity() ? inputBuffer.capacity() : maxAmountOfRead);
     }
 
     @Override

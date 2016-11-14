@@ -96,7 +96,7 @@ public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no
                     break;
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                    return ParserResponse.EVERYTHING_NORMAL;
+                    return ParserResponse.EVENT_INCOMPLETE;
                 case -1:
                     //TODO throw exception? Remove sout
                     System.out.println("XML interpreter entered error state (invalid XML)");

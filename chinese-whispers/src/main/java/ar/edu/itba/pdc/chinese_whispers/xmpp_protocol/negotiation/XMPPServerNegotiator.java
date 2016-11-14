@@ -42,7 +42,7 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
         while (parser.hasNext()) {
             next();
             if (status == AsyncXMLStreamReader.EVENT_INCOMPLETE) {
-                return ParserResponse.EVERYTHING_NORMAL;
+                return ParserResponse.EVENT_INCOMPLETE;
             }
             if (status == -1) {
                 //TODO throw exception? Remove sout

@@ -62,7 +62,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
     private static final String PROTOCOL_VERSION_NOT_SUPPORTED_CODE = "C02";
     private static final String COMMAND_NOT_IMPLEMENTED_CODE = "C03";
 
-    private static final int MAX_PARAMETER_SIZE = 10;
+    private static final int MAX_PARAMETER_SIZE = 100;
 
 
     /**
@@ -191,7 +191,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                 closeHandler(key);
             }
         } catch (Exception e) {
-            e.printStackTrace(); //TODO delete
+            e.printStackTrace();
             String message = INTERNAL_SERVER_ERROR_CODE + " Internal server error";
             outputBuffer.clear();
             outputBuffer.put(new Byte("10"));
@@ -247,7 +247,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
 
 
         String string = new  String(messageRead.array(),0,messageRead.limit());
-        System.out.println(string);
+        System.out.println("Message to process: " + string);
         String[] requestElements = string.split(" ");
         Response response = new Response();
         processCommand(response, requestElements, key);

@@ -195,8 +195,7 @@ public class ClientNegotiationProcessor extends BaseNegotiationProcessor {
                                 .setState(new ChallengeState((ClientNegotiationStateMachine) getStateMachine()));
                         break;
                     case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                        // Do nothing...
-                        break;
+                        return ParserResponse.EVENT_INCOMPLETE;
                     default:
                         response = ParserResponse.XML_ERROR;
                 }
@@ -234,9 +233,9 @@ public class ClientNegotiationProcessor extends BaseNegotiationProcessor {
 
                     case AsyncXMLStreamReader.END_ELEMENT:
                     case AsyncXMLStreamReader.CHARACTERS:
-                    case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                        // Do nothing...
                         break;
+                    case AsyncXMLStreamReader.EVENT_INCOMPLETE:
+                        return ParserResponse.EVENT_INCOMPLETE;
                     default:
                         response = ParserResponse.XML_ERROR;
                 }

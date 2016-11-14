@@ -2,6 +2,8 @@ package ar.edu.itba.pdc.chinese_whispers.application;
 
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.handlers.AdminAcceptorHandler;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.ClosingManager;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.ErrorManager;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.XMPPAcceptorHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +51,10 @@ public class Main {
             return;
         }
         logger.info("Successfully bond port " + ADMIN_PROTOCOL_PORT);
+
+        //Initialize tasks
+        ClosingManager.getInstance();
+        ErrorManager.getInstance();
 
         // Main loop
         while (true) {

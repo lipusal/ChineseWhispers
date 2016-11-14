@@ -47,18 +47,30 @@ public class ClosingManager {
 
             // Stores those messages that must be removed from the map
             // (i.e. those whose message has been completely written).
-            Set<XMPPHandler> toRemoveHandlers = new HashSet<>();
+            Set<XMPPHandler> toRemoveHandlers = new HashSet<>();//TODO reuse this?
             for (XMPPHandler each : closableHandlers.keySet()) {
                 byte[] message = closableHandlers.get(each);
+//                System.out.println("Trying to write: " +new String( message)); TODO delete
                 int writtenData = each.writeMessage(closableHandlers.get(each));
                 // If no bytes could be stored, finish this iteration step
                 if (writtenData == 0) {
                     continue;
                 }
                 // If message wasn't completely stored, save what couldn't be stored to write it afterwards.
-                if (writtenData < message.length) {
+                //TODO check if -1 means somethings else?
+                if (writtenData!=-1 && writtenData < message.length) {
                     int nonWrittenBytes = message.length - writtenData;
                     byte[] restOfMessage = new byte[nonWrittenBytes];
+                    //TODO delete souts.
+//                    try {
+//                        System.out.println("writtenData " + writtenData);
+//                        System.out.println("message " + new String (message));
+//                        System.out.println("nonWrittenBytes " + nonWrittenBytes);
+//                        System.out.println("restOfMessage " + new String (restOfMessage));
+//                    }catch (Exception e){
+//                        e.printStackTrace();
+//                    }
+
                     System.arraycopy(message, writtenData, restOfMessage, 0, nonWrittenBytes);
                     closableHandlers.put(each, restOfMessage);
                 } else {

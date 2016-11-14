@@ -57,9 +57,11 @@ public class XMLInterpreter extends BaseXMLInterpreter {
         StringBuilder readXML = new StringBuilder();
         while (parser.hasNext()) {
             status = parser.next();
-            if (status != AsyncXMLStreamReader.EVENT_INCOMPLETE) {
-                amountOfStoredBytes = -1;
-            }
+//            if (status != AsyncXMLStreamReader.EVENT_INCOMPLETE) {
+//                amountOfStoredBytes = -1;
+//            }else{
+//                amountOfStoredBytes++;
+//            }
 
             switch (status) {
                 case AsyncXMLStreamReader.START_ELEMENT:
@@ -148,10 +150,9 @@ public class XMLInterpreter extends BaseXMLInterpreter {
                     }
                     break;
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                    amountOfStoredBytes++;
                     byte[] bytes = readXML.toString().getBytes();
                     outputConsumer.consumeMessage(bytes);
-                    return ParserResponse.EVERYTHING_NORMAL;
+                    return ParserResponse.EVENT_INCOMPLETE;
                 case -1:
                     return ParserResponse.XML_ERROR;
             }

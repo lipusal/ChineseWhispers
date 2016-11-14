@@ -315,7 +315,6 @@ import java.nio.channels.SocketChannel;
             message = aux;
             writtenBytes = remainingSpace;
         }
-        System.out.println("Sending: " + new String(message)); // TODO: log? remove?
         outputBuffer.put(message); // Stores the message in the output buffer.
         enableWriting();
         return writtenBytes;

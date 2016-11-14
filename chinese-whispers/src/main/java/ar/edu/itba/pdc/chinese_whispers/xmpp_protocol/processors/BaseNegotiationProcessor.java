@@ -102,7 +102,7 @@ public abstract class BaseNegotiationProcessor extends BaseXMLInterpreter {
         while (parser.hasNext()) {
             next();
             if (getParserStatus() == AsyncXMLStreamReader.EVENT_INCOMPLETE) {
-                break;
+                return ParserResponse.EVENT_INCOMPLETE;
             } else if (getParserStatus() == -1) {
                 response = ParserResponse.XML_ERROR;
                 break;

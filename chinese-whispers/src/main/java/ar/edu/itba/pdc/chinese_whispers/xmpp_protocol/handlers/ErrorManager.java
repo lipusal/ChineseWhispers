@@ -1,5 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
+import ar.edu.itba.pdc.chinese_whispers.application.IdGenerator;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
 
@@ -25,11 +26,11 @@ import java.util.Set;
 public class ErrorManager {
 
 
-    private final static String INITIAL_TAG = "<?xml version='1.0' encoding='UTF-8'?>" +
-            "<stream:stream version='1.0' id='AnyId " +
+    private final static String INITIAL_TAG_UNCLOSED = "<?xml version='1.0' encoding='UTF-8'?>" +
+            "<stream:stream version='1.0' " +
             "xmlns:stream=\'http://etherx.jabber.org/streams\' " +
             "xmlns=\'jabber:client\' " +
-            "xmlns:xml=\'http://www.w3.org/XML/1998/namespace\'>";
+            "xmlns:xml=\'http://www.w3.org/XML/1998/namespace\'";
 
     // XML errors
     private final static String BAD_FORMAT = "<stream:error>" +
@@ -132,12 +133,12 @@ public class ErrorManager {
 
             // Stores those messages that must be removed from the map
             // (i.e. those whose message has been completely written).
-            Set<XMPPHandler> toRemoveHandlers = new HashSet<>();
+            Set<XMPPHandler> toRemoveHandlers = new HashSet<>(); //TODO se hace SIEMPRE. optimizar.
             for (XMPPHandler each : errorHandlers.keySet()) {
                 byte[] message = errorHandlers.get(each);
                 // If no message was sent, the <stream:stream> tag is prepended
-                if (each.firstMessage()) {
-                    byte[] initialTag = INITIAL_TAG.getBytes();
+                if (each.firstMessage()) { //agregar al closing?
+                    byte[] initialTag = (INITIAL_TAG_UNCLOSED+" id='"+IdGenerator.generateId() + "'>").getBytes();
                     byte[] aux = new byte[initialTag.length + message.length];
                     System.arraycopy(initialTag, 0, aux, 0, initialTag.length);
                     System.arraycopy(message, 0, aux, initialTag.length, message.length);
@@ -149,9 +150,10 @@ public class ErrorManager {
                     continue;
                 }
                 // If message wasn't completely stored, save what couldn't be stored to write it afterwards.
-                if (writtenData < message.length) {
+                //TODO check if -1 here can happend and if needed
+                if (writtenData!=-1 && writtenData < message.length) {
                     int nonWrittenBytes = message.length - writtenData;
-                    byte[] restOfMessage = new byte[nonWrittenBytes];
+                    byte[] restOfMessage = new byte[nonWrittenBytes]; //TODO porque no byte buffer?
                     System.arraycopy(message, writtenData, restOfMessage, 0, nonWrittenBytes);
                     errorHandlers.put(each, restOfMessage);
                 } else {

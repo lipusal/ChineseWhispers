@@ -120,7 +120,7 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
     @Override
     protected void handleResponse(ParserResponse parserResponse) {
         super.handleResponse(parserResponse);
-        switch (parserResponse) {
+        switch (parserResponse) { //TODO porqe solo estos 3?
             case HOST_UNKNOWN:
                 notifyError(XMPPErrors.HOST_UNKNOWN);
                 break;

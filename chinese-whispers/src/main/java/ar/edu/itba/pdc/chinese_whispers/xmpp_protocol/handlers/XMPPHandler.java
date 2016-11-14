@@ -450,11 +450,7 @@ import java.nio.channels.SocketChannel;
         afterWrite();
     }
 
-    @Override
-    public void handleTimeout(SelectionKey key) {
-
-    }
-
+    
     @Override
     public boolean handleError(SelectionKey key) {
 

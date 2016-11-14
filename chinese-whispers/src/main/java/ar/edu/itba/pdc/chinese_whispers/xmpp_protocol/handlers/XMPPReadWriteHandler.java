@@ -112,4 +112,10 @@ import java.nio.channels.SelectionKey;
     }
 
 
+    @Override
+    public void handleTimeout(SelectionKey key) {
+        // TODO: check these.
+        notifyError(XMPPErrors.CONNECTION_TIMEOUT);
+        peerHandler.notifyError(XMPPErrors.CONNECTION_TIMEOUT);
+    }
 }

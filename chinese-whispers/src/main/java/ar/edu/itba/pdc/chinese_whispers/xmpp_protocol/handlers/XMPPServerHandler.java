@@ -231,7 +231,11 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
             return;
         }
         // If peer handler is not null, then the timeout even was triggered when negotiating with the xmpp server
+
+        // Will send a connection refused error to the XMPP client to which this handler is connected.
         notifyError(XMPPErrors.CONNECTION_REFUSED);
+        // The peer handler is an XMPPClientHandler connected to an XMPP server.
+        // Will send a timeout error to the XMPP server to which the peer handler is connected.
         peerHandler.notifyError(XMPPErrors.CONNECTION_TIMEOUT);
     }
 

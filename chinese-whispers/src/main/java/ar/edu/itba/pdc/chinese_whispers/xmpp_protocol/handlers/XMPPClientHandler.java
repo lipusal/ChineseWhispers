@@ -192,6 +192,17 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
     }
 
 
+    @Override
+    public void handleTimeout(SelectionKey key) {
+        // An XMPPClientHandler always have a peer handler
+
+        // The peer handler is an XMPPServerHandler waiting for this handler to connect to an XMPP server
+        // In case this handler reached a timeout event, the XMPPServerHandler will send to the XMPP client
+        // connected to it that the connection was refused.
+        peerHandler.notifyError(XMPPErrors.CONNECTION_REFUSED);
+        // Will send the timeout error to the server to which this XMPPClientHandler is connected to.
+        notifyError(XMPPErrors.CONNECTION_TIMEOUT);
+    }
 
     @Override
     public boolean handleError(SelectionKey key) {

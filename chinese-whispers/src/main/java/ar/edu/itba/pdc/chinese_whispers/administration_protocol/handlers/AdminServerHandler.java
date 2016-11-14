@@ -202,6 +202,10 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
         if (outputBuffer.hasRemaining()) key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
     }
 
+
+
+
+
     private void processInput(SelectionKey key) {
 
 
@@ -599,6 +603,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
     private void afterWrite(SelectionKey key) {
         if(outputBuffer.position()==0){
             processInput(key);
+            if(outputBuffer.position()!=0) key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
         }
     }
 

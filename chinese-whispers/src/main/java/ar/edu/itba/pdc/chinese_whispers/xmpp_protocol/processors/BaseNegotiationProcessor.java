@@ -32,8 +32,6 @@ public abstract class BaseNegotiationProcessor extends BaseXMLInterpreter {
      */
     private NegotiationStateMachine stateMachine;
 
-
-
     protected BaseNegotiationProcessor(OutputConsumer outputConsumer, NegotiationStateMachine stateMachine) {
         this(outputConsumer);
         if (stateMachine != null) {

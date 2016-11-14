@@ -1,6 +1,7 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors;
 
 import ar.edu.itba.pdc.chinese_whispers.application.IdGenerator;
+import ar.edu.itba.pdc.chinese_whispers.application.LogHelper;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 
@@ -90,13 +91,13 @@ public class ServerNegotiationProcessor extends BaseNegotiationProcessor {
                         String streamVersion = getParser().getVersion();
                         // If streamVersion is null, we assume 1.0 version.
                         if (streamVersion != null && !streamVersion.equals("1.0")) {
-                            System.out.println("Warning: stream version is " + streamVersion); // TODO: use logger
+                            LogHelper.getLogger(ServerNegotiationProcessor.class).warn("Stream version is {}", streamVersion);
                         }
 
                         String streamEncoding = getParser().getEncoding();
                         // If streamEncoding is null, we assume UTF-8 encoding.
                         if (streamEncoding != null && !streamEncoding.equals("UTF-8")) {
-                            System.out.println("Warning: stream encoding is " + streamEncoding); // TODO: use logger
+                            LogHelper.getLogger(ServerNegotiationProcessor.class).warn("Stream encoding is {}", streamEncoding);
                         }
                         // After checking the document, proceed as if the status is a START_ELEMENT
                     case AsyncXMLStreamReader.START_ELEMENT:

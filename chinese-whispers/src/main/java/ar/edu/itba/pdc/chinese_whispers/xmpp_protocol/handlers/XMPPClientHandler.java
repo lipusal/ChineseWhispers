@@ -174,17 +174,17 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
 
                 }
             } catch (IOException e) {
-                System.out.println("Connection refused");
+                logger.info("Connection refused");  //TODO which connection?
                 ((XMPPServerHandler) peerHandler).connectClientHandler(); // Ask peer handler to retry connection
             }
         }
         if (this.connected) {
-            System.out.println("Connect established! Now listening messages"); // TODO: log this?
+            logger.info("Connection established! Now listening for messages");  //TODO between who and who?
             this.key.interestOps(0); // Turn off all keys
             enableReading();
             startXMPPNegotiation();
         } else {
-            System.out.println("Connection failed! Not Connected!"); // TODO: log this?
+            logger.warn("Connection failed! Not Connected!"); // TODO: Which connection?
         }
 
 

@@ -45,8 +45,8 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
                 return ParserResponse.EVENT_INCOMPLETE;
             }
             if (status == -1) {
-                //TODO throw exception? Remove sout
-                System.out.println("XML interpreter entered error state (invalid XML)");
+                //TODO throw exception?
+                logger.warn("XML interpreter entered error state (invalid XML)");   //TODO which connection?
                 return ParserResponse.XML_ERROR;
             }
             if (negotiationStatus == NegotiationStatus.START) {
@@ -145,7 +145,7 @@ public class XMPPServerNegotiator extends XMPPNegotiator {
                             outputConsumer.consumeMessage(negotiationError.getBytes());
                             return ParserResponse.MALFORMED_REQUEST;
                         }
-                        System.out.println("Connection with client was a SUCCESS");
+                        logger.info("Connection with client was a SUCCESS");    //TODO between who and who?
                         authorization = authorizationBuilder.toString();
                         while (parser.hasNext() && status != AsyncXMLStreamReader.EVENT_INCOMPLETE)
                             next();

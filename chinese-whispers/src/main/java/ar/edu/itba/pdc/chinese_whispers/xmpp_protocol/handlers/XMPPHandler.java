@@ -402,11 +402,9 @@ import java.nio.channels.SocketChannel;
             handleClose(this.key); // TODO: close peer also
         }
         if (readBytes > 0) {
-            logger.trace("Read: {}", new String(inputBuffer.array(), 0, readBytes)); // TODO: remove?
+            logger.trace("Read {} bytes: {}", readBytes, new String(inputBuffer.array(), 0, readBytes)); // TODO: remove?
             processReadMessage(inputBuffer.array(), inputBuffer.position());
             metricsProvider.addReadBytes(readBytes);
-            // TODO: log amount of read bytes?
-
         } else if (readBytes == -1) {
             notifyClose();
         }
@@ -442,17 +440,14 @@ import java.nio.channels.SocketChannel;
                 handleClose(this.key);
             }
         }
-        logger.trace("Written bytes: {}", writtenBytes);
-        logger.trace("Message: {}", new String(outputBuffer.array(), 0, writtenBytes));
+        logger.trace("Wrote {} bytes: {}", writtenBytes, new String(outputBuffer.array(), 0, writtenBytes));
         // Makes the buffer's position be set to limit - position, and its limit, to its capacity
         // If no data remaining, it just set the position to 0 and the limit to its capacity.
         outputBuffer.compact();
 
-        // TODO: log amount of written bytes?
         metricsProvider.addSentBytes(writtenBytes);
 
         afterWrite();
-
     }
 
     @Override

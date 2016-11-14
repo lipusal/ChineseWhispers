@@ -98,8 +98,8 @@ public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     return ParserResponse.EVENT_INCOMPLETE;
                 case -1:
-                    //TODO throw exception? Remove sout
-                    System.out.println("XML interpreter entered error state (invalid XML)");
+                    //TODO throw exception?
+                    logger.warn("XML interpreter entered error state (invalid XML)");   //TODO for which connection?
                     return ParserResponse.XML_ERROR;
 
             }

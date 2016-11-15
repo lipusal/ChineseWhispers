@@ -70,6 +70,7 @@ public class ClosingManager {
         }
 //        closableHandlers.put(handler, CLOSE_MESSAGE.getBytes());
         handler.postMessage(CLOSE_MESSAGE.getBytes());
+        handler.requestClose();
     }
 
 }

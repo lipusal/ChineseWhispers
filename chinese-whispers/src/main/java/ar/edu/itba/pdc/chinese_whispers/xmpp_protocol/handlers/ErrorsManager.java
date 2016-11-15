@@ -106,6 +106,7 @@ import java.util.Set;
             handler.postMessage((INITIAL_TAG_UNCLOSED + " id='" + IdGenerator.generateId() + "'>").getBytes());
         }
         handler.postMessage(errorMessages.get(error).getBytes());
+        afterSendingError(handler);
     }
 
     /**

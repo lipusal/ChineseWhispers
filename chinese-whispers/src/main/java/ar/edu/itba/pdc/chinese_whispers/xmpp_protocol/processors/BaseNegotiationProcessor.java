@@ -99,6 +99,7 @@ public abstract class BaseNegotiationProcessor extends BaseXMLInterpreter {
         ParserResponse response = ParserResponse.EVERYTHING_NORMAL;
         while (parser.hasNext()) {
             next();
+            updateStoredBytes(getParserStatus());
             if (getParserStatus() == AsyncXMLStreamReader.EVENT_INCOMPLETE) {
                 break;
             } else if (getParserStatus() == -1) {
@@ -106,7 +107,7 @@ public abstract class BaseNegotiationProcessor extends BaseXMLInterpreter {
                 break;
             }
             response = this.getStateMachine().negotiate();
-            updateStoredBytes(getParserStatus());
+
             // Stop negotiation if an error occurred.
             if (ErrorManager.getInstance().parserResponseErrors().contains(response)) {
                 break;

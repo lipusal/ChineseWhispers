@@ -27,7 +27,7 @@ public final class TCPSelector {
     /**
      * Timeout till the connection is closed.
      */
-    private static final int CONNECTION_TIMEOUT = 60000; // one minute till timeout.
+    private static final int CONNECTION_TIMEOUT = 5*60000; // five minute till timeout.
     /**
      * Amount of connection tries till key is cancelled.
      */

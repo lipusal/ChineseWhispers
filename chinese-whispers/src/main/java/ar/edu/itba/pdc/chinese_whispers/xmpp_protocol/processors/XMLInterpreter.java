@@ -62,7 +62,6 @@ public class XMLInterpreter extends BaseXMLInterpreter {
             status = parser.next();
             updateStoredBytes(status);
 
-
             switch (status) {
                 case AsyncXMLStreamReader.START_ELEMENT:
                     //Update status when starting a non-nested element

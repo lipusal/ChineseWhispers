@@ -99,10 +99,10 @@ public abstract class BaseXMLInterpreter {
 
 
     protected void updateStoredBytes(int status) {
-        if (status != AsyncXMLStreamReader.EVENT_INCOMPLETE) {
-            amountOfStoredBytes = -1;
-        }else{
+        if (status == AsyncXMLStreamReader.EVENT_INCOMPLETE) {
             amountOfStoredBytes++;
+        }else{
+            amountOfStoredBytes=-1;
         }
     }
 

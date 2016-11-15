@@ -1,7 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 import ar.edu.itba.pdc.chinese_whispers.application.IdGenerator;
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
 
 import java.util.HashMap;
@@ -13,8 +12,6 @@ import java.util.Set;
 /**
  * Base errors manager. It is in charge of sending errors messages according to the error situation each
  * stored {@link XMPPHandler} reached.
- * In order to perform its task, this class defines a {@link Runnable}, and stores it in the {@link TCPSelector}
- * "always-run" set.
  * <p>
  * Created by jbellini on 14/11/16.
  */

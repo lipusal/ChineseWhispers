@@ -28,7 +28,7 @@ import java.util.Stack;
 
     // Constants
     /**
-     * The buffers size.
+     * The outputBuffers size.
      */
     protected static final int BUFFER_SIZE = 8 * 1024; // We use an 8 KiB buffer
 
@@ -38,10 +38,10 @@ import java.util.Stack;
      * Buffer to fill with read data.
      */
     protected final ByteBuffer inputBuffer;
-//    /**
-//     * Buffer to fill with data to be written.
-//     */
-//    protected ByteBuffer outputBuffer;
+    /**
+     * A Deque which holds messages to be sent in the future.
+     */
+    private final Deque<ByteBuffer> outputBuffers;
     /**
      * Says if it is the first message being sent.
      * It is used to know, in case of error, if the "stream" tag must be sent or not.
@@ -64,10 +64,7 @@ import java.util.Stack;
      * Tells if the notify close operation was performed while on {@link HandlerState#ERROR} state.
      */
     private boolean closeRequestedWhileInErrorState;
-    /**
-     * A Deque which holds messages to be sent in the future.
-     */
-    private final Deque<ByteBuffer> buffers;
+
 
     // XMPP Stuff
     /**
@@ -98,14 +95,11 @@ import java.util.Stack;
                           ConfigurationsConsumer configurationsConsumer) {
         super(applicationProcessor, metricsProvider, configurationsConsumer);
         this.inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
-//        this.outputBuffer = ByteBuffer.allocate(4 * ((BUFFER_SIZE > XMLInterpreter.MAX_AMOUNT_OF_BYTES) ?
-//                BUFFER_SIZE : XMLInterpreter.MAX_AMOUNT_OF_BYTES));
-        this.buffers = new LinkedList<>();
+        this.outputBuffers = new LinkedList<>();
         this.mustClose = false;
         firstMessage = true;
         this.handlerState = HandlerState.NORMAL;
         logger = LogHelper.getLogger(getClass());
-//        buffers.push(ByteBuffersManager.getByteBuffer()); // Saves one initial buffer
     }
 
 
@@ -340,7 +334,7 @@ import java.util.Stack;
             firstMessage = false;
         }
         int count = 0;
-        ByteBuffer actualBuffer = buffers.pollLast();
+        ByteBuffer actualBuffer = outputBuffers.pollLast();
         if (actualBuffer != null) {
             count += storeInByteBuffer(actualBuffer, message, count);
         }
@@ -364,7 +358,7 @@ import java.util.Stack;
             stored = message.length - offset;
         }
         actualBuffer.put(message, offset, stored);
-        buffers.offerLast(actualBuffer);
+        outputBuffers.offerLast(actualBuffer);
         return stored;
     }
 
@@ -465,7 +459,7 @@ import java.util.Stack;
             throw new IllegalArgumentException();
         }
 
-        ByteBuffer outputBuffer = buffers.pollFirst();
+        ByteBuffer outputBuffer = outputBuffers.pollFirst();
         if (outputBuffer == null) {
             disableWriting(); // No data to be sent, so handler must disable its writing key.
             if (mustClose) {
@@ -486,10 +480,10 @@ import java.util.Stack;
         }
         if (outputBuffer.hasRemaining()) {
             outputBuffer.compact(); // Moves position to limit - position and limit to the capacity
-            buffers.offerFirst(outputBuffer); // Returns the buffer to de deque
+            outputBuffers.offerFirst(outputBuffer); // Returns the buffer to de deque
         } else {
             ByteBuffersManager.returnByteBuffer(outputBuffer); // Buffer has been completely used.
-            if (buffers.isEmpty()) {
+            if (outputBuffers.isEmpty()) {
                 // No more data to be written
                 disableWriting();
                 if (mustClose) {
@@ -535,13 +529,13 @@ import java.util.Stack;
      */
     private static class ByteBuffersManager {
         /**
-         * A stack that contains non-used {@link ByteBuffer}s. It allows to re-use buffers.
+         * A stack that contains non-used {@link ByteBuffer}s. It allows to re-use outputBuffers.
          */
         private static final Stack<ByteBuffer> buffersStack = new Stack<>();
 
 
         /**
-         * Gets a {@link ByteBuffer} from the buffers stack.
+         * Gets a {@link ByteBuffer} from the outputBuffers stack.
          *
          * @return An unused buffer.
          */
@@ -556,7 +550,7 @@ import java.util.Stack;
         }
 
         /**
-         * Stores the given {@link ByteBuffer} in the buffers stack.
+         * Stores the given {@link ByteBuffer} in the outputBuffers stack.
          * It will clear the buffer, so it will lose all its information.
          *
          * @param buffer The buffer to be stored.
@@ -569,9 +563,9 @@ import java.util.Stack;
         }
 
         /**
-         * Returns the capacity of the buffers given by this manager.
+         * Returns the capacity of the outputBuffers given by this manager.
          *
-         * @return The capacity of the buffers given by this manager.
+         * @return The capacity of the outputBuffers given by this manager.
          */
         private static int buffersSize() {
             return BUFFER_SIZE;

@@ -127,14 +127,6 @@ import java.nio.channels.SelectionKey;
         if (this.peerHandler == null) {
             throw new IllegalStateException(); // Can't proxy if no peer handler.
         }
-
-        // The handle write method call flip on outputBuffer, which sets its position to 0
-        // If the position is greater than 0, it means that, at least, one byte was written.
-        // So, the peer handler can read again
-//        if (outputBuffer.hasRemaining()) {
-//            peerHandler.enableReading();
-//        }
-        // TODO: fix this
         peerHandler.enableReading();
 
     }

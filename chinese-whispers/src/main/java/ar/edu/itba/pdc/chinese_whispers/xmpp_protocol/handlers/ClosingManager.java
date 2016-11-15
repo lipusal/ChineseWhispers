@@ -7,9 +7,6 @@ import java.util.*;
 /**
  * This class is in charge of closing nicely those {@link XMPPHandler} that have been stored.
  * Closing nicely means that those handlers will send the XMPP clossing message (i.e. the </stream> tag).
- * In order to perform its task, this class stores a {@link Runnable} - in the {@link TCPSelector} - that
- * is in charge of writing to the stored handlers the corresponding message.
- * This task can be executed whenever, but it's not thread safe.
  * Note that once the message was completely written into a given handler, it will be closed
  * (i.e. the corresponding channel will be closed).
  * <p>

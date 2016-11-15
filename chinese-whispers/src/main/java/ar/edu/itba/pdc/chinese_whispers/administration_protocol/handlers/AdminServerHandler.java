@@ -167,7 +167,6 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
      */
     /* package */ void closeHandler(SelectionKey key) {
         if (mustClose) return;
-        logger.trace("Close AdminServerHandler");   //TODO for which connection?
         mustClose = true;
         if (key.isValid()) {
             key.interestOps(key.interestOps() & ~SelectionKey.OP_READ); // Invalidates reading
@@ -187,6 +186,11 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
         inputBuffer.clear();
         try {
             int readBytes = channel.read(inputBuffer);
+
+            if(readBytes > 0 && logger.isTraceEnabled()) {
+                logger.trace("<== {}", new String(inputBuffer.array(), 0, readBytes));
+            }
+            
             inputBuffer.flip();
             metricsProvider.addAdministrationReadBytes(readBytes);
             if (readBytes >= 0) {
@@ -255,7 +259,6 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
 
 
         String string = new  String(messageRead.array(),0,messageRead.limit());
-        logger.trace("Message to process: {}", string);
         String[] requestElements = string.split(" ");
         Response response = new Response();
         processCommand(response, requestElements, key);
@@ -311,7 +314,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
         switch (command) {
             case "PTCL":
                 response.setResponseCode(UNEXPECTED_COMMAND_CODE);
-                response.setResponseMessage("Protocol need to be defined at the start of the connexion");
+                response.setResponseMessage("Protocol need to be defined at the start of the connection");
                 break;
             case "USER":
                 if (checkLength(requestElements.length, new int[]{4,5}, response)) {
@@ -327,12 +330,14 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
             case "L337":
                 if (checkLength(requestElements.length, new int[]{1}, response)) {
                     configurationsConsumer.setL337Processing(true);
+                    logger.info("L337 enabled");
                     response.setToDefaultOK();
                 }
                 break;
             case "UNL337":
                 if (checkLength(requestElements.length, new int[]{1}, response)) {
                     configurationsConsumer.setL337Processing(false);
+                    logger.info("L337 disabled");
                     response.setToDefaultOK();
                 }
                 break;
@@ -374,8 +379,11 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                     if (authenticationProvider.isValidUser(requestElements[1], requestElements[2])) {
                         response.setToDefaultOK();
                         isLoggedIn = true;
+                        userLogged = requestElements[1];
+                        logger.info("{} successfully logged into administration system", requestElements[1]);
                     } else {
                         response.setResponseMessage("WRONG USERNAME/PASSWORD");
+                        logger.info("Authentication failed for {} in administration system", requestElements[1]);
                         response.setResponseCode(FAILURE_CODE);
                     }
                 }
@@ -384,12 +392,14 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                 if (checkLength(requestElements.length, new int[]{1}, response)) {
                     response.setToDefaultOK();
                     isLoggedIn = false;
+                    logger.info("{} successfully logged out of administration system", userLogged);
                     userLogged = null;
                 }
                 break;
             case "QUIT":
                 if (checkLength(requestElements.length, new int[]{1}, response)) {
                     response.setToDefaultOK();
+                    logger.info("{}racefully disconnected from administration system", userLogged != null ? userLogged+" g" : "G");
                     closeHandler(key);
                 }
                 break;
@@ -403,9 +413,11 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                 if (checkLength(requestElements.length, new int[]{2}, response)) {
                     if(hasCnfgSpace()){
                         configurationsConsumer.silenceUser(requestElements[1]);
+                        logger.info("{} silenced", requestElements[1]);
                         response.setToDefaultOK();
                     }else{
                         response.setResponseCode(POLICY_VIOLATION_CODE);
+                        logger.info("No config space, not silencing {}", requestElements[1]);
                         response.setResponseMessage("Maximum number of silenced/multiplexed users");
                     }
 
@@ -414,6 +426,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
             case "UNBLCK":
                 if (checkLength(requestElements.length, new int[]{2}, response)) {
                     configurationsConsumer.unSilenceUser(requestElements[1]);
+                    logger.info("{} unsilenced", requestElements[1]);
                     response.setToDefaultOK();
                 }
                 break;
@@ -428,6 +441,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                                     response.setResponseMessage("Port needs to be a number between 1 and FFFE");
                                 } else {
                                     configurationsConsumer.setDefaultServer(requestElements[2], port);
+                                    logger.info("Set default server to {}:{}", requestElements[2], port);
                                     response.setToDefaultOK();
                                 }
                             } catch (NumberFormatException nfe) {
@@ -444,9 +458,11 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                                     if(hasCnfgSpace()){
                                         configurationsConsumer.multiplexUser(requestElements[1], requestElements[2],
                                                 Integer.valueOf(requestElements[3]));
+                                        logger.info("Multiplexing {} to {}:{}", requestElements[1], requestElements[2], requestElements[3]);
                                         response.setToDefaultOK();
                                     }else{
                                         response.setResponseCode(POLICY_VIOLATION_CODE);
+                                        logger.info("No config space, not multiplexing {} to {}:{}", requestElements[1], requestElements[2], requestElements[3]);
                                         response.setResponseMessage("Maximum number of silenced/multiplexed users");
                                     }
                                 }
@@ -461,6 +477,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                         if (requestElements[2].equals("DEFAULT")) {
                             if (!requestElements[1].equals("DEFAULT")) {
                                 configurationsConsumer.multiplexToDefaultServer(requestElements[1]);
+                                logger.info("Multiplexing {} to default server", requestElements[1]);
                             }
                             response.setToDefaultOK();
                             break;
@@ -472,6 +489,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                 break;
             case "CNFG":
                 if (checkLength(requestElements.length, new int[]{1}, response)) {
+                    logger.info("Requested current configuration");
                     StringBuilder responseBuild = new StringBuilder();
                     responseBuild.append("L337");
                     responseBuild.append(Configurations.getInstance().isProcessL337() ? " ON" : " OFF");
@@ -507,6 +525,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                 break;
             case "MTRC":
                 if (checkLength(requestElements.length, new int[]{1, 2}, response)) {
+                    logger.info("Requested metrics");
                     if (requestElements.length == 1) {
                         //response =  "BytesRead: "+metricsProvider.getReadBytes() + " BytesSent: "+metricsProvider.getSentBytes();
                         Map<String, String> metrics = metricsProvider.getMetrics();
@@ -532,6 +551,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                             String metricName = requestElements[1];
                             if (!metrics.containsKey(metricName)) {
                                 response.setResponseMessage("Unimplemented metric");
+                                logger.info("Requested unimplemented metric {}", metricName);
                                 response.setResponseCode(NOT_FOUND_CODE);
                             } else {
                                 response.setResponseMessage(metrics.get(metricName));
@@ -543,6 +563,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                 break;
             default:
                 response.setResponseMessage(DEFAULT_UNKNOWN_RESPONSE);
+                logger.info("Unknown command: {}", command);
                 response.setResponseCode(UNKNOWN_COMMAND_CODE);
                 break;
         }
@@ -588,8 +609,9 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                 handleClose(key);
             }
         }
-        logger.trace("Bytes written by administrator: {}", writtenBytes);
-        logger.trace("Message: {}", new String(outputBuffer.array(),0,writtenBytes));
+        if(writtenBytes > 0 && logger.isTraceEnabled()) {
+            logger.trace("==> {}", new String(outputBuffer.array(),0,writtenBytes));
+        }
         // Makes the buffer's position be set to limit - position, and its limit, to its capacity
         // If no data remaining, it just set the position to 0 and the limit to its capacity.
         outputBuffer.compact();

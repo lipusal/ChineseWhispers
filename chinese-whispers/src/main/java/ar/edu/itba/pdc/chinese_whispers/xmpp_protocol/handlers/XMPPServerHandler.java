@@ -199,7 +199,7 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
             notifyStreamError(XMPPErrors.CONNECTION_REFUSED);
             return;
         }
-        logger.trace("Trying to connect to origin server...");      //TODO which server?
+        logger.trace("Trying to connect to origin server {}...", configurationsConsumer.getServer(clientJid) + ":" + configurationsConsumer.getServerPort(clientJid));
         SelectionKey peerKey = TCPSelector.getInstance().
                 addClientSocketChannel(configurationsConsumer.getServer(clientJid),
                         configurationsConsumer.getServerPort(clientJid),

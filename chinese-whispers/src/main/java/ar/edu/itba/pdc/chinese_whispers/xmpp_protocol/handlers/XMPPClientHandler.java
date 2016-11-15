@@ -158,32 +158,35 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
         }
         SocketChannel channel = (SocketChannel) key.channel();
         this.connected = channel.isConnected();
+        InetSocketAddress remoteAddress = null;
         if (!this.connected) {
             try {
+                remoteAddress = (InetSocketAddress) channel.getRemoteAddress();
                 if (channel.isConnectionPending()) {
                     this.connected = channel.finishConnect();
                 } else {
-                    InetSocketAddress remote = (InetSocketAddress) channel.getRemoteAddress();
-                    if (remote == null) {
+                    if (remoteAddress == null) {
                         throw new IllegalStateException("Remote address wasn't specified."); // TODO: check this
                     }
-                    this.connected = channel.connect(remote);
+                    this.connected = channel.connect(remoteAddress);
 
                 }
             } catch (IOException e) {
-                logger.info("Connection refused");  //TODO which connection?
+                logger.warn("Connection to {} failed: {}", remoteAddress == null ? "unknown address" : remoteAddress, e.getMessage());
                 ((XMPPServerHandler) peerHandler).connectClientHandler(); // Ask peer handler to retry connection
             }
         }
         if (this.connected) {
-            logger.info("Connection established! Now listening for messages");  //TODO between who and who?
+            try {
+                remoteAddress = (InetSocketAddress) channel.getRemoteAddress();
+            } catch(IOException e) {
+                logger.warn("Failed to retrieve remote address for channel {}: {}", channel, e.getMessage());
+            }
+            logger.info("Connection to {} established! Now listening for messages", remoteAddress);
             this.key.interestOps(0); // Turn off all keys
             enableReading();
             startXMPPNegotiation();
-        } else {
-            logger.warn("Connection failed! Not Connected!"); // TODO: Which connection?
         }
-
 
         // TODO: Add this key when connected into some set in some future class to have tracking of connections
     }

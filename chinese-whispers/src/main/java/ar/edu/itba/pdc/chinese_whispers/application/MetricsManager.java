@@ -18,7 +18,7 @@ public class MetricsManager implements MetricsProvider {
     /**
      * Number of bytes sent by the proxy
      */
-    private long sentBytes;//TODO wat if more?
+    private long sentBytes;
 
     /**
      * Number of bytes read by the proxy for the administration protocol
@@ -28,7 +28,7 @@ public class MetricsManager implements MetricsProvider {
     /**
      * Number of bytes sent by the proxy for the administration protocol
      */
-    private long administrationSentBytes;//TODO wat if more?
+    private long administrationSentBytes;
 
     /**
      * Number of messages silenced by the proxy

@@ -9,27 +9,6 @@ import java.util.Set;
  */
 public class IdGenerator {
 
-//TODO delete
-//    /**
-//     * Holds the singleton instance.
-//     */
-//    private static IdGenerator singleton;
-//
-//    /**
-//     * Private constructor to implement singleton pattern.
-//     */
-//    private IdGenerator() {}
-//
-//
-//    public static IdGenerator getInstance() {
-//        if (singleton == null) {
-//            singleton = new IdGenerator();
-//        }
-//        return singleton;
-//    }
-
-
-
     /**
      * This set contains all ids already used
      */

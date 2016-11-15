@@ -12,15 +12,15 @@ import java.util.Map;
  * Created by Droche on 30/10/2016.
  */
 @Deprecated
-public class XMPPClientNegotiator extends XMPPNegotiator { //TODO checkear si no hay que mandar el STLTST paa que ande.
+public class XMPPClientNegotiator extends XMPPNegotiator {//TODO DELETE class
 
 
     /**
      * Constructs a new XMPP client negotiator.
      *
      * @param outputConsumer    The object that will consume output messages.
-     * @param authorization     TODO: Diego, completa esto por favor
-     * @param initialParameters TODO: Diego, completa esto por favor
+     * @param authorization
+     * @param initialParameters
      */
     public XMPPClientNegotiator(OutputConsumer outputConsumer,
                                 String authorization, Map<String, String> initialParameters) {

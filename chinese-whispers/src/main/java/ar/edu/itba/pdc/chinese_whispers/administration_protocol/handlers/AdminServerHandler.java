@@ -65,6 +65,7 @@ public class AdminServerHandler implements TCPReadWriteHandler {
     private static final String COMMAND_NOT_IMPLEMENTED_CODE = "C03";
 
     private static final int MAX_PARAMETER_SIZE = 100;
+    private static final String WRONG_SYNTAX_PORT_MESSAGE = "Port needs to be a number between 1 and 65534";
 
 
     /**
@@ -97,6 +98,11 @@ public class AdminServerHandler implements TCPReadWriteHandler {
      * Buffer to fill when writing
      */
     private final ByteBuffer outputBuffer;
+
+    /**
+     * String builder used to construct the responses in some commands.
+     */
+    private final StringBuilder responseBuilder;
     /**
      * boolean to tell if the handler is already closing
      */
@@ -140,6 +146,7 @@ public class AdminServerHandler implements TCPReadWriteHandler {
         inputBuffer = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
         inputBuffer.flip();
         outputBuffer = ByteBuffer.allocate(OUTPUT_BUFFER_SIZE);
+        responseBuilder = new StringBuilder();
         this.metricsProvider = metricsProvider;
         this.configurationsConsumer = configurationsConsumer;
         this.authenticationProvider = authenticationProvider;
@@ -204,7 +211,6 @@ public class AdminServerHandler implements TCPReadWriteHandler {
             e.printStackTrace(); //TODO log instead
             String message = INTERNAL_SERVER_ERROR_CODE + " Internal server error";
             outputBuffer.clear();
-            outputBuffer.put(new Byte("10"));
             for (byte b : message.getBytes()) outputBuffer.put(b);
             outputBuffer.put(new Byte("10"));
             closeHandler(key);
@@ -405,7 +411,7 @@ public class AdminServerHandler implements TCPReadWriteHandler {
                 break;
             case "HELP":
                 if (checkLength(requestElements.length, new int[]{1}, response)) {
-                    response.setResponseMessage("AUTH LANG HELP QUIT L337 UNL337 BLCK UNBLCK MPLX CNFG MTRC LOGOUT"); //TODO do list
+                    response.setResponseMessage("AUTH LANG HELP QUIT L337 UNL337 BLCK UNBLCK MPLX CNFG MTRC LOGOUT");
                     response.setResponseCode(OK_CODE);
                 }
                 break;
@@ -431,7 +437,7 @@ public class AdminServerHandler implements TCPReadWriteHandler {
                 }
                 break;
             case "MPLX":
-                if (checkLength(requestElements.length, new int[]{3, 4}, response)) {//TODO default port?
+                if (checkLength(requestElements.length, new int[]{3, 4}, response)) {
                     if (requestElements.length == 4) {
                         if (requestElements[1].equals("DEFAULT")) {
                             try {
@@ -446,14 +452,14 @@ public class AdminServerHandler implements TCPReadWriteHandler {
                                 }
                             } catch (NumberFormatException nfe) {
                                 response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
-                                response.setResponseMessage("Port needs to be a number between 1 and FFFE");//TODO FFFE
+                                response.setResponseMessage(WRONG_SYNTAX_PORT_MESSAGE);
                             }
                         } else {
                             try {
                                 Integer port = Integer.valueOf(requestElements[3]);
                                 if (port < 0 || port > 0xFFFF) {
                                     response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
-                                    response.setResponseMessage("Port needs to be a number between 1 and FFFE");
+                                    response.setResponseMessage(WRONG_SYNTAX_PORT_MESSAGE);
                                 } else {
                                     if(hasCnfgSpace()){
                                         configurationsConsumer.multiplexUser(requestElements[1], requestElements[2],
@@ -468,7 +474,7 @@ public class AdminServerHandler implements TCPReadWriteHandler {
                                 }
                             } catch (NumberFormatException nfe) {
                                 response.setResponseCode(WRONG_SYNTAX_OF_PARAMETERS_CODE);
-                                response.setResponseMessage("Port needs to be a number between 1 and FFFE");
+                                response.setResponseMessage(WRONG_SYNTAX_PORT_MESSAGE);
                             }
                         }
                         break;
@@ -490,37 +496,37 @@ public class AdminServerHandler implements TCPReadWriteHandler {
             case "CNFG":
                 if (checkLength(requestElements.length, new int[]{1}, response)) {
                     logger.info("Requested current configuration");
-                    StringBuilder responseBuild = new StringBuilder();
-                    responseBuild.append("L337");
-                    responseBuild.append(Configurations.getInstance().isProcessL337() ? " ON" : " OFF");
+                    responseBuilder.setLength(0);
+                    responseBuilder.append("L337");
+                    responseBuilder.append(Configurations.getInstance().isProcessL337() ? " ON" : " OFF");
 
-                    responseBuild.append(" # BLCK");
+                    responseBuilder.append(" # BLCK");
                     if (configurationsConsumer.getSilencedUsers().isEmpty()) {
-                        responseBuild.append(" NONE");
+                        responseBuilder.append(" NONE");
                     } else {
                         for (String silencedUser : configurationsConsumer.getSilencedUsers()) {
-                            responseBuild.append(" " + silencedUser);
+                            responseBuilder.append(" " + silencedUser);
                         }
                     }
-                    responseBuild.append(" # MPLX");
+                    responseBuilder.append(" # MPLX");
                     if (configurationsConsumer.getMultiplexedUsers().isEmpty()) {
-                        responseBuild.append(" NONE");
+                        responseBuilder.append(" NONE");
                     } else {
                         Iterator<String> iterator = configurationsConsumer.getMultiplexedUsers().keySet().iterator();
                         while(iterator.hasNext()){
                             String clientJid = iterator.next();
-                            responseBuild.append(" ").append(clientJid).append(" ").append(configurationsConsumer.getMultiplexedUsers().get(clientJid)); //TODO way of showing info
-                            if(iterator.hasNext()) responseBuild.append(" *");
+                            responseBuilder.append(" ").append(clientJid).append(" ").append(configurationsConsumer.getMultiplexedUsers().get(clientJid));
+                            if(iterator.hasNext()) responseBuilder.append(" *");
                         }
                     }
-                    responseBuild.append(" # DEFAULT ");
+                    responseBuilder.append(" # DEFAULT ");
                     if (Configurations.getInstance().getDefaultServerHost() == null || Configurations.getInstance().getDefaultServerPort() == null) {
-                        responseBuild.append("NONE");
+                        responseBuilder.append("NONE");
                     } else {
-                        responseBuild.append(Configurations.getInstance().getDefaultServerHost() + " " + Configurations.getInstance().getDefaultServerPort());
+                        responseBuilder.append(Configurations.getInstance().getDefaultServerHost() + " " + Configurations.getInstance().getDefaultServerPort());
                     }
                     response.setResponseCode(OK_CODE);
-                    response.setResponseMessage(responseBuild.toString());
+                    response.setResponseMessage(responseBuilder.toString());
                 }
                 break;
             case "MTRC":
@@ -529,7 +535,7 @@ public class AdminServerHandler implements TCPReadWriteHandler {
                     if (requestElements.length == 1) {
                         //response =  "BytesRead: "+metricsProvider.getReadBytes() + " BytesSent: "+metricsProvider.getSentBytes();
                         Map<String, String> metrics = metricsProvider.getMetrics();
-                        StringBuilder responseBuilder = new StringBuilder(); //Reuse?
+                        responseBuilder.setLength(0);
                         for (String metringName : metrics.keySet()) {
                             responseBuilder.append(metringName);
                             responseBuilder.append(" ");
@@ -540,7 +546,7 @@ public class AdminServerHandler implements TCPReadWriteHandler {
                     if (requestElements.length == 2) {
                         Map<String, String> metrics = metricsProvider.getMetrics();
                         if (requestElements[1].equals("ALL")) {
-                            StringBuilder responseBuilder = new StringBuilder(); //TODO Reuse?
+                            responseBuilder.setLength(0);
                             for (String metringName : metrics.keySet()) {
                                 responseBuilder.append(metringName + " ");
                                 responseBuilder.append(metrics.get(metringName) + " ");
@@ -585,7 +591,7 @@ public class AdminServerHandler implements TCPReadWriteHandler {
     }
 
     @Override
-    public void handleWrite(SelectionKey key) {// TODO: check how we turn on and off
+    public void handleWrite(SelectionKey key) {
 
         // Before trying to write, a key must be set to this handler.
         if (key == null) {

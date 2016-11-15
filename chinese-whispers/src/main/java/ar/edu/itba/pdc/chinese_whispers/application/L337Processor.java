@@ -2,6 +2,8 @@ package ar.edu.itba.pdc.chinese_whispers.application;
 
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 
+import java.util.logging.Logger;
+
 /**
  * Created by jbellini on 29/10/16.
  * <p>
@@ -40,7 +42,8 @@ public class L337Processor implements ApplicationProcessor {
 	@Override
 	public void processMessageBody(StringBuilder stringBuilder, char[] message, boolean isInBodyTag) {
 		if (stringBuilder == null || message == null) {
-			throw new IllegalArgumentException(); // TODO: Or should we just return
+			LogHelper.getLogger(getClass()).warn("A null stringBuilder or message is being passed to l337Processor");
+			return;
 		}
 		//Append l3373d or normal characters as appropriate
 		for (char c : message) {

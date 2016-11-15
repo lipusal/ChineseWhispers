@@ -149,7 +149,7 @@ public class Configurations implements ConfigurationsConsumer, AuthenticationPro
     public Map<String, String> getMultiplexedUsers() {
         Map<String,String> multiplexedUsersClone = new HashMap<>();
         for(String clientJid: multiplexedUsers.keySet()){
-            multiplexedUsersClone.put(clientJid,multiplexedUsers.get(clientJid).toString());//TODO estara bien depender de esto?
+            multiplexedUsersClone.put(clientJid,multiplexedUsers.get(clientJid).toString());
         }
         return multiplexedUsersClone;
     }

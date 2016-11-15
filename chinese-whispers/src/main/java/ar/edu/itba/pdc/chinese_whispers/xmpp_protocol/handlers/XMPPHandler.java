@@ -28,7 +28,7 @@ import java.nio.channels.SocketChannel;
     /**
      * The buffers size.
      */
-    protected static final int BUFFER_SIZE = 200;//TODO 8 * 1024; // We use an 8 KiB buffer
+    protected static final int BUFFER_SIZE = 8 * 1024; // We use an 8 KiB buffer
 
 
     // Communication stuff
@@ -354,7 +354,7 @@ import java.nio.channels.SocketChannel;
         int writtenBytes = message.length;
         int remainingSpace = remainingSpace();
         if (remainingSpace == 0) {
-            return message.length; //TODO ???? No escribiste nada aca, o si?
+            return message.length; //TODO ???? No escribiste nada aca, o si? porque no retornas 0??? O written bytes???
         }
         // Store what can be stored
         if (message.length > remainingSpace) {

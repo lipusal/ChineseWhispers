@@ -111,7 +111,7 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
     @Override
     protected void handleResponse(ParserResponse parserResponse) {
         super.handleResponse(parserResponse);
-        switch (parserResponse) { //TODO porqe solo estos 3?
+        switch (parserResponse) {
             case HOST_UNKNOWN:
                 notifyStreamError(XMPPErrors.HOST_UNKNOWN);
                 break;

@@ -93,11 +93,13 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
 
 
 
-
     @Override
     protected void afterWrite() {
         // Nothing to be done...
+        // Must not enable reading to peer handler,
+        // as it is waiting for negotiation being handled by this handler to be finished.
     }
+
 
     @Override
     protected void afterNotifyingClose() {

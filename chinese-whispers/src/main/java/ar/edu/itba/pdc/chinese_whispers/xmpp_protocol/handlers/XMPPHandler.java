@@ -28,9 +28,13 @@ import java.util.Stack;
 
     // Constants
     /**
-     * The outputBuffers size.
+     * The ByteBuffers size.
      */
     protected static final int BUFFER_SIZE = 8 * 1024; // We use an 8 KiB buffer
+    /**
+     * The maximum amount of {@link ByteBuffer}s in the buffers deque.
+     */
+    protected static final int MAX_AMOUNT_OF_BUFFERS_IN_THE_QUEUE = 10; // up to 100 byte buffers (8 KiB each)
 
 
     // Communication stuff
@@ -41,7 +45,7 @@ import java.util.Stack;
     /**
      * A Deque which holds messages to be sent in the future.
      */
-    private final Deque<ByteBuffer> outputBuffers;
+    protected final Deque<ByteBuffer> outputBuffers;
     /**
      * Says if it is the first message being sent.
      * It is used to know, in case of error, if the "stream" tag must be sent or not.
@@ -316,6 +320,10 @@ import java.util.Stack;
      */
     abstract protected void processReadMessage(byte[] message, int length);
 
+    /**
+     * Checks the corresponding keys in order to perform enabling or disabling of writing.
+     */
+    protected abstract void checkReadingKeyBeforePosting();
 
     /**
      * Saves the given {@code message} in this handler to be sent when possible.
@@ -330,6 +338,7 @@ import java.util.Stack;
             // Do nothing...
             return;
         }
+        checkReadingKeyBeforePosting();
         if (firstMessage) {
             firstMessage = false;
         }
@@ -393,11 +402,6 @@ import java.util.Stack;
         }
     }
 
-    /**
-     * Actions to be done before reading from this handler's key channel.
-     * This method must prepare the buffer in order to read.
-     */
-    protected abstract void beforeRead();
 
     /**
      * Actions to be done after writing into this handler's key channel.
@@ -423,9 +427,7 @@ import java.util.Stack;
             return; // If this handler is not in normal state, it must not read anymore
         }
 
-        beforeRead(); // Will state how many bytes can be read
-
-        // TODO: make position be zero and limit be capacity when its empty
+        inputBuffer.clear(); // Clears the buffer in order to read at most its capacity.
 
         SocketChannel channel = (SocketChannel) this.key.channel();
         int readBytes = 0;

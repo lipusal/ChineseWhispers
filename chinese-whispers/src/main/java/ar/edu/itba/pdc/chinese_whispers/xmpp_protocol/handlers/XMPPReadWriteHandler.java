@@ -87,6 +87,7 @@ import java.nio.channels.SelectionKey;
     private long getLastReadTimestamp() {
         return lastReadTimestamp;
     }
+
     /**
      * Sets a new timestamp for the read activity.
      *
@@ -112,23 +113,23 @@ import java.nio.channels.SelectionKey;
     }
 
 
-    @Override
-    protected void beforeRead() {
-
-        if (this.peerHandler == null) {
-            throw new IllegalStateException(); // Can't proxy if no peer handler.
-        }
-        inputBuffer.clear(); // Clears the buffer in order to read at most its capacity.
-        // TODO: ask if can continue reading
-    }
 
     @Override
     protected void afterWrite() {
         if (this.peerHandler == null) {
             throw new IllegalStateException(); // Can't proxy if no peer handler.
         }
-        peerHandler.enableReading();
+        if (outputBuffers.size() <= (MAX_AMOUNT_OF_BUFFERS_IN_THE_QUEUE / 2)) {
+            peerHandler.enableReading();
+        }
 
+    }
+
+    @Override
+    protected void checkReadingKeyBeforePosting() {
+        if (outputBuffers.size() >= MAX_AMOUNT_OF_BUFFERS_IN_THE_QUEUE && peerHandler != null) {
+            peerHandler.disableReading();
+        }
     }
 
     @Override

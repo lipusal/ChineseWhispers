@@ -79,7 +79,10 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
 
     @Override
     protected void afterWrite() {
-        // Nothing to be done...
+        // After writing anything, if the peer handler is not null, this handler must not read anything.
+        if (peerHandler != null) {
+            disableReading();
+        }
     }
 
     /**

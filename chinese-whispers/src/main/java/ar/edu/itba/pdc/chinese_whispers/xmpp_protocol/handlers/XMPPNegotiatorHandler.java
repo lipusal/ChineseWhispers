@@ -56,6 +56,12 @@ import org.slf4j.Logger;
         this.negotiationProcessor = negotiationProcessor;
     }
 
+    @Override
+    protected void checkReadingKeyBeforePosting() {
+        if (outputBuffers.size() >= MAX_AMOUNT_OF_BUFFERS_IN_THE_QUEUE) {
+            disableReading();
+        }
+    }
 
     /**
      * Process done when the XMPP negotiation finishes.
@@ -73,10 +79,6 @@ import org.slf4j.Logger;
         // Do nothing...
     }
 
-    @Override
-    protected void beforeRead() {
-        inputBuffer.clear(); // Clears the buffer in order to read at most its capacity.
-    }
 
     @Override
     protected void processReadMessage(byte[] message, int length) {

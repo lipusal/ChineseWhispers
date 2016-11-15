@@ -143,7 +143,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
         this.metricsProvider = metricsProvider;
         this.configurationsConsumer = configurationsConsumer;
         this.authenticationProvider = authenticationProvider;
-        language = "ENG";
+        language = "en";
         isMessageViolatingPolicy = false;
         firstMessage = true;
         isLoggedIn = false;
@@ -187,11 +187,11 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
         inputBuffer.clear();
         try {
             int readBytes = channel.read(inputBuffer);
-            logger.trace("Read bytes = {}", readBytes);
-            logger.trace("Read by administrator: {}", new String(inputBuffer.array(), 0, readBytes));
             inputBuffer.flip();
             metricsProvider.addAdministrationReadBytes(readBytes);
             if (readBytes >= 0) {
+                logger.trace("Read bytes = {}", readBytes);
+                logger.trace("Read by administrator: {}", new String(inputBuffer.array(), 0, readBytes));
                 processInput(key);
             } else if (readBytes == -1) {
                 closeHandler(key);
@@ -338,24 +338,24 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                 break;
             case "LANG":
                 if (requestElements.length == 1) {
-                    response.setResponseMessage("ENG");
+                    response.setResponseMessage("en");
                     response.setResponseCode(OK_CODE);
                     return;
                 }
                 if(requestElements[1].equals("DEFAULT")){
-                    //Change default Only ENG supported
+                    //Change default Only "en" supported
                     for (int langIndex = 2; langIndex < requestElements.length; langIndex++) {
-                        if (requestElements[langIndex].equals("ENG") || requestElements[langIndex].equals("DEFAULT") ) {
+                        if (requestElements[langIndex].toLowerCase().equals("en") || requestElements[langIndex].equals("DEFAULT") ) {
                             response.setResponseCode(OK_CODE);
-                            response.setResponseMessage("ENG");
+                            response.setResponseMessage("en");
                             return;
                         }
                     }
                 }else{
                     for (int langIndex = 1; langIndex < requestElements.length; langIndex++) {
-                        if (requestElements[langIndex].equals("ENG") || requestElements[langIndex].equals("DEFAULT")) {
+                        if (requestElements[langIndex].toLowerCase().equals("en") || requestElements[langIndex].equals("DEFAULT")) {
                             response.setResponseCode(OK_CODE);
-                            response.setResponseMessage("ENG");
+                            response.setResponseMessage("en");
                             return;
                         }
                     }
@@ -476,9 +476,6 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                     responseBuild.append("L337");
                     responseBuild.append(Configurations.getInstance().isProcessL337() ? " ON" : " OFF");
 
-                    response.setResponseCode(OK_CODE);
-                    response.setResponseMessage(responseBuild.toString());
-
                     responseBuild.append(" # BLCK");
                     if (configurationsConsumer.getSilencedUsers().isEmpty()) {
                         responseBuild.append(" NONE");
@@ -503,9 +500,9 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                         responseBuild.append("NONE");
                     } else {
                         responseBuild.append(Configurations.getInstance().getDefaultServerHost() + " " + Configurations.getInstance().getDefaultServerPort());
-
                     }
-
+                    response.setResponseCode(OK_CODE);
+                    response.setResponseMessage(responseBuild.toString());
                 }
                 break;
             case "MTRC":

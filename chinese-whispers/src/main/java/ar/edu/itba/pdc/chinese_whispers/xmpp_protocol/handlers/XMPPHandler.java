@@ -28,7 +28,7 @@ import java.nio.channels.SocketChannel;
     /**
      * The buffers size.
      */
-    protected static final int BUFFER_SIZE = 8 * 1024; // We use an 8 KiB buffer
+    protected static final int BUFFER_SIZE = 200;//TODO 8 * 1024; // We use an 8 KiB buffer
 
 
     // Communication stuff
@@ -94,8 +94,8 @@ import java.nio.channels.SocketChannel;
                           ConfigurationsConsumer configurationsConsumer) {
         super(applicationProcessor, metricsProvider, configurationsConsumer);
         this.inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
-        this.outputBuffer = ByteBuffer.allocate((BUFFER_SIZE * 4 > XMLInterpreter.MAX_AMOUNT_OF_BYTES) ?
-                BUFFER_SIZE * 4 : XMLInterpreter.MAX_AMOUNT_OF_BYTES);
+        this.outputBuffer = ByteBuffer.allocate(4*((BUFFER_SIZE  > XMLInterpreter.MAX_AMOUNT_OF_BYTES) ?
+                BUFFER_SIZE : XMLInterpreter.MAX_AMOUNT_OF_BYTES));
         this.mustClose = false;
         firstMessage = true;
         this.handlerState = HandlerState.NORMAL;
@@ -313,7 +313,7 @@ import java.nio.channels.SocketChannel;
         int writtenBytes = message.length;
         int remainingSpace = remainingSpace();
         if (remainingSpace == 0) {
-            return message.length;
+            return message.length; //TODO ???? No escribiste nada aca, o si?
         }
         // Store what can be stored
         if (message.length > remainingSpace) {

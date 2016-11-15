@@ -91,7 +91,7 @@ import java.nio.channels.SelectionKey;
         // The handle write method call flip on outputBuffer, which sets its position to 0
         // If the position is greater than 0, it means that, at least, one byte was written.
         // So, the peer handler can read again
-        if (outputBuffer.position() > 0) {
+        if (outputBuffer.hasRemaining()) {
             peerHandler.enableReading();
         }
 

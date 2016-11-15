@@ -29,7 +29,6 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
      */
     private static int MAX_PEER_CONNECTIONS_TRIES = 3;
 
-
     /**
      * The new connections consumer that will be notified when new connections arrive.
      */
@@ -54,7 +53,7 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
      * It MUST only be called by {@link XMPPAcceptorHandler}, when a client-proxy TCP connection has been established.
      *
      * @param applicationProcessor   An object that can process XMPP messages bodies.
-     * @param newConnectionsConsumer An object that can track new TCP connections.
+    x * @param newConnectionsConsumer An object that can track new TCP connections.
      * @param configurationsConsumer An object that can be queried about which server each user must connect to.
      * @param metricsProvider        An object that manages the system metrics.
      * @param key                    The {@link SelectionKey} that corresponds to this handler.
@@ -77,14 +76,6 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
         throw new UnsupportedOperationException("Key can't be changed to an XMPPServerHandler");
     }
 
-
-
-
-    @Override
-    protected void beforeRead() {
-        // TODO: check own output buffer
-        inputBuffer.clear();
-    }
 
     @Override
     protected void afterWrite() {

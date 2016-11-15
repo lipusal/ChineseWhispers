@@ -151,7 +151,7 @@ public class XMLInterpreter extends BaseXMLInterpreter {
                     break;
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     String processedXML = readXML.toString();
-                    if(!processedXML.isEmpty()) logger.trace(processedXML);
+                 //   if(!processedXML.isEmpty()) logger.trace(processedXML);
                     byte[] bytes = processedXML.getBytes();
                     outputConsumer.consumeMessage(bytes);
                     return ParserResponse.EVENT_INCOMPLETE;

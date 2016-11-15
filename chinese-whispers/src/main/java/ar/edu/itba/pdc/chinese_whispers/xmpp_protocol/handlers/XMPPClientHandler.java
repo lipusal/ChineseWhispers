@@ -92,10 +92,7 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
     }
 
 
-    @Override
-    protected void beforeRead() {
-        inputBuffer.clear(); // Clears the buffer in order to read at most its capacity.
-    }
+
 
     @Override
     protected void afterWrite() {

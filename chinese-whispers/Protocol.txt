@@ -38,6 +38,7 @@ Protocol Version Not Supported                              303
 ""
 
 TODO:
+add Lang in protocol to ISO 639-1 Language Codes
 Close inactive connexions
 Do not accept multiple conexion from same host?
 Measure max connexion, etc...

@@ -16,7 +16,7 @@ public abstract class BaseXMLInterpreter {
     /**
      * Says how many bytes this interpreter can hold at most.
      */
-    public final static int MAX_AMOUNT_OF_BYTES = 10 * 1024; // We allow up to 10 KiB data inside the parser.
+    public final static int MAX_AMOUNT_OF_BYTES = 200;//TODO 10 * 1024; // We allow up to 10 KiB data inside the parser.
 
     /**
      * The XML parser.
@@ -55,7 +55,7 @@ public abstract class BaseXMLInterpreter {
      * @return The amount of bytes that can be fed to this interpreter
      */
     public int remainingSpace() {
-        return (outputConsumer.remainingSpace() - amountOfStoredBytes) / 4;
+        return outputConsumer.remainingSpace()/4 - amountOfStoredBytes;
     }
 
     /**

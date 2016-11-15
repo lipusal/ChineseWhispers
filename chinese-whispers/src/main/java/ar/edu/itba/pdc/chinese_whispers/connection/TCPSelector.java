@@ -1,6 +1,8 @@
 package ar.edu.itba.pdc.chinese_whispers.connection;
 
+import ar.edu.itba.pdc.chinese_whispers.application.Configurations;
 import ar.edu.itba.pdc.chinese_whispers.application.LogHelper;
+import ar.edu.itba.pdc.chinese_whispers.application.MetricsManager;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -354,6 +356,7 @@ public final class TCPSelector {
                             continue;
                         }
                         acceptedKeys.add(newKey); // Adds the new key in the accepted keys.
+                        MetricsManager.getInstance().addAccesses(1);
                     }
                 } else if (key.isConnectable()) {
                     // Key can only be connectable if it's channel is a client socket channel

@@ -157,12 +157,12 @@ public class XMPPReadWriteHandler extends XMPPHandler {
         }
         handlerState = HandlerState.ERROR;
         disableReading(); // Can't read anymore
-        afterNotifyingError();
+        afterNotifyingStreamError();
         StanzaErrorsManager.getInstance().notifyError(this, errorMessage); // Notify the corresponding errors manager.
     }
 
     @Override
-    protected void afterNotifyingError() {
+    protected void afterNotifyingStreamError() {
         if (peerHandler != null) {
             peerHandler.notifyStreamError(XMPPErrors.INTERNAL_SERVER_ERROR); // TODO: If server sends error?
         }

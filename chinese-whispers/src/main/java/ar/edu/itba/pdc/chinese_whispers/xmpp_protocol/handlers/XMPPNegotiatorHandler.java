@@ -68,7 +68,7 @@ import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
 
 
     @Override
-    protected void afterNotifyingError() {
+    protected void afterNotifyingStreamError() {
         // Do nothing...
     }
 

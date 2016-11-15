@@ -27,9 +27,23 @@ public class Main {
 
     public static void main(String[] args) {
 
+        final String usageMessage = "Usage: <xmpp-port> <admin-port> " +
+                "<default-xmpp-server-address> <default-xmpp-server-port>";
+        if (args.length < 4) {
+            System.out.println(usageMessage);
+            System.exit(1);
+        }
+        try {
+            xmppProxyPort = new Integer(args[0]);
+            adminProtocolPort = new Integer(args[1]);
+            defaultServer = args[2];
+            defaultPort = new Integer(args[3]);
+        } catch (Exception e) {
+            System.out.println(usageMessage);
+            System.exit(1);
+        }
 
-        adminProtocolPort = ADMIN_PROTOCOL_PORT;
-        xmppProxyPort = XMPP_PROXY_PORT;
+        Configurations.getInstance().setDefaultServer(defaultServer, defaultPort);
 
 		Logger logger = LogHelper.getLogger(Main.class);
 		logger.info("Application started at {}", LocalDateTime.now());

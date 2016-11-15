@@ -2,7 +2,7 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPServerHandler;
+import ar.edu.itba.pdc.chinese_whispers.connection.TCPAcceptorHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NewConnectionsConsumer;
 
@@ -18,7 +18,7 @@ import java.nio.channels.SocketChannel;
  * <p>
  * Created by jbellini on 29/10/16.
  */
-public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler {
+public class XMPPAcceptorHandler extends BaseHandler implements TCPAcceptorHandler {
 
 
     /**
@@ -47,16 +47,6 @@ public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler
 
 
     @Override
-    public void handleRead(SelectionKey key) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void handleWrite(SelectionKey key) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public boolean handleError(SelectionKey key) {
         // TODO: what should we do in case of an error?
         return true;
@@ -68,10 +58,17 @@ public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler
         return true;
     }
 
+
     @Override
-    public void handleAccept(SelectionKey key) {
+    public SelectionKey handleAccept(SelectionKey key) {
+        if (key == null) {
+            throw new IllegalArgumentException();
+        }
         try {
             SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
+            if (channel == null) {
+                return null;
+            }
             channel.configureBlocking(false);
 
             // The net key will be listening till the client connected to its channel sends a message
@@ -84,11 +81,11 @@ public class XMPPAcceptorHandler extends BaseHandler implements TCPServerHandler
                     newKey);
             newKey.attach(handler);
 
-
+            return newKey;
             // TODO: Add this new key into some set in some future class to have tracking of connections
-            // TODO this should be done in a TCPCOnnecter or something.
         } catch (IOException ignored) {
             // TODO: what should we do here? XMPP connection wasn't established yet, so it's not necessary to close nicely the connection?
         }
+        return null;
     }
 }

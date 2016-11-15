@@ -38,6 +38,7 @@ Protocol Version Not Supported                              303
 ""
 
 TODO:
+add Lang in protocol to ISO 639-1 Language Codes
 Close inactive connexions
 Do not accept multiple conexion from same host?
 Measure max connexion, etc...
@@ -46,18 +47,23 @@ java.nio.channels.UnresolvedAddressException when error in address.
 
 check to send correct error and to send them and close correctly.
 re use all stringBuilders
+check capitalization in protocol
 
 TODO neg:
 
 check bullshit
-check if ...
+send error if message is bloqued.
+
+
 
 TODO PROTOCOL:
+maximun number of client to be silenced //Size of clients names, etc...
 chenge write to be nonBlcking and to work like the handlers.
 finish mtrcs.
 set maximum size for request.
 talk in protocol about spaces to right that are not important and amout of spaces and bla bla?
-block one user to other interation?                                          X
+block one user to other interation?
+ limitar el tamaño de los nombres de clientes y de servers y la cantidad.                           X
 
 marcar como finished cuando leamos un </stream>                              X
 check if we can send an message without "from" to client in neg.             X

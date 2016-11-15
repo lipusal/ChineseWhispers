@@ -5,7 +5,7 @@ import java.nio.channels.SelectionKey;
 /**
  * Created by jbellini on 27/10/16.
  */
-public interface TCPClientHandler extends TCPHandler {
+public interface TCPClientHandler extends TCPTimeoutCancellableHandler {
 
 	/**
 	 * Handles the connect operation.

@@ -1,13 +1,13 @@
 package ar.edu.itba.pdc.chinese_whispers.application;
 
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.handlers.AdminAcceptorHandler;
-import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.AuthenticationProvider;
-import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
-import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.ClosingManager;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.StreamErrorsManager;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.XMPPAcceptorHandler;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import java.time.LocalDateTime;
 
 /**
  * Created by jbellini on 28/10/16.
@@ -15,39 +15,51 @@ import org.slf4j.LoggerFactory;
 public class Main {
 
 
-	public static void main(String[] args) {
+    // TODO: get them from parameters
+    private static final int ADMIN_PROTOCOL_PORT = 4444;
+    private static final int XMPP_PROXY_PORT = 3333;
 
-		Logger LOG = LoggerFactory.getLogger(Main.class);
-		LOG.debug("Application started");
 
-		TCPSelector selector = TCPSelector.getInstance();
+    public static void main(String[] args) {
 
-		XMPPAcceptorHandler acceptorHandler = new XMPPAcceptorHandler(L337Processor.getInstance(),
-				ApplicationNewConnectionsConsumer.getInstance(), Configurations.getInstance(), MetricsManager.getInstance());
+		Logger logger = LogHelper.getLogger(Main.class);
+		logger.info("Application started at {}", LocalDateTime.now());
 
-		System.out.print("Trying to bind port 3333... ");
-		try {
-            selector.addServerSocketChannel(3333, acceptorHandler);
-		} catch (Throwable e) {
-			System.err.println("ERROR! Couldn't bind!");
-			return;
-		}
-		Configurations configurations = Configurations.getInstance();
+        TCPSelector selector = TCPSelector.getInstance();
 
-		AdminAcceptorHandler administrationAcceptorHandler = new AdminAcceptorHandler (MetricsManager.getInstance(), configurations, configurations);
+        XMPPAcceptorHandler acceptorHandler = new XMPPAcceptorHandler(L337Processor.getInstance(),
+                ApplicationNewConnectionsConsumer.getInstance(), Configurations.getInstance(), MetricsManager.getInstance());
 
-		System.out.print("Trying to bind port 4444... ");
-		try {
-			selector.addServerSocketChannel(4444, administrationAcceptorHandler);
-		} catch (Throwable e) {
-			System.err.println("ERROR! Couldn't bind!");
-			return;
-		}
-		System.out.println("\t[Done]");
-		while (true) {
-			// Before select tasks...
-			selector.doSelect(); // Perform select operations...
-			// After select tasks...
-		}
-	}
+        logger.info("Trying to bind port {}...", XMPP_PROXY_PORT);
+        try {
+            selector.addServerSocketChannel(XMPP_PROXY_PORT, acceptorHandler); // TODO: check why it's not breaking
+        } catch (Throwable e) {
+            logger.error("Couldn't bind port {}. Aborting.", XMPP_PROXY_PORT);
+            return;
+        }
+        logger.info("Successfully bound port {}", XMPP_PROXY_PORT);
+        Configurations configurations = Configurations.getInstance();
+
+        AdminAcceptorHandler administrationAcceptorHandler = new AdminAcceptorHandler(MetricsManager.getInstance(), configurations, configurations);
+
+        logger.info("Trying to bind port {}...", ADMIN_PROTOCOL_PORT);
+        try {
+            selector.addServerSocketChannel(ADMIN_PROTOCOL_PORT, administrationAcceptorHandler);
+        } catch (Throwable e) {
+            logger.error("Couldn't bind port {}. Aborting", ADMIN_PROTOCOL_PORT);
+            return;
+        }
+        logger.info("Successfully bound port {}", ADMIN_PROTOCOL_PORT);
+
+        //Initialize tasks
+        ClosingManager.getInstance();
+        StreamErrorsManager.getInstance();
+
+        // Main loop
+        while (true) {
+            // Before select tasks...
+            selector.doSelect(); // Perform select operations...
+            // After select tasks...
+        }
+    }
 }

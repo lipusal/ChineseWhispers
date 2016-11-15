@@ -1,0 +1,25 @@
+package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
+
+/**
+ * Created by jbellini on 11/11/16.
+ */
+public enum XMPPErrors {
+    // Stream errors
+    BAD_FORMAT,
+    POLICY_VIOLATION,
+    CONNECTION_REFUSED,
+    CONNECTION_TIMEOUT,
+    HOST_UNKNOWN,
+    HOST_UNKNOWN_FROM_SERVER,
+    INVALID_AUTH_MECHANISM,
+    MALFORMED_REQUEST,
+    UNSUPPORTED_NEGOTIATION_MECHANISM,
+    UNSUPPORTED_NEGOTIATION_MECHANISM_FOR_CLIENT,
+    FAILED_NEGOTIATION,
+    FAILED_NEGOTIATION_FOR_SERVER,
+    SYSTEM_SHUTDOWN,
+    INTERNAL_SERVER_ERROR,
+
+    // Stanza errors
+    SILENCED_USER
+}

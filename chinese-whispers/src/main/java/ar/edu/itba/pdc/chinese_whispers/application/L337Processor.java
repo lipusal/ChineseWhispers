@@ -69,75 +69,17 @@ public class L337Processor implements ApplicationProcessor {
 				case '&':
 					stringBuilder.append("&amp;");
 					break;
+				case '\'':
+					stringBuilder.append("&apos;");
+					break;
+				case '\"':
+					stringBuilder.append("&quot;");
+					break;
 				default:
 					stringBuilder.append(c);
 					break;
 			}
 		}
-	}
-
-	@Deprecated
-	@Override
-	public byte[] processMessageBody(byte[] message) {
-		if (message == null) {
-			return null;
-		}
-		if (configurations.isProcessL337()) {
-			return message; // Don't do anything if L337 is set off.
-		}
-
-		byte[] finalMessage = new byte[calculateFinalMessageLength(message)];
-
-		for (int i = 0; i < message.length; i++) {
-			switch (message[i]) {
-				case 'A':
-				case 'a':
-					finalMessage[i] = '4';
-					break;
-				case 'E':
-				case 'e':
-					finalMessage[i] = '3';
-					break;
-				case 'I':
-				case 'i':
-					finalMessage[i] = '1';
-					break;
-				case 'O':
-				case 'o':
-					finalMessage[i] = '0';
-					break;
-				case 'C':
-				case 'c':
-					finalMessage[i++] = '&';
-					finalMessage[i++] = 'l';
-					finalMessage[i++] = 't';
-					finalMessage[i] = ';';
-					break;
-                case '<':
-                    finalMessage[i++] = '&';
-                    finalMessage[i++] = 'l';
-                    finalMessage[i++] = 't';
-                    finalMessage[i] = ';';
-                    break;
-                case '>':
-                    finalMessage[i++] = '&';
-                    finalMessage[i++] = 'g';
-                    finalMessage[i++] = 't';
-                    finalMessage[i] = ';';
-                    break;
-                case '&':
-                    finalMessage[i++] = '&';
-                    finalMessage[i++] = 'a';
-                    finalMessage[i++] = 'm';
-                    finalMessage[i++] = 'p';
-                    finalMessage[i] = ';';
-                    break;
-				default:
-					finalMessage[i] = message[i];
-					break;
-			}
-		}
-		return finalMessage;
 	}
 
 

@@ -6,26 +6,23 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces;
  * This interface defines a method to be executed when output is processed.
  * The implementor will consume output data.
  */
-public interface OutputConsumer extends NegotiationConsumer {
+public interface OutputConsumer {
 
 
     /**
      * Consumes the given message.
      *
      * @param message The message to be consumed.
+     * @return How many bytes were consumed.
      */
-    void consumeMessage(byte[] message);
+    int consumeMessage(byte[] message);
 
     /**
-     * Consumes the given byte.
+     * Returns how much space this consumer can consume.
      *
-     * @param b The byte to be consumed.
+     * @return The amount of bytes that this consumer can consume.
      */
-    @Deprecated
-    default void consumeByte(byte b) {
-        byte[] message = new byte[1];
-        message[0] = b;
-        consumeMessage(message);
-    }
+    int remainingSpace();
+
 
 }

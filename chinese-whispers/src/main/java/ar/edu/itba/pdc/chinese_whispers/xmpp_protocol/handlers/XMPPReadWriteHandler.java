@@ -2,15 +2,14 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.xml_parser.XMLInterpreter;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.XMLInterpreter;
 
 import java.nio.channels.SelectionKey;
 
 /**
  * This class is in charge of reading and writing with the client or server connected to the channel in the
- * handler's {@link SelectionKey}.
+ * handler's {@link SelectionKey}. Basically, this handler is in charge of proxying.
  * When reading data, it will parse it using an XMLInterpreter, process it with an {@link ApplicationProcessor},
  * and send it to its peerHandler (another {@link XMPPReadWriteHandler}).
  * When receiving a message from its peerHandler, it will write that message to the socket channel
@@ -19,7 +18,23 @@ import java.nio.channels.SelectionKey;
  * <p>
  * Created by jbellini on 3/11/16.
  */
-public class XMPPReadWriteHandler extends XMPPHandler implements TCPHandler {
+/* package */ class XMPPReadWriteHandler extends XMPPHandler {
+
+
+    private final static long XMPP_TIMEOUT = 10 * 60000; // 10 minutes
+
+
+    /**
+     * XML Parser
+     */
+    protected XMLInterpreter xmlInterpreter;
+
+    /**
+     * Holds the time in which the last read was performed.
+     * It is used to decide if timeout event must close the connection.
+     * (Might timeout from one side, but not the other).
+     */
+    private long lastReadTimestamp;
 
 
     /* package */ XMPPReadWriteHandler(ApplicationProcessor applicationProcessor,
@@ -43,28 +58,125 @@ public class XMPPReadWriteHandler extends XMPPHandler implements TCPHandler {
         if (peerHandler != null) {
             this.xmlInterpreter = new XMLInterpreter(applicationProcessor, peerHandler);
         }
+        lastReadTimestamp = System.currentTimeMillis();
     }
 
 
+    /**
+     * Sets the peer handler (an {@link XMPPReadWriteHandler} to this handler.
+     * Note: Once it's set, it can't be changed.
+     *
+     * @param peerHandler The {@link XMPPReadWriteHandler} that acts as a peer to this handler.
+     */
     /* package */ void setPeerHandler(XMPPReadWriteHandler peerHandler) {
+        if (peerHandler == null) {
+            throw new IllegalArgumentException();
+        }
+        if (this.peerHandler != null) {
+            throw new IllegalStateException("Can't change the peer handler once it's set.");
+        }
         this.peerHandler = peerHandler;
         this.xmlInterpreter = new XMLInterpreter(applicationProcessor, peerHandler);
     }
 
-    @Override
-    protected void processReadMessage(byte[] message) {
-        if (peerHandler == null) {
+    /**
+     * Returns when was performed the last read activity
+     *
+     * @return The last read activity timestamp.
+     */
+    private long getLastReadTimestamp() {
+        return lastReadTimestamp;
+    }
+    /**
+     * Sets a new timestamp for the read activity.
+     *
+     * @param lastReadTimestamp The new timestamp.
+     */
+    protected void setLastReadTimestamp(long lastReadTimestamp) {
+        if (lastReadTimestamp < this.lastReadTimestamp) {
             throw new IllegalArgumentException();
         }
-        if (message != null && message.length > 0) {
+        this.lastReadTimestamp = lastReadTimestamp;
+    }
+
+
+    @Override
+    protected void processReadMessage(byte[] message, int length) {
+        if (peerHandler == null) {
+            throw new IllegalStateException();
+        }
+        if (message != null && length > 0) {
             xmlInterpreter.setSilenced(configurationsConsumer.isUserSilenced(clientJid));
-            xmlInterpreter.feed(message);
+            handleResponse(xmlInterpreter.feed(message, length));
+        }
+    }
+
+
+    @Override
+    protected void beforeRead() {
+
+        if (this.peerHandler == null) {
+            throw new IllegalStateException(); // Can't proxy if no peer handler.
+        }
+
+        // This handler can read at most the amount of data its XMLInterpreter can hold
+        int maxAmountOfRead = xmlInterpreter.remainingSpace();
+
+        // If the XMLInterpreter does not have space...
+        if (maxAmountOfRead == 0) {
+            disableReading(); // Stops reading if there is no space in its peer handler's output buffer
+        }
+        inputBuffer.position(0);
+        inputBuffer.limit(maxAmountOfRead > inputBuffer.capacity() ? inputBuffer.capacity() : maxAmountOfRead);
+    }
+
+    @Override
+    protected void afterWrite() {
+        if (this.peerHandler == null) {
+            throw new IllegalStateException(); // Can't proxy if no peer handler.
+        }
+
+        // The handle write method call flip on outputBuffer, which sets its position to 0
+        // If the position is greater than 0, it means that, at least, one byte was written.
+        // So, the peer handler can read again
+        if (outputBuffer.hasRemaining()) {
+            peerHandler.enableReading();
+        }
+
+    }
+
+    @Override
+    public void handleRead(SelectionKey key) {
+        super.handleRead(key);
+        this.lastReadTimestamp = System.currentTimeMillis();
+    }
+
+    @Override
+    protected void afterNotifyingError() {
+        if (peerHandler != null) {
+            peerHandler.notifyStreamError(XMPPErrors.INTERNAL_SERVER_ERROR); // TODO: If server sends error?
         }
     }
 
     @Override
-    void beforeClose() {
+    protected void afterNotifyingClose() {
+        if (peerHandler != null) {
+            peerHandler.notifyClose();
+        }
+    }
 
+
+    @Override
+    public void handleTimeout(SelectionKey key) {
+        long currentTime = System.currentTimeMillis();
+        long peerLastReadActivity = ((XMPPReadWriteHandler) peerHandler).getLastReadTimestamp();
+        if (currentTime - peerLastReadActivity <= XMPP_TIMEOUT) {
+            ((XMPPReadWriteHandler) peerHandler).setLastReadTimestamp(currentTime);
+            return;
+        }
+        // TODO: check these.
+        notifyStreamError(XMPPErrors.CONNECTION_TIMEOUT);
+        peerHandler.notifyStreamError(XMPPErrors.CONNECTION_TIMEOUT);
     }
 
 

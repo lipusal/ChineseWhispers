@@ -4,7 +4,8 @@ import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.Confi
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPClientHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.negotiation.XMPPClientNegotiator;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ClientNegotiationProcessor;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -20,29 +21,18 @@ import java.util.Map;
  * When that process finishes, it will create a new {@link XMPPReadWriteHandler},
  * and notify the {@link XMPPServerHandler} that created this handler that the negotiation process has finished,
  * and that the new handler that is handling the connection with the origin server is the recently created one.
- *
+ * <p>
  * <p>
  * Created by jbellini on 28/10/16.
  */
-public class XMPPClientHandler extends NegotiatorHandler implements TCPClientHandler {
-
-
-    private static final String PARTIAL_INITIAL_MESSAGE = "<stream:stream " +
-            "xmlns:stream=\'http://etherx.jabber.org/streams\' " +
-            "xmlns=\'jabber:client\' " +
-            "xmlns:xml=\'http://www.w3.org/XML/1998/namespace\'";
-
-
-    /**
-     * A string builder to create strings efficiently
-     */
-    private static final StringBuilder stringBuilder = new StringBuilder();
+public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClientHandler {
 
 
     /**
      * Says if this handler has established a TCP connection with the origin server
      */
     private boolean connected;
+
 
 
     /**
@@ -57,7 +47,7 @@ public class XMPPClientHandler extends NegotiatorHandler implements TCPClientHan
      * @param clientJid                   The User's JID (The user that connected to the proxy).
      * @param negotiatorInitialParameters The negotiation initial parameters that were read by the
      *                                    {@link XMPPServerHandler} that is creating this new {@link XMPPClientHandler}
-     * @param authorization               The authorization. // TODO: specify a bit more
+     * @param authentication              The authentication string (i.e. text between the auth tags).
      */
     /* package */ XMPPClientHandler(ApplicationProcessor applicationProcessor,
                                     MetricsProvider metricsProvider,
@@ -65,15 +55,15 @@ public class XMPPClientHandler extends NegotiatorHandler implements TCPClientHan
                                     XMPPServerHandler xmppServerHandler,
                                     String clientJid,
                                     Map<String, String> negotiatorInitialParameters,
-                                    String authorization) {
+                                    String authentication) {
         super(applicationProcessor, metricsProvider, configurationsConsumer);
+        setNegotiationProcessor(new ClientNegotiationProcessor(this, authentication, negotiatorInitialParameters));
         if (xmppServerHandler == null) {
             throw new IllegalArgumentException();
         }
         this.peerHandler = xmppServerHandler;
         this.clientJid = clientJid;
         connected = false;
-        xmppNegotiator = new XMPPClientNegotiator(this, authorization, negotiatorInitialParameters);
     }
 
     /**
@@ -87,26 +77,59 @@ public class XMPPClientHandler extends NegotiatorHandler implements TCPClientHan
 
 
     /**
+     * Sets the given interest ops to this handler's key, if it is connected.
+     * If its not connected, nothing is done.
+     *
+     * @param interestOps The new interest ops.
+     * @return This handler.
+     */
+    @Override
+    protected XMPPHandler setKeyInterestOps(int interestOps) {
+        if (!connected) {
+            return this;
+        }
+        return super.setKeyInterestOps(interestOps);
+    }
+
+
+
+
+    @Override
+    protected void afterWrite() {
+        // Nothing to be done...
+    }
+
+
+    @Override
+    protected void handleResponse(ParserResponse parserResponse) {
+        super.handleResponse(parserResponse);
+        switch (parserResponse) {
+            case XML_ERROR:
+                // super class method just calls the own notify error method (which does not notify the peer handler)
+                peerHandler.notifyStreamError(XMPPErrors.INTERNAL_SERVER_ERROR); // Not our proxy, but the origin server
+                break;
+            case HOST_UNKNOWN:
+                peerHandler.notifyStreamError(XMPPErrors.HOST_UNKNOWN_FROM_SERVER); // Make peer handler send error
+                notifyClose(); // Close this handler
+                break;
+            case UNSUPPORTED_NEGOTIATION_MECHANISM:
+                // Tells the client that connection couldn't be established
+                peerHandler.notifyStreamError(XMPPErrors.UNSUPPORTED_NEGOTIATION_MECHANISM_FOR_CLIENT);
+                // Tells the server that the authentication process is aborted
+                notifyStreamError(XMPPErrors.UNSUPPORTED_NEGOTIATION_MECHANISM);
+                break;
+            case FAILED_NEGOTIATION:
+                peerHandler.notifyStreamError(XMPPErrors.FAILED_NEGOTIATION);
+                notifyStreamError(XMPPErrors.FAILED_NEGOTIATION_FOR_SERVER);
+                break;
+        }
+    }
+
+    /**
      * Starts the XMPP negotiation process by creating the first negotiation message to be sent.
      */
-    // TODO: shouldn't this belong on the client negotiator?
     private void startXMPPNegotiation() {
-        // TODO: check that this does not have problems with char encoding
-        stringBuilder.setLength(0); // Clears the string builder
-        stringBuilder.append(PARTIAL_INITIAL_MESSAGE);
-
-        // Adds to the initial message all parameters sent by the client connected to the proxy
-        for (String attributeKey : xmppNegotiator.getInitialParameters().keySet()) {
-            stringBuilder.append(" ")
-                    .append(attributeKey)
-                    .append("=\'")
-                    .append(xmppNegotiator.getInitialParameters().get(attributeKey))
-                    .append("\'");
-        }
-
-        stringBuilder.append(">\n");
-        System.out.println("Proxy to Server:" + stringBuilder); // TODO: log this.
-        writeMessage(stringBuilder.toString().getBytes());
+        ((ClientNegotiationProcessor) getNegotiationProcessor()).sendInitialMessage();
     }
 
 
@@ -124,7 +147,7 @@ public class XMPPClientHandler extends NegotiatorHandler implements TCPClientHan
                 configurationsConsumer, clientJid, this.key);
         ((XMPPServerHandler) peerHandler).startProxying(xmppReadWriteHandler);
         this.key.attach(xmppReadWriteHandler);
-        this.key.interestOps(peerHandler.key.interestOps() | SelectionKey.OP_READ); // TODO: check if it's better to check the peer handler's write buffer before.
+        enableReading();
     }
 
 
@@ -135,40 +158,51 @@ public class XMPPClientHandler extends NegotiatorHandler implements TCPClientHan
         }
         SocketChannel channel = (SocketChannel) key.channel();
         this.connected = channel.isConnected();
+        InetSocketAddress remoteAddress = null;
         if (!this.connected) {
             try {
+                remoteAddress = (InetSocketAddress) channel.getRemoteAddress();
                 if (channel.isConnectionPending()) {
                     this.connected = channel.finishConnect();
                 } else {
-                    InetSocketAddress remote = (InetSocketAddress) channel.getRemoteAddress();
-                    if (remote == null) {
+                    if (remoteAddress == null) {
                         throw new IllegalStateException("Remote address wasn't specified."); // TODO: check this
                     }
-                    this.connected = channel.connect(remote);
+                    this.connected = channel.connect(remoteAddress);
 
                 }
             } catch (IOException e) {
-                System.out.println("Connection refused");
+                logger.warn("Connection to {} failed: {}", remoteAddress == null ? "unknown address" : remoteAddress, e.getMessage());
                 ((XMPPServerHandler) peerHandler).connectClientHandler(); // Ask peer handler to retry connection
             }
         }
         if (this.connected) {
-            System.out.println("Connect established! Now listening messages"); // TODO: log this?
-            this.key.interestOps(key.interestOps() | SelectionKey.OP_READ); // Makes the key readable TODO: check this!!
+            try {
+                remoteAddress = (InetSocketAddress) channel.getRemoteAddress();
+            } catch(IOException e) {
+                logger.warn("Failed to retrieve remote address for channel {}: {}", channel, e.getMessage());
+            }
+            logger.info("Connection to {} established! Now listening for messages", remoteAddress);
+            this.key.interestOps(0); // Turn off all keys
+            enableReading();
             startXMPPNegotiation();
-        } else {
-            System.out.println("Connection failed! Not Connected!"); // TODO: log this?
         }
-
 
         // TODO: Add this key when connected into some set in some future class to have tracking of connections
     }
 
-    @Override
-    void beforeClose() {
-        ((XMPPServerHandler)peerHandler).handleFailure();
-    }
 
+    @Override
+    public void handleTimeout(SelectionKey key) {
+        // An XMPPClientHandler always have a peer handler
+
+        // The peer handler is an XMPPServerHandler waiting for this handler to connect to an XMPP server
+        // In case this handler reached a timeout event, the XMPPServerHandler will send to the XMPP client
+        // connected to it that the connection was refused.
+        peerHandler.notifyStreamError(XMPPErrors.CONNECTION_REFUSED);
+        // Will send the timeout error to the server to which this XMPPClientHandler is connected to.
+        notifyStreamError(XMPPErrors.CONNECTION_TIMEOUT);
+    }
 
     @Override
     public boolean handleError(SelectionKey key) {

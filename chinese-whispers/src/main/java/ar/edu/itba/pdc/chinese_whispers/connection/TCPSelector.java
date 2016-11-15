@@ -6,10 +6,7 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.*;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by jbellini on 27/10/16.
@@ -32,14 +29,22 @@ public final class TCPSelector {
      */
     private static final int CONNECTION_TIMEOUT = 5 * 60000; // 5 minutes
     /**
-     * Amount of connection tries till key is cancelled.
+     * Max amount of connection tries till key is cancelled.
      */
     private static final int MAX_CONNECTION_TRIES = 10;
+    /**
+     * Max amount of TCP connections allowed.
+     */
+    private static final int MAX_AMOUNT_OF_CONNECTIONS = 500;
 
     /**
      * The selector to perform IO operations.
      */
     private final Selector selector;
+    /**
+     * Contains all the accepted keys that are connected.
+     */
+    private final Set<SelectionKey> acceptedKeys;
     /**
      * Contains when the last activity took place.
      */
@@ -61,6 +66,8 @@ public final class TCPSelector {
      */
     private final Set<SelectionKey> removableKeys;
 
+
+
     private final Logger logger;
     /**
      * Contains the singleton.
@@ -75,6 +82,7 @@ public final class TCPSelector {
      */
     private TCPSelector() throws IOException {
         this.selector = Selector.open();
+        this.acceptedKeys = new HashSet<>();
         this.lastActivities = new HashMap<>();
         this.alwaysRunTasks = new HashSet<>();
         this.nothingToDoTasks = new HashSet<>();
@@ -82,6 +90,7 @@ public final class TCPSelector {
         removableKeys = new HashSet<>();
         this.logger = LogHelper.getLogger(getClass());
         alwaysRunTasks.add(() -> {
+            // Checks the timeout for each key in the lastActivities map's key set.
             removableKeys.clear();
             for (SelectionKey key : lastActivities.keySet()) {
                 if (!key.isValid()) {
@@ -115,6 +124,18 @@ public final class TCPSelector {
                 }
             }
             removableKeys.forEach(lastActivities::remove); // Remove all those keys with problems
+        });
+        alwaysRunTasks.add(() -> {
+            // This task updates the accepted key set,
+            // Removing those that are not contained in the selector's keys set.
+            Iterator<SelectionKey> it = acceptedKeys.iterator();
+            while(it.hasNext()) {
+                SelectionKey each = it.next();
+                // If the selector does not contains the key, it means that the connection was closed.
+                if (!selector.keys().contains(each)) {
+                    it.remove();
+                }
+            }
         });
     }
 
@@ -323,6 +344,16 @@ public final class TCPSelector {
                     if (newKey != null) {
                         // Saves the first activity for the new connection
                         registerTimeoutCancelableKey(newKey);
+                        if (acceptedKeys.size() >= MAX_AMOUNT_OF_CONNECTIONS) {
+                            newKey.cancel(); // No more connections allowed.
+                            try {
+                                newKey.channel().close();
+                            } catch (Throwable e) {
+                                newKey.cancel(); // Allows cancelling the new key
+                            }
+                            continue;
+                        }
+                        acceptedKeys.add(newKey); // Adds the new key in the accepted keys.
                     }
                 } else if (key.isConnectable()) {
                     // Key can only be connectable if it's channel is a client socket channel

@@ -197,10 +197,9 @@ import java.util.Stack;
     }
 
     /**
-     * Actions performed after notifying this handler has reached an error situation.
+     * Actions performed after notifying this handler has reached a stream error situation.
      */
-    protected abstract void afterNotifyingError();
-
+    protected abstract void afterNotifyingStreamError();
     /**
      * Actions performed after notifying this handler's close
      */
@@ -223,7 +222,6 @@ import java.util.Stack;
         }
         handlerState = HandlerState.ERROR;
         disableReading(); // Can't read anymore
-        afterNotifyingError();
     }
 
     /**
@@ -236,6 +234,7 @@ import java.util.Stack;
     public void notifyStreamError(XMPPErrors error) {
         notifyError(error);
         StreamErrorsManager.getInstance().notifyError(this, error); // Notify the corresponding errors manager.
+        afterNotifyingStreamError();
     }
 
     /**

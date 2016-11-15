@@ -8,6 +8,7 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces;
  * For example, if a user is silenced or multiplexed, when calling this method,
  * the upper layer (the one deciding what to do which each user) can store users connected to the proxy.
  */
+@Deprecated
 public interface NewConnectionsConsumer {
 
 

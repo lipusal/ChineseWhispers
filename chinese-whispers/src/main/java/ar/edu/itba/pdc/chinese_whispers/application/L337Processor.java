@@ -48,20 +48,29 @@ public class L337Processor implements ApplicationProcessor {
 		//Append l3373d or normal characters as appropriate
 		for (char c : message) {
 			switch (c) {
+				case 'A':
 				case 'a':
-					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "4": "a");
+					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "4": c);
 					break;
+				case 'E':
 				case 'e':
-					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "3": "e");
+					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "3": c);
 					break;
+				case 'I':
 				case 'i':
-					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "1": "i");
+					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "1": c);
 					break;
+				case 'O':
 				case 'o':
-					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "0": "o");
+					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "0": c);
 					break;
+				case 'C':
 				case 'c':
-					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "&lt;": "c");
+					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "&lt;": c);
+					break;
+				case 'T':
+				case 't':
+					stringBuilder.append((isInBodyTag && configurations.isProcessL337())? "7": c);
 					break;
 				case '<':
 					stringBuilder.append("&lt;");

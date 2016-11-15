@@ -56,7 +56,7 @@ public class Configurations implements ConfigurationsConsumer, AuthenticationPro
 
     }
 
-    public long getNewId(){
+    public long getNewId() {
         return numId++;
     }
 
@@ -139,7 +139,7 @@ public class Configurations implements ConfigurationsConsumer, AuthenticationPro
     @Override
     public Set<String> getSilencedUsers() {
         HashSet silencedUsersClone = new LinkedHashSet<>();
-        for(String silencedUser: silencedUsers){
+        for (String silencedUser : silencedUsers) {
             silencedUsersClone.add(silencedUser);
         }
         return silencedUsersClone;
@@ -147,9 +147,9 @@ public class Configurations implements ConfigurationsConsumer, AuthenticationPro
 
     @Override
     public Map<String, String> getMultiplexedUsers() {
-        Map<String,String> multiplexedUsersClone = new HashMap<>();
-        for(String clientJid: multiplexedUsers.keySet()){
-            multiplexedUsersClone.put(clientJid,multiplexedUsers.get(clientJid).toString());
+        Map<String, String> multiplexedUsersClone = new HashMap<>();
+        for (String clientJid : multiplexedUsers.keySet()) {
+            multiplexedUsersClone.put(clientJid, multiplexedUsers.get(clientJid).toString());
         }
         return multiplexedUsersClone;
     }
@@ -179,16 +179,18 @@ public class Configurations implements ConfigurationsConsumer, AuthenticationPro
 
     @Override
     public void setDefaultServer(String host, int port) {
+
         defaultServer = new HostAndPort(host, port);
+
     }
 
-    public String getDefaultServerHost(){
-        if(defaultServer!=null) return defaultServer.host;
+    public String getDefaultServerHost() {
+        if (defaultServer != null) return defaultServer.host;
         return null;
     }
 
-    public String getDefaultServerPort(){
-        if(defaultServer!=null) return String.valueOf(defaultServer.port);
+    public String getDefaultServerPort() {
+        if (defaultServer != null) return String.valueOf(defaultServer.port);
         return null;
     }
 
@@ -234,8 +236,8 @@ public class Configurations implements ConfigurationsConsumer, AuthenticationPro
         }
 
         @Override
-        public String toString(){
-            return host+" "+port;
+        public String toString() {
+            return host + " " + port;
         }
     }
 }

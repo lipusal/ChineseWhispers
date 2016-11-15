@@ -102,7 +102,7 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
         this.key.attach(xmppReadWriteHandler);
 
         String response = "<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>";
-        xmppReadWriteHandler.writeMessage(response.getBytes());
+        xmppReadWriteHandler.postMessage(response.getBytes());
         xmppReadWriteHandler.enableReading();
     }
 

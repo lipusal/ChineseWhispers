@@ -7,7 +7,6 @@ import ar.edu.itba.pdc.chinese_whispers.connection.TCPReadWriteHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.XMLInterpreter;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -315,18 +314,6 @@ import java.util.Stack;
     }
 
 
-    /**
-     * Returns how many bytes are allowed to be written into this handler.
-     *
-     * @return The amount of bytes allowed to be written into this handler.
-     */
-    @Override
-    public int remainingSpace() {
-        // After each write, the buffer's limit is set to its capacity, and its position to the next free element.
-//        return outputBuffer.limit() - outputBuffer.position(); //TODO: FIX THIS
-        return 0;
-    }
-
 
     /**
      * Method to be executed once a message is received (i.e. when a message is read).
@@ -408,7 +395,7 @@ import java.util.Stack;
             firstMessage = false; // TODO: check this!
         }
         int writtenBytes = message.length;
-        int remainingSpace = remainingSpace();
+        int remainingSpace = 0;
         if (remainingSpace == 0) {
             return message.length; //TODO ???? No escribiste nada aca, o si? porque no retornas 0??? O written bytes???
         }
@@ -426,11 +413,10 @@ import java.util.Stack;
 
 
     @Override
-    public int consumeMessage(byte[] message) {
+    public void consumeMessage(byte[] message) {
         if (handlerState == HandlerState.NORMAL) {
-            return writeMessage(message);
+            postMessage(message);
         }
-        return 0; // If this handler's state is not normal, it can't consume more messages.
     }
 
 

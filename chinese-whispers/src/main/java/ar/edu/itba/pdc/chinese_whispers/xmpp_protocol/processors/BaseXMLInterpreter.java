@@ -54,8 +54,9 @@ public abstract class BaseXMLInterpreter {
      *
      * @return The amount of bytes that can be fed to this interpreter
      */
-    public int remainingSpace() {
-        return outputConsumer.remainingSpace()/4 - amountOfStoredBytes;
+    private int remainingSpace() {
+//        return outputConsumer.remainingSpace()/4 - amountOfStoredBytes;
+        return MAX_AMOUNT_OF_BYTES - amountOfStoredBytes;
     }
 
     /**

@@ -190,6 +190,7 @@ public class XMLInterpreter extends BaseXMLInterpreter {
     }
 
 
+
     /**
      * Sets whether this stream is silenced. Silenced streams discard all <message> stanzas.
      * <b>NOTE:</b> This setting takes effect upon reaching the next stanza.

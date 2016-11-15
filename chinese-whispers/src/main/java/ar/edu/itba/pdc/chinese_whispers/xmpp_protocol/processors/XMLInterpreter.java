@@ -148,12 +148,11 @@ public class XMLInterpreter extends BaseXMLInterpreter {
                     break;
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     String processedXML = readXML.toString();
-                    //   if(!processedXML.isEmpty()) logger.trace(processedXML);
                     byte[] bytes = processedXML.getBytes();
                     outputConsumer.consumeMessage(bytes);
                     return ParserResponse.EVENT_INCOMPLETE;
                 case -1:
-                    logger.warn("XML interpreter entered error state (invalid XML)");   //TODO for which connection?
+                    logger.warn("XML interpreter {} entered error state (invalid XML)", this);
                     return ParserResponse.XML_ERROR;
             }
         }
@@ -189,6 +188,7 @@ public class XMLInterpreter extends BaseXMLInterpreter {
 
         return silencedErrorBuilder.toString();
     }
+
 
 
     /**

@@ -265,7 +265,11 @@ public final class TCPSelector {
      * @return {@code true} if IO events where triggered, or {@code false} otherwise.
      */
     public boolean doSelect() {
-        alwaysRunTasks.forEach(Runnable::run); // Run all tasks that are required to run always
+        try {
+            alwaysRunTasks.forEach(Runnable::run); // Run all tasks that are required to run always
+        } catch (Throwable e) {
+            // TODO: JUAN!!!! LOG STACKTRACE
+        }
         try {
             if (selector.select(SELECT_TIMEOUT) == 0) {
                 // No IO operation ...

@@ -40,12 +40,6 @@ public class AdminAcceptorHandler implements TCPAcceptorHandler {
 
 
     @Override
-    public boolean handleError(SelectionKey key) {
-        // TODO:  Close all connections.
-        return true;
-    }
-
-    @Override
     public boolean handleClose(SelectionKey key) {
         // TODO: Close all connections.
         return true;

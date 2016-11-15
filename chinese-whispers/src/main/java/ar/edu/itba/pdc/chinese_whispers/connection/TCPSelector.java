@@ -67,7 +67,6 @@ public final class TCPSelector {
     private final Set<SelectionKey> removableKeys;
 
 
-
     private final Logger logger;
     /**
      * Contains the singleton.
@@ -110,12 +109,12 @@ public final class TCPSelector {
                 }
                 TCPTimeoutCancellableHandler handler = (TCPTimeoutCancellableHandler) key.attachment();
                 Long lastActivity = lastActivities.get(key);
+                long currentTime = System.currentTimeMillis();
                 if (lastActivity == null) {
                     // The key's first activity was not registered...
-                    handler.handleError(key);
+                    registerTimeoutCancelableKey(key, currentTime);
                     continue;
                 }
-                long currentTime = System.currentTimeMillis();
                 if (currentTime - lastActivity >= CONNECTION_TIMEOUT) {
 
                     handler.handleTimeout(key);
@@ -129,7 +128,7 @@ public final class TCPSelector {
             // This task updates the accepted key set,
             // Removing those that are not contained in the selector's keys set.
             Iterator<SelectionKey> it = acceptedKeys.iterator();
-            while(it.hasNext()) {
+            while (it.hasNext()) {
                 SelectionKey each = it.next();
                 // If the selector does not contains the key, it means that the connection was closed.
                 if (!selector.keys().contains(each)) {
@@ -287,9 +286,10 @@ public final class TCPSelector {
     /**
      * Logs the given {@link Throwable}.
      * That's the message (if any), and all the stacktrace.
+     *
      * @param e
      */
-    private void logException(Throwable e){
+    private void logException(Throwable e) {
         if (e.getMessage() == null) {
             logger.error("Exception when trying to perform an \"always-run\" task");
         } else {
@@ -374,22 +374,12 @@ public final class TCPSelector {
                     }
                 }
             } catch (Throwable e) {
-
-
-                // If any error occurred, don't crash.
-                // Try to handle this error if the attachment is a TCPHandler
-                // After that, cancel the key.
-                // Note that the handler can't be null.
-                if (key.attachment() instanceof TCPHandler) {
-                    try {
-                        ((TCPHandler) key.attachment()).handleError(key);
-                    } catch (Throwable ignored) {
-                        // In case any error occurred while handling the previous error
-                        // Just ignore the exception and proceed.
-                        // The key will be cancelled after this.
-                    }
+                try {
+                    key.channel().close();
+                } catch (Throwable anotherThrowable) {
+                    key.cancel();
                 }
-                key.cancel();
+                logException(e);
             }
         }
         selector.selectedKeys().clear();

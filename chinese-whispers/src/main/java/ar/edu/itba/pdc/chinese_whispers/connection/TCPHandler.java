@@ -8,13 +8,6 @@ import java.nio.channels.SelectionKey;
 public interface TCPHandler {
 
 
-    /**
-     * Handles error situations.
-     *
-     * @param key The {@link SelectionKey} that fell into error.
-     * @return {@code true} if the key must be closed, or {@code false} otherwise.
-     */
-    boolean handleError(SelectionKey key);
 
     /**
      * Handles close event.

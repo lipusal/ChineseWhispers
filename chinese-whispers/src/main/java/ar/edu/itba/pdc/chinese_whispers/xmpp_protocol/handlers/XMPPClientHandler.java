@@ -194,8 +194,6 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
             enableReading();
             startXMPPNegotiation();
         }
-
-        // TODO: Add this key when connected into some set in some future class to have tracking of connections
     }
 
 
@@ -211,10 +209,6 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
         notifyStreamError(XMPPErrors.CONNECTION_TIMEOUT);
     }
 
-    @Override
-    public boolean handleError(SelectionKey key) {
-        return false;
-    }
 
     @Override
     public boolean handleClose(SelectionKey key) {

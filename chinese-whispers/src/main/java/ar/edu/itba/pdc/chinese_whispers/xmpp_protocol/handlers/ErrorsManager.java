@@ -92,29 +92,33 @@ import java.util.Set;
 
 
     /**
-     * Stores the given {@link XMPPHandler} in this manager, saving it with the corresponding error message
-     * (according to the given {@link XMPPErrors} value).
+     * Posts the corresponding error message (according to the given {@link XMPPErrors} value),
+     * to the given {@link XMPPHandler}.
      *
      * @param handler The handler that reached an error situation.
      * @param error   The error it reached.
      */
     public void notifyError(XMPPHandler handler, XMPPErrors error) {
-        if (handler.firstMessage()) {
-            handler.postMessage((INITIAL_TAG_UNCLOSED + " id='" + IdGenerator.generateId() + "'>").getBytes());
-        }
-        handler.postMessage(errorMessages.get(error).getBytes());
-        afterSendingError(handler);
+//        if (handler.firstMessage()) {
+//            handler.postMessage((INITIAL_TAG_UNCLOSED + " id='" + IdGenerator.generateId() + "'>").getBytes());
+//        }
+//        handler.postMessage(errorMessages.get(error).getBytes());
+//        afterSendingError(handler);
+        doNotify(handler, errorMessages.get(error).getBytes());
     }
 
     /**
-     * Returns whether there is unsent data in this manager for the given {@link XMPPHandler}
+     * Performs the error posting action.
      *
-     * @param handler The handler that must be checked if any message is still waiting for writing
-     * @return {@code true} if there is unsent data, or {@code false} otherwise.
+     * @param handler The handler that reached an error situation.
+     * @param message The mesage to be posted to the given handler.
      */
-    public boolean stillNotCompletelySent(XMPPHandler handler) {
-        // If the map contains the handler as a key, it has unsent data.
-        // Otherwise, it would have been removed from the map.
-        return errorHandlers.containsKey(handler);
+    protected void doNotify(XMPPHandler handler, byte[] message) {
+        if (handler.firstMessage()) {
+            handler.postMessage((INITIAL_TAG_UNCLOSED + " id='" + IdGenerator.generateId() + "'>").getBytes());
+        }
+        handler.postMessage(message);
+        afterSendingError(handler);
     }
+
 }

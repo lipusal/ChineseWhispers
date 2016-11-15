@@ -248,7 +248,7 @@ import java.util.Stack;
      */
     public void notifyStanzaError(XMPPErrors error) {
         notifyError(error);
-        StreamErrorsManager.getInstance().notifyError(this, error); // Notify the corresponding errors manager.
+        StanzaErrorsManager.getInstance().notifyError(this, error); // Notify the corresponding errors manager.
     }
 
     /**

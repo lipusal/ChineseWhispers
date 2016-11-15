@@ -18,7 +18,7 @@ import java.nio.channels.SelectionKey;
  * <p>
  * Created by jbellini on 3/11/16.
  */
-/* package */ class XMPPReadWriteHandler extends XMPPHandler {
+public class XMPPReadWriteHandler extends XMPPHandler {
 
 
     private final static long XMPP_TIMEOUT = 10 * 60000; // 10 minutes
@@ -56,7 +56,7 @@ import java.nio.channels.SelectionKey;
         this.key = key;
         this.peerHandler = peerHandler;
         if (peerHandler != null) {
-            this.xmlInterpreter = new XMLInterpreter(applicationProcessor, peerHandler);
+            this.xmlInterpreter = new XMLInterpreter(applicationProcessor, peerHandler, this);
         }
         lastReadTimestamp = System.currentTimeMillis();
     }
@@ -76,7 +76,7 @@ import java.nio.channels.SelectionKey;
             throw new IllegalStateException("Can't change the peer handler once it's set.");
         }
         this.peerHandler = peerHandler;
-        this.xmlInterpreter = new XMLInterpreter(applicationProcessor, peerHandler);
+        this.xmlInterpreter = new XMLInterpreter(applicationProcessor, peerHandler, this);
     }
 
     /**
@@ -113,7 +113,6 @@ import java.nio.channels.SelectionKey;
     }
 
 
-
     @Override
     protected void afterWrite() {
         if (this.peerHandler == null) {
@@ -136,6 +135,30 @@ import java.nio.channels.SelectionKey;
     public void handleRead(SelectionKey key) {
         super.handleRead(key);
         this.lastReadTimestamp = System.currentTimeMillis();
+    }
+
+    /**
+     * Sets this handler state in error state.
+     * This method can only be called if the handler's state is {@link HandlerState#NORMAL}.
+     * Note: After sending a stanza error, if closing wasn't requested, the handler state will be normal again.
+     * Otherwise, it will continue with the closing operation.
+     *
+     * @param errorMessage The error message this handler wants to send.
+     */
+    public void notifyStanzaError(String errorMessage) {
+        if (errorMessage == null) {
+            throw new IllegalArgumentException();
+        }
+        if (errorMessage.isEmpty()) {
+            return;
+        }
+        if (handlerState != HandlerState.NORMAL) {
+            return;
+        }
+        handlerState = HandlerState.ERROR;
+        disableReading(); // Can't read anymore
+        afterNotifyingError();
+        StanzaErrorsManager.getInstance().notifyError(this, errorMessage); // Notify the corresponding errors manager.
     }
 
     @Override
@@ -168,7 +191,7 @@ import java.nio.channels.SelectionKey;
 
     @Override
     public boolean handleClose(SelectionKey key) {
-        boolean result =  super.handleClose(key);
+        boolean result = super.handleClose(key);
         peerHandler.notifyClose();
         return result;
     }

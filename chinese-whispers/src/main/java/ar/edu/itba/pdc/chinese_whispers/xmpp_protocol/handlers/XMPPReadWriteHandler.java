@@ -126,7 +126,7 @@ import java.nio.channels.SelectionKey;
     }
 
     @Override
-    protected void checkReadingKeyBeforePosting() {
+    protected void checkReadingKeyAfterPosting() {
         if (outputBuffers.size() >= MAX_AMOUNT_OF_BUFFERS_IN_THE_QUEUE && peerHandler != null) {
             peerHandler.disableReading();
         }

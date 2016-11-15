@@ -323,7 +323,7 @@ import java.util.Stack;
     /**
      * Checks the corresponding keys in order to perform enabling or disabling of writing.
      */
-    protected abstract void checkReadingKeyBeforePosting();
+    protected abstract void checkReadingKeyAfterPosting();
 
     /**
      * Saves the given {@code message} in this handler to be sent when possible.
@@ -338,7 +338,7 @@ import java.util.Stack;
             // Do nothing...
             return;
         }
-        checkReadingKeyBeforePosting();
+
         if (firstMessage) {
             firstMessage = false;
         }
@@ -351,6 +351,7 @@ import java.util.Stack;
             count += storeInByteBuffer(ByteBuffersManager.getByteBuffer(), message, count);
         }
         enableWriting();
+        checkReadingKeyAfterPosting();
     }
 
     /**

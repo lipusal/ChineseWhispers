@@ -222,10 +222,7 @@ public class AdminServerHandler implements TCPReadWriteHandler {
 
     private void processInput(SelectionKey key) {
 
-
-        if(isMessageViolatingPolicy){
-
-        }
+        if(!key.isValid()) return;
         key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
         while (inputBuffer.hasRemaining()){
             byte b = inputBuffer.get();

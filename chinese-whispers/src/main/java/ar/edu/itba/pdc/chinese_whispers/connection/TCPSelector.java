@@ -291,15 +291,15 @@ public final class TCPSelector {
      *
      * @param e
      */
-    private void logException(Throwable e) {
+    private void logException(String message, Throwable e) {
         if (e.getMessage() == null) {
-            logger.error("Exception when trying to perform an \"always-run\" task");
+            logger.trace(message);
         } else {
-            logger.error("Exception when trying to perform an \"always-run\" task. Message {}", e.getMessage());
+            logger.trace(message + " Message {}", e.getMessage());
         }
-        logger.error("Stacktrace:");
+        logger.trace("Stacktrace:");
         for (StackTraceElement each : e.getStackTrace()) {
-            logger.error(each.toString());
+            logger.trace(each.toString());
         }
     }
 
@@ -312,7 +312,7 @@ public final class TCPSelector {
         try {
             alwaysRunTasks.forEach(Runnable::run); // Run all tasks that are required to run always
         } catch (Throwable e) {
-            logException(e);
+            logException("Exception when trying to perform an \"always-run\" task", e);
         }
         try {
             if (selector.select(SELECT_TIMEOUT) == 0) {
@@ -320,7 +320,7 @@ public final class TCPSelector {
                 try {
                     nothingToDoTasks.forEach(Runnable::run);
                 } catch (Throwable e) {
-                    logException(e);
+                    logException("Exception when trying to perform a \"nothing-to-do-run\" task", e);
                 }
                 return false;
             }
@@ -382,7 +382,7 @@ public final class TCPSelector {
                 } catch (Throwable anotherThrowable) {
                     key.cancel();
                 }
-                logException(e);
+                logException("Exception when trying to perform an IO task task", e);
             }
         }
         selector.selectedKeys().clear();

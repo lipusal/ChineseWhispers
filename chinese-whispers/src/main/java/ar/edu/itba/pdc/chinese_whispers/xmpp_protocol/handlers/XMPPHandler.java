@@ -270,7 +270,7 @@ import java.nio.channels.SocketChannel;
      */
     public void notifyStreamErrorWasSent() {
         if (this.handlerState != HandlerState.ERROR) {
-            throw new IllegalStateException();
+            return;
         }
         this.handlerState = HandlerState.NORMAL;
         notifyClose();

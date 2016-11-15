@@ -1,5 +1,8 @@
 package ar.edu.itba.pdc.chinese_whispers.connection;
 
+import ar.edu.itba.pdc.chinese_whispers.application.LogHelper;
+import org.slf4j.Logger;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.*;
@@ -58,6 +61,7 @@ public final class TCPSelector {
      */
     private final Set<SelectionKey> removableKeys;
 
+    private final Logger logger;
     /**
      * Contains the singleton.
      */
@@ -76,6 +80,7 @@ public final class TCPSelector {
         this.nothingToDoTasks = new HashSet<>();
         this.connectionTries = new HashMap<>();
         removableKeys = new HashSet<>();
+        this.logger = LogHelper.getLogger(getClass());
         alwaysRunTasks.add(() -> {
             removableKeys.clear();
             for (SelectionKey key : lastActivities.keySet()) {
@@ -258,6 +263,22 @@ public final class TCPSelector {
 
     }
 
+    /**
+     * Logs the given {@link Throwable}.
+     * That's the message (if any), and all the stacktrace.
+     * @param e
+     */
+    private void logException(Throwable e){
+        if (e.getMessage() == null) {
+            logger.error("Exception when trying to perform an \"always-run\" task");
+        } else {
+            logger.error("Exception when trying to perform an \"always-run\" task. Message {}", e.getMessage());
+        }
+        logger.error("Stacktrace:");
+        for (StackTraceElement each : e.getStackTrace()) {
+            logger.error(each.toString());
+        }
+    }
 
     /**
      * Performs IO operations. If no IO event was triggered, the added nothingToDoTasks will be performed.
@@ -265,11 +286,19 @@ public final class TCPSelector {
      * @return {@code true} if IO events where triggered, or {@code false} otherwise.
      */
     public boolean doSelect() {
-        alwaysRunTasks.forEach(Runnable::run); // Run all tasks that are required to run always
+        try {
+            alwaysRunTasks.forEach(Runnable::run); // Run all tasks that are required to run always
+        } catch (Throwable e) {
+            logException(e);
+        }
         try {
             if (selector.select(SELECT_TIMEOUT) == 0) {
                 // No IO operation ...
-                nothingToDoTasks.forEach(Runnable::run);
+                try {
+                    nothingToDoTasks.forEach(Runnable::run);
+                } catch (Throwable e) {
+                    logException(e);
+                }
                 return false;
             }
         } catch (IOException e) {

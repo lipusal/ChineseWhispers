@@ -2,8 +2,6 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPReadWriteHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.XMLInterpreter;
 
@@ -118,7 +116,7 @@ import java.nio.channels.SelectionKey;
     @Override
     protected void afterNotifyingError() {
         if (peerHandler != null) {
-            peerHandler.notifyError(XMPPErrors.INTERNAL_SERVER_ERROR); // TODO: If server sends error?
+            peerHandler.notifyStreamError(XMPPErrors.INTERNAL_SERVER_ERROR); // TODO: If server sends error?
         }
     }
 
@@ -133,7 +131,10 @@ import java.nio.channels.SelectionKey;
     @Override
     public void handleTimeout(SelectionKey key) {
         // TODO: check these.
-        notifyError(XMPPErrors.CONNECTION_TIMEOUT);
-        peerHandler.notifyError(XMPPErrors.CONNECTION_TIMEOUT);
+        notifyStreamError(XMPPErrors.CONNECTION_TIMEOUT);
+        peerHandler.notifyStreamError(XMPPErrors.CONNECTION_TIMEOUT);
     }
+
+
+
 }

@@ -11,19 +11,14 @@ import java.util.Set;
 
 
 /**
- * This class is in charge of sending error messages according to the error situation each
+ * Base errors manager. It is in charge of sending errors messages according to the error situation each
  * stored {@link XMPPHandler} reached.
- * In order to perform its task, this class stores a {@link Runnable} - in the {@link TCPSelector} - that
- * is in charge of writing to the stored handlers the corresponding message.
- * This task can be executed whenever, but it's not thread safe.
- * Note that once the message was completely written into a given handler, that handler will be notified to close.
- * (i.e. the method {@link XMPPHandler#notifyClose()} will be called).
+ * In order to perform its task, this class defines a {@link Runnable}, and stores it in the {@link TCPSelector}
+ * "always-run" set.
  * <p>
- * This class implements the singleton pattern.
- * <p>
- * Created by jbellini on 11/11/16.
+ * Created by jbellini on 14/11/16.
  */
-public class ErrorManager {
+/* package */ abstract class ErrorsManager {
 
 
     private final static String INITIAL_TAG_UNCLOSED = "<?xml version='1.0' encoding='UTF-8'?>" +
@@ -32,55 +27,12 @@ public class ErrorManager {
             "xmlns=\'jabber:client\' " +
             "xmlns:xml=\'http://www.w3.org/XML/1998/namespace\'";
 
-    // XML errors
-    private final static String BAD_FORMAT = "<stream:error>" +
-            "<bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
-            "</stream:error>";
-    private final static String POLICY_VIOLATION = "<stream:error>" +
-            "<policy-violation xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
-            "</stream:error>";
-
-
-    // TCP level errors
-    private final static String CONNECTION_REFUSED = "<stream:error>" +
-            "<remote-connection-failed xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
-            "</stream:error>";
-    private final static String CONNECTION_TIMEOUT = "<stream:error>" +
-            "<connection-timeout xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
-            "</stream:error>";
-
-    // Negotiation errors
-    private final static String HOST_UNKNOWN = "<stream:error>" +
-            "<host-unknown xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
-            "</stream:error>";
-    private final static String HOST_UNKNOWN_FROM_SERVER = CONNECTION_REFUSED; // Same XMPP response
-    private final static String INVALID_MECHANISM_FAILURE = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>" +
-            "<invalid-mechanism/>" +
-            "</failure>";
-    private final static String MALFORMED_REQUEST = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>" +
-            "<malformed-request/>" +
-            "</failure>";
-    private final static String UNSUPPORTED_NEGOTIATION_MECHANISM = "<abort xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>";
-    private final static String UNSUPPORTED_NEGOTIATION_MECHANISM_FOR_CLIENT = CONNECTION_REFUSED; // Same XMPP response
-    private final static String FAILED_NEGOTIATION = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>" +
-            "<not-authorized/>" +
-            "</failure>";
-    private final static String FAILED_NEGOTIATION_FOR_SERVER = UNSUPPORTED_NEGOTIATION_MECHANISM; // Same XMPP response
-
-
-    // System errors
-    private final static String SYSTEM_SHUTDOWN = "<stream:error>" +
-            "<system-shutdown xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
-            "</stream:error>\n";
-    private final static String INTERNAL_SERVER_ERROR = "<stream:error>" +
-            "<internal-server-error xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
-            "</stream:error>\n";
-
 
     /**
      * Set containing the {@link ParserResponse} values that are errors.
      */
     private final Set<ParserResponse> parserResponseErrors;
+
     /**
      * Holds the message that mus be sent for each value of the {@link XMPPErrors} enum.
      */
@@ -92,15 +44,7 @@ public class ErrorManager {
     private final Map<XMPPHandler, byte[]> errorHandlers;
 
 
-    /**
-     * Holds the singleton.
-     */
-    private static ErrorManager singleton;
-
-    /**
-     * Private constructor (only called by the {@link ErrorManager#getInstance()} method.
-     */
-    private ErrorManager() {
+    protected ErrorsManager() {
         this.parserResponseErrors = new HashSet<>();
         parserResponseErrors.add(ParserResponse.XML_ERROR);
         parserResponseErrors.add(ParserResponse.POLICY_VIOLATION);
@@ -111,24 +55,8 @@ public class ErrorManager {
         parserResponseErrors.add(ParserResponse.FAILED_NEGOTIATION);
 
         this.errorMessages = new HashMap<>();
-        this.errorMessages.put(XMPPErrors.BAD_FORMAT, BAD_FORMAT);
-        this.errorMessages.put(XMPPErrors.POLICY_VIOLATION, POLICY_VIOLATION);
-        this.errorMessages.put(XMPPErrors.CONNECTION_REFUSED, CONNECTION_REFUSED);
-        this.errorMessages.put(XMPPErrors.CONNECTION_TIMEOUT, CONNECTION_TIMEOUT);
-        this.errorMessages.put(XMPPErrors.HOST_UNKNOWN, HOST_UNKNOWN);
-        this.errorMessages.put(XMPPErrors.HOST_UNKNOWN_FROM_SERVER, HOST_UNKNOWN_FROM_SERVER);
-        this.errorMessages.put(XMPPErrors.INVALID_AUTH_MECHANISM, INVALID_MECHANISM_FAILURE);
-        this.errorMessages.put(XMPPErrors.MALFORMED_REQUEST, MALFORMED_REQUEST);
-        this.errorMessages.put(XMPPErrors.UNSUPPORTED_NEGOTIATION_MECHANISM, UNSUPPORTED_NEGOTIATION_MECHANISM);
-        this.errorMessages.put(XMPPErrors.UNSUPPORTED_NEGOTIATION_MECHANISM_FOR_CLIENT,
-                UNSUPPORTED_NEGOTIATION_MECHANISM_FOR_CLIENT);
-        this.errorMessages.put(XMPPErrors.FAILED_NEGOTIATION, FAILED_NEGOTIATION);
-        this.errorMessages.put(XMPPErrors.FAILED_NEGOTIATION_FOR_SERVER, FAILED_NEGOTIATION_FOR_SERVER);
-        this.errorMessages.put(XMPPErrors.SYSTEM_SHUTDOWN, SYSTEM_SHUTDOWN);
-        this.errorMessages.put(XMPPErrors.INTERNAL_SERVER_ERROR, INTERNAL_SERVER_ERROR);
-
         this.errorHandlers = new HashMap<>();
-        // Stores in the TCP Selector "always run" set a task that is in charge of sending error messages.
+
         TCPSelector.getInstance().addAlwaysRunTask(() -> {
 
             // Stores those messages that must be removed from the map
@@ -158,8 +86,7 @@ public class ErrorManager {
                     errorHandlers.put(each, restOfMessage);
                 } else {
                     toRemoveHandlers.add(each); // Message was completely written
-                    // Once the error message is completely written, the corresponding handler must be closed.
-                    each.notifyErrorWasSent();
+                    afterSendingError(each);
                 }
             }
             // Remove all handlers whose message has been completely written
@@ -169,20 +96,39 @@ public class ErrorManager {
 
 
     /**
-     * Gets the singleton instance.
+     * Actions performed after sending errors completely.
      *
-     * @return The only instance in all the system.
+     * @param handler The handler that received an error message completely.
      */
-    public static ErrorManager getInstance() {
-        if (singleton == null) {
-            singleton = new ErrorManager();
-        }
-        return singleton;
+    protected abstract void afterSendingError(XMPPHandler handler);
+
+    /**
+     * Allows subclasses add more parser responses to the set.
+     *
+     * @param response The {@link ParserResponse} that will be added to the set.
+     */
+    protected void addParserResponseErrors(ParserResponse response) {
+        this.parserResponseErrors.add(response);
     }
 
-    public Set<ParserResponse> parserResponseErrors() {
-        return parserResponseErrors;
+
+    protected void addErrorMessage(XMPPErrors errors, String message) {
+        if (errors == null || message == null) {
+            return;
+        }
+        errorMessages.put(errors, message);
     }
+
+
+    /**
+     * Returns a set containing those {@link ParserResponse} values that are considered as errors.
+     *
+     * @return The set with {@link ParserResponse} that are errors.
+     */
+    public Set<ParserResponse> parserResponseErrors() {
+        return new HashSet<>(parserResponseErrors); // Another set in case it's modified by caller.
+    }
+
 
     /**
      * Stores the given {@link XMPPHandler} in this manager, saving it with the corresponding error message
@@ -195,7 +141,6 @@ public class ErrorManager {
         errorHandlers.put(handler, errorMessages.get(error).getBytes());
     }
 
-
     /**
      * Returns whether there is unsent data in this manager for the given {@link XMPPHandler}
      *
@@ -207,5 +152,4 @@ public class ErrorManager {
         // Otherwise, it would have been removed from the map.
         return errorHandlers.containsKey(handler);
     }
-
 }

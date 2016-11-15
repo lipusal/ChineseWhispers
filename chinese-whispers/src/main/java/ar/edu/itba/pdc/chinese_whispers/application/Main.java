@@ -3,13 +3,11 @@ package ar.edu.itba.pdc.chinese_whispers.application;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.handlers.AdminAcceptorHandler;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.ClosingManager;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.ErrorManager;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.StreamErrorsManager;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.XMPPAcceptorHandler;
 import org.slf4j.Logger;
 
 import java.time.LocalDateTime;
-
-import java.util.Date;
 
 /**
  * Created by jbellini on 28/10/16.
@@ -55,7 +53,7 @@ public class Main {
 
         //Initialize tasks
         ClosingManager.getInstance();
-        ErrorManager.getInstance();
+        StreamErrorsManager.getInstance();
 
         // Main loop
         while (true) {

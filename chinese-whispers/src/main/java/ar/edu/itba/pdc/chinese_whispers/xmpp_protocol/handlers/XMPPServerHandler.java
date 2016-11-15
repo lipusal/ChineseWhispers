@@ -122,13 +122,13 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
         super.handleResponse(parserResponse);
         switch (parserResponse) { //TODO porqe solo estos 3?
             case HOST_UNKNOWN:
-                notifyError(XMPPErrors.HOST_UNKNOWN);
+                notifyStreamError(XMPPErrors.HOST_UNKNOWN);
                 break;
             case INVALID_AUTH_MECHANISM:
-                notifyError(XMPPErrors.INVALID_AUTH_MECHANISM);
+                notifyStreamError(XMPPErrors.INVALID_AUTH_MECHANISM);
                 break;
             case MALFORMED_REQUEST:
-                notifyError(XMPPErrors.MALFORMED_REQUEST);
+                notifyStreamError(XMPPErrors.MALFORMED_REQUEST);
                 break;
         }
     }
@@ -157,7 +157,7 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
         }
 
         if (authParameters == null) {
-            notifyError(XMPPErrors.MALFORMED_REQUEST);
+            notifyStreamError(XMPPErrors.MALFORMED_REQUEST);
             return;
         }
 
@@ -173,7 +173,7 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
                 break;
             default:
                 // Shouldn't reach here, but in case...
-                notifyError(XMPPErrors.MALFORMED_REQUEST);
+                notifyStreamError(XMPPErrors.MALFORMED_REQUEST);
                 return;
         }
 
@@ -205,7 +205,7 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
         // TODO: Should we avoid trying to connect again for some seconds? We can mark the clientHandler with a timestamp and retry after some time has passed.
         // TODO: We can save the key in a Map and update those timestamps before the select.
         if (peerConnectionTries >= MAX_PEER_CONNECTIONS_TRIES) {
-            notifyError(XMPPErrors.CONNECTION_REFUSED);
+            notifyStreamError(XMPPErrors.CONNECTION_REFUSED);
             return;
         }
         logger.trace("Trying to connect to origin server...");      //TODO which server?
@@ -227,16 +227,16 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
     public void handleTimeout(SelectionKey key) {
         if (peerHandler == null) {
           // Timeout when performing xmpp negotiation with the xmpp client
-            notifyError(XMPPErrors.CONNECTION_TIMEOUT);
+            notifyStreamError(XMPPErrors.CONNECTION_TIMEOUT);
             return;
         }
         // If peer handler is not null, then the timeout even was triggered when negotiating with the xmpp server
 
         // Will send a connection refused error to the XMPP client to which this handler is connected.
-        notifyError(XMPPErrors.CONNECTION_REFUSED);
+        notifyStreamError(XMPPErrors.CONNECTION_REFUSED);
         // The peer handler is an XMPPClientHandler connected to an XMPP server.
         // Will send a timeout error to the XMPP server to which the peer handler is connected.
-        peerHandler.notifyError(XMPPErrors.CONNECTION_TIMEOUT);
+        peerHandler.notifyStreamError(XMPPErrors.CONNECTION_TIMEOUT);
     }
 
     @Override

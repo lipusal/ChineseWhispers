@@ -1,6 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors;
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.ErrorManager;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.StreamErrorsManager;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import com.fasterxml.aalto.AsyncByteArrayFeeder;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -87,7 +87,7 @@ public abstract class BaseXMLInterpreter {
                 if (amountOfStoredBytes >= MAX_AMOUNT_OF_BYTES || parser.getDepth() > 10000) {
                     return ParserResponse.POLICY_VIOLATION;
                 }
-                if (ErrorManager.getInstance().parserResponseErrors().contains(response)) {
+                if (StreamErrorsManager.getInstance().parserResponseErrors().contains(response)) {
                     break;
                 }
             }

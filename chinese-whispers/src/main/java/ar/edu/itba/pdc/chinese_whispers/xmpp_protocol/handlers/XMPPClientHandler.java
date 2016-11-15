@@ -101,6 +101,7 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
     }
 
 
+
     @Override
     protected void afterNotifyingClose() {
         peerHandler.notifyClose();
@@ -108,7 +109,6 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
 
     @Override
     protected void handleResponse(ParserResponse parserResponse) {
-        super.handleResponse(parserResponse);
         switch (parserResponse) {
             case XML_ERROR:
                 // super class method just calls the own notify error method (which does not notify the peer handler)
@@ -129,6 +129,7 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
                 notifyStreamError(XMPPErrors.FAILED_NEGOTIATION_FOR_SERVER);
                 break;
         }
+        super.handleResponse(parserResponse);
     }
 
     /**

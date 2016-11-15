@@ -368,49 +368,6 @@ import java.util.Stack;
         return stored;
     }
 
-    /**
-     * Saves the given {@code message} in this handler to be sent when possible.
-     * If there is no space for the all the message to be sent, it is stored only
-     * the amount of space that is allowed in.
-     * <p>
-     * Note: In case there this handler has its {@link SelectionKey} invalidated, it will close the connection.
-     *
-     * @param message The message to be sent.
-     * @return How many bytes could be saved in this handler, or -1 if the handler had an invalidated key.
-     */
-    @Deprecated
-    /* package */ int writeMessage(byte[] message) {
-        if (message == null) {
-            throw new IllegalArgumentException();
-        }
-        if (message.length == 0) {
-            return 0; // Do nothing if message is empty
-        }
-        // TODO: check if necessary
-        if (this.key != null && !this.key.isValid()) {
-            handleClose(this.key); // In case the key was invalidated, make this handler close
-            return -1;
-        }
-        if (firstMessage) {
-            firstMessage = false; // TODO: check this!
-        }
-        int writtenBytes = message.length;
-        int remainingSpace = 0;
-        if (remainingSpace == 0) {
-            return message.length; //TODO ???? No escribiste nada aca, o si? porque no retornas 0??? O written bytes???
-        }
-        // Store what can be stored
-        if (message.length > remainingSpace) {
-            byte[] aux = new byte[remainingSpace];
-            System.arraycopy(message, 0, aux, 0, remainingSpace);
-            message = aux;
-            writtenBytes = remainingSpace;
-        }
-//        outputBuffer.put(message); // Stores the message in the output buffer.
-        enableWriting();
-        return writtenBytes;
-    }
-
 
     @Override
     public void consumeMessage(byte[] message) {

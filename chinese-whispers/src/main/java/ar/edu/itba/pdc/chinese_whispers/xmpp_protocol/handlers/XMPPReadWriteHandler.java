@@ -118,16 +118,8 @@ import java.nio.channels.SelectionKey;
         if (this.peerHandler == null) {
             throw new IllegalStateException(); // Can't proxy if no peer handler.
         }
-
-        // This handler can read at most the amount of data its XMLInterpreter can hold
-        int maxAmountOfRead = xmlInterpreter.remainingSpace();
-
-        // If the XMLInterpreter does not have space...
-        if (maxAmountOfRead == 0) {
-            disableReading(); // Stops reading if there is no space in its peer handler's output buffer
-        }
-        inputBuffer.position(0);
-        inputBuffer.limit(maxAmountOfRead > inputBuffer.capacity() ? inputBuffer.capacity() : maxAmountOfRead);
+        inputBuffer.clear(); // Clears the buffer in order to read at most its capacity.
+        // TODO: ask if can continue reading
     }
 
     @Override
@@ -135,13 +127,7 @@ import java.nio.channels.SelectionKey;
         if (this.peerHandler == null) {
             throw new IllegalStateException(); // Can't proxy if no peer handler.
         }
-
-        // The handle write method call flip on outputBuffer, which sets its position to 0
-        // If the position is greater than 0, it means that, at least, one byte was written.
-        // So, the peer handler can read again
-        if (outputBuffer.hasRemaining()) {
-            peerHandler.enableReading();
-        }
+        peerHandler.enableReading();
 
     }
 
@@ -164,7 +150,6 @@ import java.nio.channels.SelectionKey;
             peerHandler.notifyClose();
         }
     }
-
 
     @Override
     public void handleTimeout(SelectionKey key) {

@@ -120,8 +120,8 @@ public abstract class BaseNegotiationProcessor extends BaseXMLInterpreter {
         return parser;
     }
 
-    private int consumeOutput(byte[] message) {
-        return outputConsumer.consumeMessage(message);
+    private void consumeOutput(byte[] message) {
+        outputConsumer.consumeMessage(message);
     }
 
     /**
@@ -197,8 +197,8 @@ public abstract class BaseNegotiationProcessor extends BaseXMLInterpreter {
             return negotiationProcessor.getParser();
         }
 
-        private int consumeOutput(byte[] message) {
-            return negotiationProcessor.consumeOutput(message);
+        private void consumeOutput(byte[] message) {
+            negotiationProcessor.consumeOutput(message);
         }
 
 
@@ -251,8 +251,8 @@ public abstract class BaseNegotiationProcessor extends BaseXMLInterpreter {
                 return stateMachine.getParser();
             }
 
-            protected int consumeOutput(byte[] message) {
-                return stateMachine.consumeOutput(message);
+            protected void consumeOutput(byte[] message) {
+                stateMachine.consumeOutput(message);
             }
 
 

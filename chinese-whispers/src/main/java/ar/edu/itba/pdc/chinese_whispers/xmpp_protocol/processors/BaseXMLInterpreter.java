@@ -48,16 +48,7 @@ public abstract class BaseXMLInterpreter {
         this.amountOfStoredBytes = 0;
     }
 
-
-    /**
-     * Returns how many bytes can be fed to this interpreter.
-     *
-     * @return The amount of bytes that can be fed to this interpreter
-     */
-    public int remainingSpace() {
-        return outputConsumer.remainingSpace()/4 - amountOfStoredBytes;
-    }
-
+    
     /**
      * Adds bytes to be processed by the interpreter.
      *
@@ -71,9 +62,6 @@ public abstract class BaseXMLInterpreter {
 
         if (data == null || length < 0 || length > data.length) {
             throw new IllegalArgumentException(); // return internal server error?
-        }
-        if (length > remainingSpace()) {
-            return ParserResponse.POLICY_VIOLATION;
         }
 
         ParserResponse response = ParserResponse.EVERYTHING_NORMAL;

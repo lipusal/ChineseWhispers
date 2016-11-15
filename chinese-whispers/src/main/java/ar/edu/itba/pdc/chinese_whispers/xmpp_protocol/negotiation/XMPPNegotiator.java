@@ -105,14 +105,14 @@ public abstract class XMPPNegotiator {
     }
 
 
-    /**
-     * Returns how many bytes can be fed to this interpreter.
-     *
-     * @return The amount of bytes that can be fed to this interpreter
-     */
-    public int remainingSpace() {
-        return (outputConsumer.remainingSpace() - amountOfStoredBytes) / 4;
-    }
+//    /**
+//     * Returns how many bytes can be fed to this interpreter.
+//     *
+//     * @return The amount of bytes that can be fed to this interpreter
+//     */
+//    public int remainingSpace() {
+//        return (outputConsumer.remainingSpace() - amountOfStoredBytes) / 4;
+//    }
 
 
     /**
@@ -127,9 +127,9 @@ public abstract class XMPPNegotiator {
         if (data == null || length < 0 || length > data.length) {
             throw new IllegalArgumentException();
         }
-        if (length > remainingSpace()) {
-            return ParserResponse.POLICY_VIOLATION;
-        }
+//        if (length > remainingSpace()) {
+//            return ParserResponse.POLICY_VIOLATION;
+//        }
 
         // TODO: check repeated code.
         ParserResponse response = ParserResponse.EVERYTHING_NORMAL;

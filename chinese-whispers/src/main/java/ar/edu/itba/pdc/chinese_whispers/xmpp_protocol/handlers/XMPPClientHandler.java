@@ -99,6 +99,10 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
         // Nothing to be done...
     }
 
+    @Override
+    protected void afterNotifyingClose() {
+        peerHandler.notifyClose();
+    }
 
     @Override
     protected void handleResponse(ParserResponse parserResponse) {

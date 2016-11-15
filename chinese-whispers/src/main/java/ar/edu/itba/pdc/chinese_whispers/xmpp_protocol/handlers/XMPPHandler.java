@@ -7,13 +7,15 @@ import ar.edu.itba.pdc.chinese_whispers.connection.TCPReadWriteHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.XMLInterpreter;
 import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.Stack;
 
 /**
  * Base XMPP handler that defines methods for sending and writing messages.
@@ -26,7 +28,7 @@ import java.nio.channels.SocketChannel;
 
     // Constants
     /**
-     * The buffers size.
+     * The outputBuffers size.
      */
     protected static final int BUFFER_SIZE = 8 * 1024; // We use an 8 KiB buffer
 
@@ -37,9 +39,9 @@ import java.nio.channels.SocketChannel;
      */
     protected final ByteBuffer inputBuffer;
     /**
-     * Buffer to fill with data to be written.
+     * A Deque which holds messages to be sent in the future.
      */
-    protected final ByteBuffer outputBuffer;
+    private final Deque<ByteBuffer> outputBuffers;
     /**
      * Says if it is the first message being sent.
      * It is used to know, in case of error, if the "stream" tag must be sent or not.
@@ -63,6 +65,8 @@ import java.nio.channels.SocketChannel;
      */
     private boolean closeRequestedWhileInErrorState;
 
+
+    // XMPP Stuff
     /**
      * Client JID
      */
@@ -74,7 +78,6 @@ import java.nio.channels.SocketChannel;
      * Tells which is this handler's state.
      */
     protected HandlerState handlerState;
-
     /**
      * Logger
      */
@@ -92,8 +95,7 @@ import java.nio.channels.SocketChannel;
                           ConfigurationsConsumer configurationsConsumer) {
         super(applicationProcessor, metricsProvider, configurationsConsumer);
         this.inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
-        this.outputBuffer = ByteBuffer.allocate(4*((BUFFER_SIZE  > XMLInterpreter.MAX_AMOUNT_OF_BYTES) ?
-                BUFFER_SIZE : XMLInterpreter.MAX_AMOUNT_OF_BYTES));
+        this.outputBuffers = new LinkedList<>();
         this.mustClose = false;
         firstMessage = true;
         this.handlerState = HandlerState.NORMAL;
@@ -306,17 +308,6 @@ import java.nio.channels.SocketChannel;
     }
 
 
-    /**
-     * Returns how many bytes are allowed to be written into this handler.
-     *
-     * @return The amount of bytes allowed to be written into this handler.
-     */
-    @Override
-    public int remainingSpace() {
-        // After each write, the buffer's limit is set to its capacity, and its position to the next free element.
-        return outputBuffer.limit() - outputBuffer.position();
-    }
-
 
     /**
      * Method to be executed once a message is received (i.e. when a message is read).
@@ -328,53 +319,55 @@ import java.nio.channels.SocketChannel;
 
     /**
      * Saves the given {@code message} in this handler to be sent when possible.
-     * If there is no space for the all the message to be sent, it is stored only
-     * the amount of space that is allowed in.
-     * <p>
-     * Note: In case there this handler has its {@link SelectionKey} invalidated, it will close the connection.
      *
      * @param message The message to be sent.
-     * @return How many bytes could be saved in this handler, or -1 if the handler had an invalidated key.
      */
-    /* package */ int writeMessage(byte[] message) {
+    /* package */ void postMessage(byte[] message) {
         if (message == null) {
             throw new IllegalArgumentException();
         }
-        if (message.length == 0) {
-            return 0; // Do nothing if message is empty
-        }
-        // TODO: check if necessary
-        if (this.key != null && !this.key.isValid()) {
-            handleClose(this.key); // In case the key was invalidated, make this handler close
-            return -1;
+        if (message.length == 0 || this.key == null || !this.key.isValid()) {
+            // Do nothing...
+            return;
         }
         if (firstMessage) {
-            firstMessage = false; // TODO: check this!
+            firstMessage = false;
         }
-        int writtenBytes = message.length;
-        int remainingSpace = remainingSpace();
-        if (remainingSpace == 0) {
-            return message.length; //TODO ???? No escribiste nada aca, o si? porque no retornas 0??? O written bytes???
+        int count = 0;
+        ByteBuffer actualBuffer = outputBuffers.pollLast();
+        if (actualBuffer != null) {
+            count += storeInByteBuffer(actualBuffer, message, count);
         }
-        // Store what can be stored
-        if (message.length > remainingSpace) {
-            byte[] aux = new byte[remainingSpace];
-            System.arraycopy(message, 0, aux, 0, remainingSpace);
-            message = aux;
-            writtenBytes = remainingSpace;
+        while (count < message.length) {
+            count += storeInByteBuffer(ByteBuffersManager.getByteBuffer(), message, count);
         }
-        outputBuffer.put(message); // Stores the message in the output buffer.
         enableWriting();
-        return writtenBytes;
+    }
+
+    /**
+     * Stores bytes in the given {@link ByteBuffer} till the buffer is full or no more bytes must be stored.
+     *
+     * @param actualBuffer The buffer where data will be stored.
+     * @param message      The byte array containing the data.
+     * @param offset       Offset for the given message.
+     * @return
+     */
+    private int storeInByteBuffer(ByteBuffer actualBuffer, byte[] message, int offset) {
+        int stored = actualBuffer.remaining();
+        if (stored + offset > message.length) {
+            stored = message.length - offset;
+        }
+        actualBuffer.put(message, offset, stored);
+        outputBuffers.offerLast(actualBuffer);
+        return stored;
     }
 
 
     @Override
-    public int consumeMessage(byte[] message) {
+    public void consumeMessage(byte[] message) {
         if (handlerState == HandlerState.NORMAL) {
-            return writeMessage(message);
+            postMessage(message);
         }
-        return 0; // If this handler's state is not normal, it can't consume more messages.
     }
 
 
@@ -443,7 +436,7 @@ import java.nio.channels.SocketChannel;
             handleClose(this.key); // TODO: close peer also
         }
         if (readBytes > 0) {
-            if(logger.isTraceEnabled()) {
+            if (logger.isTraceEnabled()) {
                 logger.trace("<-- {}", new String(inputBuffer.array(), 0, readBytes));
             }
             processReadMessage(inputBuffer.array(), inputBuffer.position());
@@ -466,6 +459,17 @@ import java.nio.channels.SocketChannel;
             throw new IllegalArgumentException();
         }
 
+        ByteBuffer outputBuffer = outputBuffers.pollFirst();
+        if (outputBuffer == null) {
+            disableWriting(); // No data to be sent, so handler must disable its writing key.
+            if (mustClose) {
+                // If reached this point, no data must be sent, but still the key is being selected as writable
+                // That means that the handler must be closed.
+                handleClose(this.key);
+            }
+            return; // No message to be sent
+        }
+
         outputBuffer.flip(); // Makes the buffer's limit be set to its position, and it position, to 0
         int writtenBytes = 0;
         SocketChannel channel = (SocketChannel) this.key.channel();
@@ -474,21 +478,24 @@ import java.nio.channels.SocketChannel;
         } catch (IOException e) {
             handleClose(this.key);
         }
-        if (!outputBuffer.hasRemaining()) {
-            // Disables writing if there is no more data to write
-            disableWriting();
-            if (mustClose) {
-                // If this handler mustClose field is true, it means that it has been requested to close
-                // Up to this point, all stored data was already sent, so it's ready to be closed.
-                handleClose(this.key);
+        if (outputBuffer.hasRemaining()) {
+            outputBuffer.compact(); // Moves position to limit - position and limit to the capacity
+            outputBuffers.offerFirst(outputBuffer); // Returns the buffer to de deque
+        } else {
+            ByteBuffersManager.returnByteBuffer(outputBuffer); // Buffer has been completely used.
+            if (outputBuffers.isEmpty()) {
+                // No more data to be written
+                disableWriting();
+                if (mustClose) {
+                    // If this handler mustClose field is true, it means that it has been requested to close
+                    // Up to this point, all stored data was already sent, so it's ready to be closed.
+                    handleClose(this.key);
+                }
             }
         }
-        if(writtenBytes > 0 && logger.isTraceEnabled()) {
+        if (writtenBytes > 0 && logger.isTraceEnabled()) {
             logger.trace("--> {}", new String(outputBuffer.array(), 0, writtenBytes));
         }
-        // Makes the buffer's position be set to limit - position, and its limit, to its capacity
-        // If no data remaining, it just set the position to 0 and the limit to its capacity.
-        outputBuffer.compact();
 
         metricsProvider.addSentBytes(writtenBytes);
 
@@ -514,6 +521,55 @@ import java.nio.channels.SocketChannel;
             return false;
         }
         return true;
+    }
+
+
+    /**
+     * This class is in charge of retrieving and storing instances of {@link ByteBuffer}.
+     */
+    private static class ByteBuffersManager {
+        /**
+         * A stack that contains non-used {@link ByteBuffer}s. It allows to re-use outputBuffers.
+         */
+        private static final Stack<ByteBuffer> buffersStack = new Stack<>();
+
+
+        /**
+         * Gets a {@link ByteBuffer} from the outputBuffers stack.
+         *
+         * @return An unused buffer.
+         */
+        private static ByteBuffer getByteBuffer() {
+
+            if (buffersStack.isEmpty()) {
+                return ByteBuffer.allocate(BUFFER_SIZE);
+            }
+            ByteBuffer buffer = buffersStack.pop();
+            buffer.clear();
+            return buffer;
+        }
+
+        /**
+         * Stores the given {@link ByteBuffer} in the outputBuffers stack.
+         * It will clear the buffer, so it will lose all its information.
+         *
+         * @param buffer The buffer to be stored.
+         */
+        private static void returnByteBuffer(ByteBuffer buffer) {
+            if (buffer == null) {
+                throw new IllegalArgumentException();
+            }
+            buffersStack.push(buffer);
+        }
+
+        /**
+         * Returns the capacity of the outputBuffers given by this manager.
+         *
+         * @return The capacity of the outputBuffers given by this manager.
+         */
+        private static int buffersSize() {
+            return BUFFER_SIZE;
+        }
     }
 
 

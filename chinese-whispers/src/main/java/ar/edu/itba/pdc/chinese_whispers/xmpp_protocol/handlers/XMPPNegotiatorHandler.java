@@ -76,9 +76,6 @@ import org.slf4j.Logger;
     @Override
     protected void beforeRead() {
         inputBuffer.clear(); // Clears the buffer in order to read at most its capacity.
-        int maxAmountOfRead = getNegotiationProcessor().remainingSpace();
-        inputBuffer.position(0);
-        inputBuffer.limit(maxAmountOfRead>inputBuffer.capacity()?inputBuffer.capacity():maxAmountOfRead);
     }
 
     @Override

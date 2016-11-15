@@ -124,7 +124,8 @@ public class XMLInterpreter extends BaseXMLInterpreter {
                         readXML.append(">");
                     } else {
                         if (parser.getLocalName().equals("message")) {
-                            ownerHandler.notifyStanzaError(generateErrorMessage());
+                            //ownerHandler.notifyStanzaError(generateErrorMessage());
+                            ownerHandler.consumeMessage(generateErrorMessage().getBytes());
                             MetricsManager.getInstance().addNumSilencedMessages(1); //TODO user producer
                         }
                     }
@@ -172,7 +173,7 @@ public class XMLInterpreter extends BaseXMLInterpreter {
 
     private String generateErrorMessage() {
         StringBuilder silencedErrorBuilder = new StringBuilder();
-        silencedErrorBuilder.append("<message type='error'");
+        silencedErrorBuilder.append("<message");
         int attrCount = parser.getAttributeCount();
         for (int i = 0; i < attrCount; i++) {
             if (parser.getAttributePrefix(i).isEmpty()) {
@@ -193,7 +194,7 @@ public class XMLInterpreter extends BaseXMLInterpreter {
                 }
             }
         }
-        silencedErrorBuilder.append("><error type='auth'><forbidden xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></error></message>");
+        silencedErrorBuilder.append("><error type='wait'><policy-violation xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></error></message>");
 
         return silencedErrorBuilder.toString();
     }

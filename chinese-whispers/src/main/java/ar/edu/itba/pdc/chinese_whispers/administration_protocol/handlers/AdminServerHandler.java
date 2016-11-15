@@ -208,7 +208,6 @@ public class AdminServerHandler implements TCPReadWriteHandler {
                 closeHandler(key);
             }
         } catch (Exception e) {
-            e.printStackTrace(); //TODO log instead
             String message = INTERNAL_SERVER_ERROR_CODE + " Internal server error";
             outputBuffer.clear();
             for (byte b : message.getBytes()) outputBuffer.put(b);

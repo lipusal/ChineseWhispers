@@ -41,36 +41,6 @@ public class ClosingManager {
      */
     private ClosingManager() {
         this.closableHandlers = new HashMap<>();
-        // Stores in the TCP Selector "always run" set a task that is in charge of sending closing messages.
-        TCPSelector.getInstance().addAlwaysRunTask(() -> {
-
-
-            // Stores those messages that must be removed from the map
-            // (i.e. those whose message has been completely written).
-            Set<XMPPHandler> toRemoveHandlers = new HashSet<>();//TODO reuse this?
-            for (XMPPHandler each : closableHandlers.keySet()) {
-                byte[] message = closableHandlers.get(each);
-//                System.out.println("Trying to write: " +new String( message)); TODO delete
-                int writtenData = each.writeMessage(closableHandlers.get(each));
-                // If no bytes could be stored, finish this iteration step
-                if (writtenData == 0) {
-                    continue;
-                }
-                // If message wasn't completely stored, save what couldn't be stored to write it afterwards.
-                //TODO check if -1 means somethings else?
-                if (writtenData!=-1 && writtenData < message.length) {
-                    int nonWrittenBytes = message.length - writtenData;
-                    byte[] restOfMessage = new byte[nonWrittenBytes];
-                    System.arraycopy(message, writtenData, restOfMessage, 0, nonWrittenBytes);
-                    closableHandlers.put(each, restOfMessage);
-                } else {
-                    toRemoveHandlers.add(each); // Message was completely written
-                    each.requestClose(); // Now it is ready for being closed.
-                }
-            }
-            // Remove all handlers whose message has been completely written
-            toRemoveHandlers.forEach(closableHandlers::remove);
-        });
     }
 
     /**
@@ -98,7 +68,8 @@ public class ClosingManager {
         if (closableHandlers.containsKey(handler)) {
             return;
         }
-        closableHandlers.put(handler, CLOSE_MESSAGE.getBytes());
+//        closableHandlers.put(handler, CLOSE_MESSAGE.getBytes());
+        handler.postMessage(CLOSE_MESSAGE.getBytes());
     }
 
 }

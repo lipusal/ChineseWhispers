@@ -50,10 +50,10 @@ public class StreamErrorsManager extends ErrorsManager {
     // System errors
     private final static String SYSTEM_SHUTDOWN = "<stream:error>" +
             "<system-shutdown xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
-            "</stream:error>\n";
+            "</stream:error>";
     private final static String INTERNAL_SERVER_ERROR = "<stream:error>" +
             "<internal-server-error xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
-            "</stream:error>\n";
+            "</stream:error>";
 
 
     /**

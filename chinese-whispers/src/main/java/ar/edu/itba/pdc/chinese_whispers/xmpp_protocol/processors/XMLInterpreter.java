@@ -22,7 +22,6 @@ public class XMLInterpreter extends BaseXMLInterpreter {
     private boolean isInMessageTag;
 
 
-
     /**
      * Object that will perform data processing.
      */
@@ -42,8 +41,6 @@ public class XMLInterpreter extends BaseXMLInterpreter {
         this.applicationProcessor = applicationProcessor;
         logger = LogHelper.getLogger(getClass());
     }
-
-
 
 
     /**
@@ -119,6 +116,7 @@ public class XMLInterpreter extends BaseXMLInterpreter {
                         readXML.append(">");
                     } else {
                         if (parser.getLocalName().equals("message")) {
+                            String silencedError = generateErrorMessage(); //TODO send silenced error
                             MetricsManager.getInstance().addNumSilencedMessages(1); //TODO user producer
                         }
                     }
@@ -150,7 +148,7 @@ public class XMLInterpreter extends BaseXMLInterpreter {
                     break;
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     String processedXML = readXML.toString();
-                 //   if(!processedXML.isEmpty()) logger.trace(processedXML);
+                    //   if(!processedXML.isEmpty()) logger.trace(processedXML);
                     byte[] bytes = processedXML.getBytes();
                     outputConsumer.consumeMessage(bytes);
                     return ParserResponse.EVENT_INCOMPLETE;
@@ -162,6 +160,34 @@ public class XMLInterpreter extends BaseXMLInterpreter {
         byte[] bytes = readXML.toString().getBytes();
         outputConsumer.consumeMessage(bytes);
         return ParserResponse.EVERYTHING_NORMAL;
+    }
+
+    private String generateErrorMessage() {
+        StringBuilder silencedErrorBuilder = new StringBuilder();
+        silencedErrorBuilder.append("<message type='error'");
+        int attrCount = parser.getAttributeCount();
+        for (int i = 0; i < attrCount; i++) {
+            if (parser.getAttributePrefix(i).isEmpty()) {
+                if (parser.getAttributeLocalName(i).equals("to")) {
+                    silencedErrorBuilder.append(" from='")
+                            .append(parser.getAttributeValue(i))
+                            .append("'");
+                }
+                if (parser.getAttributeLocalName(i).equals("from")) {
+                    silencedErrorBuilder.append(" to='")
+                            .append(parser.getAttributeValue(i))
+                            .append("'");
+                }
+                if (parser.getAttributeLocalName(i).equals("id")) {
+                    silencedErrorBuilder.append(" id='")
+                            .append(parser.getAttributeValue(i))
+                            .append("'");
+                }
+            }
+        }
+        silencedErrorBuilder.append("><error type='auth'><forbidden xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></error></message>");
+
+        return silencedErrorBuilder.toString();
     }
 
 

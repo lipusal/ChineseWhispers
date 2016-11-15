@@ -98,7 +98,7 @@ public abstract class BaseXMLInterpreter {
     }
 
 
-    protected void updateStoredBytes(int status) {
+    protected void updateStoredBytes(int status) {  //TODO transform also atributes.
         if (status == AsyncXMLStreamReader.EVENT_INCOMPLETE) {
             amountOfStoredBytes++;
         }else{

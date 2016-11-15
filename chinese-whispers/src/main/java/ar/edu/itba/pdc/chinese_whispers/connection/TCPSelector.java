@@ -27,7 +27,7 @@ public final class TCPSelector {
     /**
      * Timeout till the connection is closed.
      */
-    private static final int CONNECTION_TIMEOUT = 5*60000; // five minute till timeout.
+    private static final int CONNECTION_TIMEOUT = 5 * 60000; // 5 minutes
     /**
      * Amount of connection tries till key is cancelled.
      */
@@ -54,7 +54,10 @@ public final class TCPSelector {
      * Contains connectable keys that didn't connect yet, saving how many tries were done.
      */
     private final Map<SelectionKey, Integer> connectionTries;
-
+    /**
+     * Set used by the timeout task to remove keys with issues.
+     */
+    private final Set<SelectionKey> removableKeys;
 
     /**
      * Contains the singleton.
@@ -73,17 +76,23 @@ public final class TCPSelector {
         this.alwaysRunTasks = new HashSet<>();
         this.nothingToDoTasks = new HashSet<>();
         this.connectionTries = new HashMap<>();
+        removableKeys = new HashSet<>();
         alwaysRunTasks.add(() -> {
-
-            Set<SelectionKey> updatablesKeys = new HashSet<SelectionKey>();
-            for (SelectionKey key : selector.keys()) {
+            removableKeys.clear();
+            for (SelectionKey key : lastActivities.keySet()) {
+                if (!key.isValid()) {
+                    removableKeys.add(key);
+                    continue;
+                }
                 if (key.attachment() instanceof TCPAcceptorHandler) {
-                    continue; // Don't check acceptor handlers
+                    removableKeys.add(key); // Don't check again acceptor handlers.
+                    continue; // Do nothing with these handlers.
                 }
                 if (!(key.attachment() instanceof TCPTimeoutCancellableHandler)) {
                     // Shouldn't reach this point
                     // In case one attachment is not a TCPHandler, that key is cancelled
                     key.cancel();
+                    removableKeys.add(key);
                     continue;
                 }
                 TCPTimeoutCancellableHandler handler = (TCPTimeoutCancellableHandler) key.attachment();
@@ -93,13 +102,15 @@ public final class TCPSelector {
                     handler.handleError(key);
                     continue;
                 }
-                if (System.currentTimeMillis() - lastActivity >= CONNECTION_TIMEOUT) {
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastActivity >= CONNECTION_TIMEOUT) {
+
                     handler.handleTimeout(key);
                     // Updates the last activity timestamp
-                    lastActivities.put(key, System.currentTimeMillis());
+                    registerTimeoutCancelableKey(key, currentTime);
                 }
             }
-
+            removableKeys.forEach(lastActivities::remove); // Remove all those keys with problems
         });
     }
 
@@ -118,6 +129,38 @@ public final class TCPSelector {
             }
         }
         return instance;
+    }
+
+    /**
+     * Adds the key in the last activities map.
+     * Note that the key attachment must not be null, and must implement {@link TCPTimeoutCancellableHandler} interface.
+     *
+     * @param key The key that must be check for timeout.
+     */
+    private void registerTimeoutCancelableKey(SelectionKey key) {
+        registerTimeoutCancelableKey(key, System.currentTimeMillis());
+    }
+
+    /**
+     * Adds the key in the last activities map.
+     * Note that the key attachment must not be null, and must implement {@link TCPTimeoutCancellableHandler} interface.
+     * If the key already had a registered timestamp, and the given timestamp is smaller that the registered one,
+     * an {@link IllegalArgumentException} is thrown.
+     *
+     * @param key       The key that must be check for timeout.
+     * @param timestamp The new timestamp
+     * @throws IllegalArgumentException if the the key already had a registered timestamp,
+     *                                  and the given timestamp is smaller that the registered one
+     */
+    private void registerTimeoutCancelableKey(SelectionKey key, long timestamp) {
+        if (key.attachment() == null || !(key.attachment() instanceof TCPTimeoutCancellableHandler)) {
+            return; // Do nothing with keys that are not of our interest.
+        }
+        Long oldTimestamp = lastActivities.get(key);
+        if (oldTimestamp != null && timestamp < oldTimestamp) {
+            throw new IllegalArgumentException();
+        }
+        lastActivities.put(key, System.currentTimeMillis());
     }
 
 
@@ -208,7 +251,7 @@ public final class TCPSelector {
             // Will throw exception if the channel was closed (can't happen this)
             SelectionKey key = channel.register(selector, SelectionKey.OP_CONNECT, handler);
             // Saves the first activity for the new key
-            lastActivities.put(key, System.currentTimeMillis());
+            registerTimeoutCancelableKey(key);
             return key;
         } catch (IOException | UnresolvedAddressException e) {
             return null;
@@ -236,7 +279,6 @@ public final class TCPSelector {
 
         // If control reached here, there are IO Operations pending to be handled
         for (SelectionKey key : selector.selectedKeys()) {
-            lastActivities.put(key, System.currentTimeMillis());
             try {
                 TCPHandler handler = (TCPHandler) key.attachment();
 
@@ -245,14 +287,14 @@ public final class TCPSelector {
                     key.cancel();
                     continue;
                 }
-
+                registerTimeoutCancelableKey(key); // registers a new timestamp
                 // Only valid keys with a TCPHandler as an attachment will reach this point...
                 if (key.isAcceptable()) {
                     // Key can only be acceptable if it's channel is a server socket channel
                     SelectionKey newKey = ((TCPAcceptorHandler) handler).handleAccept(key);
                     if (newKey != null) {
                         // Saves the first activity for the new connection
-                        lastActivities.put(newKey, System.currentTimeMillis());
+                        registerTimeoutCancelableKey(newKey);
                     }
                 } else if (key.isConnectable()) {
                     // Key can only be connectable if it's channel is a client socket channel

@@ -436,7 +436,7 @@ import java.util.Stack;
             readBytes = channel.read(inputBuffer);
         } catch (IOException e) {
             // I/O error (for example, connection reset by peer)
-            handleClose(this.key); // TODO: close peer also
+            handleClose(this.key);
         }
         if (readBytes > 0) {
             if (logger.isTraceEnabled()) {

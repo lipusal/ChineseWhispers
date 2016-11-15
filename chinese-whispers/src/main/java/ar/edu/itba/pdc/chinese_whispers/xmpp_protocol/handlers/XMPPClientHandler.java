@@ -214,4 +214,11 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
     public boolean handleError(SelectionKey key) {
         return false;
     }
+
+    @Override
+    public boolean handleClose(SelectionKey key) {
+        boolean result = super.handleClose(key);
+        peerHandler.notifyClose();
+        return result;
+    }
 }

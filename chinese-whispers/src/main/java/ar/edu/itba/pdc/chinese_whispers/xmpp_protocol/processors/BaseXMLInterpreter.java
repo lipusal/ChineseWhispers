@@ -141,4 +141,31 @@ public abstract class BaseXMLInterpreter {
     }
 
 
+    protected static void appendEscapedCharacters(StringBuilder stringBuilder, String prefix) {
+
+        for(char c : prefix.toCharArray()){
+            switch (c){
+                case '<':
+                    stringBuilder.append("&lt;");
+                    break;
+                case '>':
+                    stringBuilder.append("&gt;");
+                    break;
+                case '&':
+                    stringBuilder.append("&amp;");
+                    break;
+                case '\'':
+                    stringBuilder.append("&apos;");
+                    break;
+                case '\"':
+                    stringBuilder.append("&quot;");
+                    break;
+                default:
+                    stringBuilder.append(c);
+                    break;
+            }
+        }
+    }
+
+
 }

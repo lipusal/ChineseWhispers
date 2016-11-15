@@ -69,6 +69,12 @@ public class L337Processor implements ApplicationProcessor {
 				case '&':
 					stringBuilder.append("&amp;");
 					break;
+				case '\'':
+					stringBuilder.append("&apos;");
+					break;
+				case '\"':
+					stringBuilder.append("&quot;");
+					break;
 				default:
 					stringBuilder.append(c);
 					break;

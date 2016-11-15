@@ -43,9 +43,9 @@ public class ClientNegotiationProcessor extends BaseNegotiationProcessor {
         for (String attributeKey : getInitialParameters().keySet()) {
             getStringBuilder().append(" ")
                     .append(attributeKey)
-                    .append("=\'")
-                    .append(getInitialParameters().get(attributeKey))
-                    .append("\'");
+                    .append("=\'");
+            appendEscapedCharacters(getStringBuilder(),getInitialParameters().get(attributeKey));
+            getStringBuilder().append("\'");
         }
         getStringBuilder().append(">");
         outputConsumer.consumeMessage(getStringBuilder().toString().getBytes()); // TODO: check if enough space

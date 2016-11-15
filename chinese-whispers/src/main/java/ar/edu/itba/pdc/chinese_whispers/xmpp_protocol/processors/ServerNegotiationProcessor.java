@@ -169,9 +169,11 @@ public class ServerNegotiationProcessor extends BaseNegotiationProcessor {
                                 }
 
                                 if (!getParser().getAttributePrefix(i).isEmpty()) {
-                                    attributeFullName.append(getParser().getAttributePrefix(i)).append(":");
+                                    appendEscapedCharacters(attributeFullName,getParser().getAttributePrefix(i));
+                                    attributeFullName.append(":");
                                 }
-                                attributeFullName.append(getParser().getAttributeLocalName(i));
+                                appendEscapedCharacters(attributeFullName,getParser().getAttributeLocalName(i));
+
                                 switch (attributeFullName.toString()) {
                                     case "to":
                                         getStringBuilder().append("from");
@@ -244,9 +246,10 @@ public class ServerNegotiationProcessor extends BaseNegotiationProcessor {
                                 attributeFullName.setLength(0); // Clears the string buffer
 
                                 if (!getParser().getAttributePrefix(i).isEmpty()) {
-                                    attributeFullName.append(getParser().getAttributePrefix(i)).append(":");
+                                    appendEscapedCharacters(attributeFullName,getParser().getAttributePrefix(i));
+                                    attributeFullName.append(":");
                                 }
-                                attributeFullName.append(getParser().getAttributeLocalName(i));
+                                appendEscapedCharacters(attributeFullName,getParser().getAttributeLocalName(i));
 
                                 if (attributeFullName.toString().equals("mechanism")) {
                                     String mechanismValue = getParser().getAttributeValue(i);
@@ -263,7 +266,7 @@ public class ServerNegotiationProcessor extends BaseNegotiationProcessor {
                         break;
                     case AsyncXMLStreamReader.CHARACTERS:
                         if (validMechanism) {
-                            authenticationBuilder.append(getParser().getText());
+                            appendEscapedCharacters(authenticationBuilder,getParser().getText());
                         }
                         break;
                     case AsyncXMLStreamReader.END_ELEMENT:

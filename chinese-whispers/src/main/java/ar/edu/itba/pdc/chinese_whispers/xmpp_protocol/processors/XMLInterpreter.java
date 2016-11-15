@@ -76,7 +76,8 @@ public class XMLInterpreter extends BaseXMLInterpreter {
                         readXML.append("<");
                         //Name (and namespace prefix if necessary)
                         if (!parser.getName().getPrefix().isEmpty()) {
-                            readXML.append(parser.getPrefix()).append(":");
+                            appendEscapedCharacters(readXML,parser.getPrefix());
+                            readXML.append(":");
                         }
                         readXML.append(parser.getLocalName());
 
@@ -87,12 +88,12 @@ public class XMLInterpreter extends BaseXMLInterpreter {
                             for (int i = 0; i < namespaceCount; i++) {
                                 readXML.append("xmlns");
                                 if (!parser.getNamespacePrefix(i).isEmpty()) {
-                                    readXML.append(":")
-                                            .append(parser.getNamespacePrefix(i));
+                                    readXML.append(":");
+                                    appendEscapedCharacters(readXML,parser.getNamespacePrefix(i));
                                 }
-                                readXML.append("=\'")
-                                        .append(parser.getNamespaceURI(i))
-                                        .append("\'")
+                                readXML.append("=\'");
+                                appendEscapedCharacters(readXML,parser.getNamespaceURI(i));
+                                readXML.append("\'")
                                         .append(i < namespaceCount - 1 ? " " : "");
                             }
                         }
@@ -103,13 +104,13 @@ public class XMLInterpreter extends BaseXMLInterpreter {
                             readXML.append(" ");
                             for (int i = 0; i < attrCount; i++) {
                                 if (!parser.getAttributePrefix(i).isEmpty()) {
-                                    readXML.append(parser.getAttributePrefix(i))
-                                            .append(":");
+                                    appendEscapedCharacters(readXML,parser.getAttributePrefix(i));
+                                    readXML.append(":");
                                 }
-                                readXML.append(parser.getAttributeLocalName(i))
-                                        .append("=\'")
-                                        .append(parser.getAttributeValue(i))
-                                        .append("\'")
+                                appendEscapedCharacters(readXML,parser.getAttributeLocalName(i));
+                                readXML.append("=\'");
+                                appendEscapedCharacters(readXML,parser.getAttributeValue(i));
+                                readXML.append("\'")
                                         .append(i < attrCount - 1 ? " " : "");
                             }
                         }
@@ -162,6 +163,7 @@ public class XMLInterpreter extends BaseXMLInterpreter {
         return ParserResponse.EVERYTHING_NORMAL;
     }
 
+
     private String generateErrorMessage() {
         StringBuilder silencedErrorBuilder = new StringBuilder();
         silencedErrorBuilder.append("<message type='error'");
@@ -169,19 +171,19 @@ public class XMLInterpreter extends BaseXMLInterpreter {
         for (int i = 0; i < attrCount; i++) {
             if (parser.getAttributePrefix(i).isEmpty()) {
                 if (parser.getAttributeLocalName(i).equals("to")) {
-                    silencedErrorBuilder.append(" from='")
-                            .append(parser.getAttributeValue(i))
-                            .append("'");
+                    silencedErrorBuilder.append(" from='");
+                    appendEscapedCharacters(silencedErrorBuilder,parser.getAttributeValue(i));
+                           silencedErrorBuilder.append("'");
                 }
                 if (parser.getAttributeLocalName(i).equals("from")) {
-                    silencedErrorBuilder.append(" to='")
-                            .append(parser.getAttributeValue(i))
-                            .append("'");
+                    silencedErrorBuilder.append(" to='");
+                    appendEscapedCharacters(silencedErrorBuilder,parser.getAttributeValue(i));
+                    silencedErrorBuilder.append("'");
                 }
                 if (parser.getAttributeLocalName(i).equals("id")) {
-                    silencedErrorBuilder.append(" id='")
-                            .append(parser.getAttributeValue(i))
-                            .append("'");
+                    silencedErrorBuilder.append(" id='");
+                    appendEscapedCharacters(silencedErrorBuilder,parser.getAttributeValue(i));
+                    silencedErrorBuilder.append("'");
                 }
             }
         }

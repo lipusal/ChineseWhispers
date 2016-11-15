@@ -54,6 +54,8 @@ TODO neg:
 check bullshit
 send error if message is bloqued.
 
+
+
 TODO PROTOCOL:
 maximun number of client to be silenced //Size of clients names, etc...
 chenge write to be nonBlcking and to work like the handlers.

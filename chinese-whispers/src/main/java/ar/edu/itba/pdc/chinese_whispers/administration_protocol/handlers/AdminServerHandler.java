@@ -18,7 +18,7 @@ import java.util.*;
 /**
  * Created by Droche on 30/10/16.
  */
-public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make case insensitive for users admins? Make errors responses follow codes. Error msj between "".
+public class AdminServerHandler implements TCPReadWriteHandler {
 
     // Constants
     /**
@@ -201,7 +201,7 @@ public class AdminServerHandler implements TCPReadWriteHandler { //TODO Make cas
                 closeHandler(key);
             }
         } catch (Exception e) {
-            e.printStackTrace(); //TODO delete
+            e.printStackTrace(); //TODO log instead
             String message = INTERNAL_SERVER_ERROR_CODE + " Internal server error";
             outputBuffer.clear();
             outputBuffer.put(new Byte("10"));

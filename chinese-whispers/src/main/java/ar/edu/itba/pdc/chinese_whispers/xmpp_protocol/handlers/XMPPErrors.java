@@ -4,6 +4,7 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
  * Created by jbellini on 11/11/16.
  */
 public enum XMPPErrors {
+    // Stream errors
     BAD_FORMAT,
     POLICY_VIOLATION,
     CONNECTION_REFUSED,
@@ -17,5 +18,8 @@ public enum XMPPErrors {
     FAILED_NEGOTIATION,
     FAILED_NEGOTIATION_FOR_SERVER,
     SYSTEM_SHUTDOWN,
-    INTERNAL_SERVER_ERROR
+    INTERNAL_SERVER_ERROR,
+
+    // Stanza errors
+    SILENCED_USER
 }

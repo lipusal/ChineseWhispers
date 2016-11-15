@@ -2,8 +2,6 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers;
 
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.ConfigurationsConsumer;
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPHandler;
-import ar.edu.itba.pdc.chinese_whispers.connection.TCPReadWriteHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.XMLInterpreter;
 
@@ -21,6 +19,12 @@ import java.nio.channels.SelectionKey;
  * Created by jbellini on 3/11/16.
  */
 /* package */ class XMPPReadWriteHandler extends XMPPHandler {
+
+
+    /**
+     * XML Parser
+     */
+    protected XMLInterpreter xmlInterpreter;
 
 
     /* package */ XMPPReadWriteHandler(ApplicationProcessor applicationProcessor,
@@ -47,7 +51,19 @@ import java.nio.channels.SelectionKey;
     }
 
 
+    /**
+     * Sets the peer handler (an {@link XMPPReadWriteHandler} to this handler.
+     * Note: Once it's set, it can't be changed.
+     *
+     * @param peerHandler The {@link XMPPReadWriteHandler} that acts as a peer to this handler.
+     */
     /* package */ void setPeerHandler(XMPPReadWriteHandler peerHandler) {
+        if (peerHandler == null) {
+            throw new IllegalArgumentException();
+        }
+        if (this.peerHandler != null) {
+            throw new IllegalStateException("Can't change the peer handler once it's set.");
+        }
         this.peerHandler = peerHandler;
         this.xmlInterpreter = new XMLInterpreter(applicationProcessor, peerHandler);
     }
@@ -64,7 +80,7 @@ import java.nio.channels.SelectionKey;
     }
 
 
-
+    @Override
     protected void beforeRead() {
 
         if (this.peerHandler == null) {
@@ -79,7 +95,7 @@ import java.nio.channels.SelectionKey;
             disableReading(); // Stops reading if there is no space in its peer handler's output buffer
         }
         inputBuffer.position(0);
-        inputBuffer.limit(maxAmountOfRead>inputBuffer.capacity()?inputBuffer.capacity():maxAmountOfRead);
+        inputBuffer.limit(maxAmountOfRead > inputBuffer.capacity() ? inputBuffer.capacity() : maxAmountOfRead);
     }
 
     @Override
@@ -100,7 +116,7 @@ import java.nio.channels.SelectionKey;
     @Override
     protected void afterNotifyingError() {
         if (peerHandler != null) {
-            peerHandler.notifyError(XMPPErrors.INTERNAL_SERVER_ERROR); // TODO: If server sends error?
+            peerHandler.notifyStreamError(XMPPErrors.INTERNAL_SERVER_ERROR); // TODO: If server sends error?
         }
     }
 
@@ -110,6 +126,15 @@ import java.nio.channels.SelectionKey;
             peerHandler.notifyClose();
         }
     }
+
+
+    @Override
+    public void handleTimeout(SelectionKey key) {
+        // TODO: check these.
+        notifyStreamError(XMPPErrors.CONNECTION_TIMEOUT);
+        peerHandler.notifyStreamError(XMPPErrors.CONNECTION_TIMEOUT);
+    }
+
 
 
 }

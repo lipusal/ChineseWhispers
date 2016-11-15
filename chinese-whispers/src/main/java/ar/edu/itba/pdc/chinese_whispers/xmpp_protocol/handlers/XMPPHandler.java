@@ -58,13 +58,11 @@ import java.nio.channels.SocketChannel;
      * If true, it will be closed on the next writing operation.
      */
     private boolean mustClose;
-
-
-    // XMPP Stuff
     /**
-     * XML Parser
+     * Tells if the notify close operation was performed while on {@link HandlerState#ERROR} state.
      */
-    protected XMLInterpreter xmlInterpreter; // Should be initialized by subclass.
+    private boolean closeRequestedWhileInErrorState;
+
     /**
      * Client JID
      */
@@ -202,13 +200,15 @@ import java.nio.channels.SocketChannel;
      */
     protected abstract void afterNotifyingClose();
 
+
     /**
+     * Base method for notifying errors.
      * Sets this handler state in error state.
      * This method can only be called if the handler's state is {@link HandlerState#NORMAL}.
      *
-     * @param error The error this handler has experienced.
+     * @param error The error to be notified.
      */
-    public void notifyError(XMPPErrors error) {
+    private void notifyError(XMPPErrors error) {
         if (error == null) {
             throw new IllegalArgumentException();
         }
@@ -217,8 +217,32 @@ import java.nio.channels.SocketChannel;
         }
         handlerState = HandlerState.ERROR;
         disableReading(); // Can't read anymore
-        ErrorManager.getInstance().notifyError(this, error); // Notify the errors manager that an error occurred.
         afterNotifyingError();
+    }
+
+    /**
+     * Sets this handler state in error state.
+     * This method can only be called if the handler's state is {@link HandlerState#NORMAL}.
+     * Note: After sending a stream error, the handler will continue with the close operation.
+     *
+     * @param error The error this handler has experienced.
+     */
+    public void notifyStreamError(XMPPErrors error) {
+        notifyError(error);
+        StreamErrorsManager.getInstance().notifyError(this, error); // Notify the corresponding errors manager.
+    }
+
+    /**
+     * Sets this handler state in error state.
+     * This method can only be called if the handler's state is {@link HandlerState#NORMAL}.
+     * Note: After sending a stanza error, if closing wasn't requested, the handler state will be normal again.
+     * Otherwise, it will continue with the closing operation.
+     *
+     * @param error The error this handler has experienced.
+     */
+    public void notifyStanzaError(XMPPErrors error) {
+        notifyError(error);
+        StreamErrorsManager.getInstance().notifyError(this, error); // Notify the corresponding errors manager.
     }
 
     /**
@@ -227,6 +251,9 @@ import java.nio.channels.SocketChannel;
      */
     public void notifyClose() {
         if (handlerState != HandlerState.NORMAL) {
+            if (handlerState == HandlerState.ERROR) {
+                closeRequestedWhileInErrorState = true;
+            }
             return;
         }
         if (this.key == null) {
@@ -239,14 +266,28 @@ import java.nio.channels.SocketChannel;
     }
 
     /**
-     * Wrapper method to notify closing after sending an error.
+     * Wrapper method to notify closing after sending an stream error.
      */
-    public void notifyErrorWasSent() {
+    public void notifyStreamErrorWasSent() {
         if (this.handlerState != HandlerState.ERROR) {
             throw new IllegalStateException();
         }
         this.handlerState = HandlerState.NORMAL;
         notifyClose();
+    }
+
+    /**
+     * Wrapper method to notify a stanza error was sent, allowing to take certain decisions
+     * based on this handler's state
+     */
+    public void notifyStanzaErrorWasSent() {
+        handlerState = HandlerState.NORMAL;
+        if (closeRequestedWhileInErrorState) {
+            notifyClose();
+            return;
+        }
+        enableReading();
+
     }
 
     /**
@@ -346,10 +387,10 @@ import java.nio.channels.SocketChannel;
 
         switch (parserResponse) {
             case XML_ERROR:
-                notifyError(XMPPErrors.BAD_FORMAT);
+                notifyStreamError(XMPPErrors.BAD_FORMAT);
                 break;
             case POLICY_VIOLATION:
-                notifyError(XMPPErrors.POLICY_VIOLATION);
+                notifyStreamError(XMPPErrors.POLICY_VIOLATION);
                 break;
             case STREAM_CLOSED:
                 notifyClose();
@@ -450,10 +491,6 @@ import java.nio.channels.SocketChannel;
         afterWrite();
     }
 
-    @Override
-    public void handleTimeout(SelectionKey key) {
-
-    }
 
     @Override
     public boolean handleError(SelectionKey key) {

@@ -106,21 +106,21 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
         switch (parserResponse) {
             case XML_ERROR:
                 // super class method just calls the own notify error method (which does not notify the peer handler)
-                peerHandler.notifyError(XMPPErrors.INTERNAL_SERVER_ERROR); // Not our proxy, but the origin server
+                peerHandler.notifyStreamError(XMPPErrors.INTERNAL_SERVER_ERROR); // Not our proxy, but the origin server
                 break;
             case HOST_UNKNOWN:
-                peerHandler.notifyError(XMPPErrors.HOST_UNKNOWN_FROM_SERVER); // Make peer handler send error
+                peerHandler.notifyStreamError(XMPPErrors.HOST_UNKNOWN_FROM_SERVER); // Make peer handler send error
                 notifyClose(); // Close this handler
                 break;
             case UNSUPPORTED_NEGOTIATION_MECHANISM:
                 // Tells the client that connection couldn't be established
-                peerHandler.notifyError(XMPPErrors.UNSUPPORTED_NEGOTIATION_MECHANISM_FOR_CLIENT);
+                peerHandler.notifyStreamError(XMPPErrors.UNSUPPORTED_NEGOTIATION_MECHANISM_FOR_CLIENT);
                 // Tells the server that the authentication process is aborted
-                notifyError(XMPPErrors.UNSUPPORTED_NEGOTIATION_MECHANISM);
+                notifyStreamError(XMPPErrors.UNSUPPORTED_NEGOTIATION_MECHANISM);
                 break;
             case FAILED_NEGOTIATION:
-                peerHandler.notifyError(XMPPErrors.FAILED_NEGOTIATION);
-                notifyError(XMPPErrors.FAILED_NEGOTIATION_FOR_SERVER);
+                peerHandler.notifyStreamError(XMPPErrors.FAILED_NEGOTIATION);
+                notifyStreamError(XMPPErrors.FAILED_NEGOTIATION_FOR_SERVER);
                 break;
         }
     }
@@ -189,6 +189,17 @@ public class XMPPClientHandler extends XMPPNegotiatorHandler implements TCPClien
     }
 
 
+    @Override
+    public void handleTimeout(SelectionKey key) {
+        // An XMPPClientHandler always have a peer handler
+
+        // The peer handler is an XMPPServerHandler waiting for this handler to connect to an XMPP server
+        // In case this handler reached a timeout event, the XMPPServerHandler will send to the XMPP client
+        // connected to it that the connection was refused.
+        peerHandler.notifyStreamError(XMPPErrors.CONNECTION_REFUSED);
+        // Will send the timeout error to the server to which this XMPPClientHandler is connected to.
+        notifyStreamError(XMPPErrors.CONNECTION_TIMEOUT);
+    }
 
     @Override
     public boolean handleError(SelectionKey key) {

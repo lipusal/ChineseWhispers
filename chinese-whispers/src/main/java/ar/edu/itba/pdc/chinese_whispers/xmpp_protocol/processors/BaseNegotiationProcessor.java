@@ -1,6 +1,6 @@
 package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors;
 
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.ErrorManager;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.StreamErrorsManager;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import com.fasterxml.aalto.AsyncByteArrayFeeder;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -109,7 +109,7 @@ public abstract class BaseNegotiationProcessor extends BaseXMLInterpreter {
             response = this.getStateMachine().negotiate();
 
             // Stop negotiation if an error occurred.
-            if (ErrorManager.getInstance().parserResponseErrors().contains(response)) {
+            if (StreamErrorsManager.getInstance().parserResponseErrors().contains(response)) {
                 break;
             }
         }

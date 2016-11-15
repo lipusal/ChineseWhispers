@@ -61,16 +61,6 @@ public class ClosingManager {
                 if (writtenData!=-1 && writtenData < message.length) {
                     int nonWrittenBytes = message.length - writtenData;
                     byte[] restOfMessage = new byte[nonWrittenBytes];
-                    //TODO delete souts.
-//                    try {
-//                        System.out.println("writtenData " + writtenData);
-//                        System.out.println("message " + new String (message));
-//                        System.out.println("nonWrittenBytes " + nonWrittenBytes);
-//                        System.out.println("restOfMessage " + new String (restOfMessage));
-//                    }catch (Exception e){
-//                        e.printStackTrace();
-//                    }
-
                     System.arraycopy(message, writtenData, restOfMessage, 0, nonWrittenBytes);
                     closableHandlers.put(each, restOfMessage);
                 } else {

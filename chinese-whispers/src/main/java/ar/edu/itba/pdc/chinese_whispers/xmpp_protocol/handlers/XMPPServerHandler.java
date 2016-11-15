@@ -5,9 +5,8 @@ import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.Confi
 import ar.edu.itba.pdc.chinese_whispers.administration_protocol.interfaces.MetricsProvider;
 import ar.edu.itba.pdc.chinese_whispers.connection.TCPSelector;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.NewConnectionsConsumer;
-import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ServerNegotiationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ParserResponse;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors.ServerNegotiationProcessor;
 
 import java.nio.channels.SelectionKey;
 import java.util.Base64;
@@ -30,22 +29,11 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
     private static int MAX_PEER_CONNECTIONS_TRIES = 3;
 
     /**
-     * The new connections consumer that will be notified when new connections arrive.
-     */
-    private final NewConnectionsConsumer newConnectionsConsumer;
-
-    /**
      * Holds how many peer connection tries have been done.
      */
     private int peerConnectionTries;
 
-    /**
-     * A string builder to create strings efficiently
-     */
-    private final StringBuilder stringBuilder;
 
-
-//    private final ServerNegotiationProcessor serverNegotiationProcessor;
 
 
     /**
@@ -59,16 +47,13 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
      * @param key                    The {@link SelectionKey} that corresponds to this handler.
      */
     /* package */ XMPPServerHandler(ApplicationProcessor applicationProcessor,
-                                    NewConnectionsConsumer newConnectionsConsumer,
                                     ConfigurationsConsumer configurationsConsumer,
                                     MetricsProvider metricsProvider,
                                     SelectionKey key) {
         super(applicationProcessor, metricsProvider, configurationsConsumer);
         setNegotiationProcessor(new ServerNegotiationProcessor(this));
-        this.newConnectionsConsumer = newConnectionsConsumer;
         this.peerConnectionTries = 0;
         this.key = key;
-        this.stringBuilder = new StringBuilder();
     }
 
     @Override
@@ -209,7 +194,6 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
                         (XMPPClientHandler) this.peerHandler);
         if (peerKey == null) {
             // Start of connection failed ...
-            handleError(key); // Our own key
             return;
         }
         peerHandler.setKey(peerKey);
@@ -233,9 +217,4 @@ public class XMPPServerHandler extends XMPPNegotiatorHandler {
         peerHandler.notifyStreamError(XMPPErrors.CONNECTION_TIMEOUT);
     }
 
-    @Override
-    public boolean handleError(SelectionKey key) {
-        // TODO: what should we do in case of an error?
-        return true;
-    }
 }

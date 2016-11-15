@@ -124,7 +124,6 @@ import java.util.Stack;
             throw new IllegalStateException();
         }
         this.key = key;
-        // TODO: check if writing must be enabled for this key (as messages could have arrived to this handler)
     }
 
     /**
@@ -505,12 +504,6 @@ import java.util.Stack;
     }
 
 
-    @Override
-    public boolean handleError(SelectionKey key) {
-
-
-        return false; // TODO: change as specified in javadoc
-    }
 
     @Override
     public boolean handleClose(SelectionKey key) {

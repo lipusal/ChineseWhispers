@@ -27,18 +27,6 @@ public class Main {
 
     public static void main(String[] args) {
 
-//        if(args.length!=4) return;
-//        try {
-//            adminProtocolPort = Integer.valueOf(args[1]);
-//            xmppProxyPort = Integer.valueOf(args[0]);
-//            defaultServer = args[2];
-//            defaultPort =  Integer.valueOf(args[3]);
-//            Configurations.getInstance().setDefaultServer(defaultServer,defaultPort);
-//        }catch (Exception e){
-//            //TODO make cleaner clean.
-//            return;
-//        }
-
 
         adminProtocolPort = ADMIN_PROTOCOL_PORT;
         xmppProxyPort = XMPP_PROXY_PORT;
@@ -48,12 +36,12 @@ public class Main {
 
         TCPSelector selector = TCPSelector.getInstance();
 
-        XMPPAcceptorHandler acceptorHandler = new XMPPAcceptorHandler(L337Processor.getInstance(),
-                ApplicationNewConnectionsConsumer.getInstance(), Configurations.getInstance(), MetricsManager.getInstance());
+        XMPPAcceptorHandler acceptorHandler = new XMPPAcceptorHandler(L337Processor.getInstance()
+                , Configurations.getInstance(), MetricsManager.getInstance());
 
         logger.info("Trying to bind port {}...", xmppProxyPort);
         try {
-            selector.addServerSocketChannel(xmppProxyPort, acceptorHandler); // TODO: check why it's not breaking
+            selector.addServerSocketChannel(xmppProxyPort, acceptorHandler);
         } catch (Throwable e) {
             logger.error("Couldn't bind port {}. Aborting.", xmppProxyPort);
             return;

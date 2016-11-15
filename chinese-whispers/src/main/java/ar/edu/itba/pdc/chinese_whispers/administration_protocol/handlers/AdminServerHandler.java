@@ -685,10 +685,6 @@ public class AdminServerHandler implements TCPReadWriteHandler {
 
     }
 
-    @Override
-    public boolean handleError(SelectionKey key) {
-        return false; // TODO: change as specified in javadoc
-    }
 
     @Override
     public boolean handleClose(SelectionKey key) {

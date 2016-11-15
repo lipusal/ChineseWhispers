@@ -14,6 +14,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.Stack;
 
 /**
  * Base XMPP handler that defines methods for sending and writing messages.
@@ -36,10 +39,10 @@ import java.nio.channels.SocketChannel;
      * Buffer to fill with read data.
      */
     protected final ByteBuffer inputBuffer;
-    /**
-     * Buffer to fill with data to be written.
-     */
-    protected final ByteBuffer outputBuffer;
+//    /**
+//     * Buffer to fill with data to be written.
+//     */
+//    protected ByteBuffer outputBuffer;
     /**
      * Says if it is the first message being sent.
      * It is used to know, in case of error, if the "stream" tag must be sent or not.
@@ -62,7 +65,12 @@ import java.nio.channels.SocketChannel;
      * Tells if the notify close operation was performed while on {@link HandlerState#ERROR} state.
      */
     private boolean closeRequestedWhileInErrorState;
+    /**
+     * A Deque which holds messages to be sent in the future.
+     */
+    private final Deque<ByteBuffer> buffers;
 
+    // XMPP Stuff
     /**
      * Client JID
      */
@@ -74,7 +82,6 @@ import java.nio.channels.SocketChannel;
      * Tells which is this handler's state.
      */
     protected HandlerState handlerState;
-
     /**
      * Logger
      */
@@ -92,12 +99,14 @@ import java.nio.channels.SocketChannel;
                           ConfigurationsConsumer configurationsConsumer) {
         super(applicationProcessor, metricsProvider, configurationsConsumer);
         this.inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
-        this.outputBuffer = ByteBuffer.allocate(4*((BUFFER_SIZE  > XMLInterpreter.MAX_AMOUNT_OF_BYTES) ?
-                BUFFER_SIZE : XMLInterpreter.MAX_AMOUNT_OF_BYTES));
+//        this.outputBuffer = ByteBuffer.allocate(4 * ((BUFFER_SIZE > XMLInterpreter.MAX_AMOUNT_OF_BYTES) ?
+//                BUFFER_SIZE : XMLInterpreter.MAX_AMOUNT_OF_BYTES));
+        this.buffers = new LinkedList<>();
         this.mustClose = false;
         firstMessage = true;
         this.handlerState = HandlerState.NORMAL;
         logger = LogHelper.getLogger(getClass());
+//        buffers.push(ByteBuffersManager.getByteBuffer()); // Saves one initial buffer
     }
 
 
@@ -314,7 +323,8 @@ import java.nio.channels.SocketChannel;
     @Override
     public int remainingSpace() {
         // After each write, the buffer's limit is set to its capacity, and its position to the next free element.
-        return outputBuffer.limit() - outputBuffer.position();
+//        return outputBuffer.limit() - outputBuffer.position(); //TODO: FIX THIS
+        return 0;
     }
 
 
@@ -328,6 +338,51 @@ import java.nio.channels.SocketChannel;
 
     /**
      * Saves the given {@code message} in this handler to be sent when possible.
+     *
+     * @param message The message to be sent.
+     */
+    /* package */ void postMessage(byte[] message) {
+        if (message == null) {
+            throw new IllegalArgumentException();
+        }
+        if (message.length == 0 || this.key == null || !this.key.isValid()) {
+            // Do nothing...
+            return;
+        }
+        if (firstMessage) {
+            firstMessage = false;
+        }
+        int count = 0;
+        ByteBuffer actualBuffer = buffers.pollLast();
+        if (actualBuffer != null) {
+            count += storeInByteBuffer(actualBuffer, message, count);
+        }
+        while (count < message.length) {
+            count += storeInByteBuffer(ByteBuffersManager.getByteBuffer(), message, count);
+        }
+        enableWriting();
+    }
+
+    /**
+     * Stores bytes in the given {@link ByteBuffer} till the buffer is full or no more bytes must be stored.
+     *
+     * @param actualBuffer The buffer where data will be stored.
+     * @param message      The byte array containing the data.
+     * @param offset       Offset for the given message.
+     * @return
+     */
+    private int storeInByteBuffer(ByteBuffer actualBuffer, byte[] message, int offset) {
+        int stored = actualBuffer.remaining();
+        if (stored + offset > message.length) {
+            stored = message.length - offset;
+        }
+        actualBuffer.put(message, offset, stored);
+        buffers.offerLast(actualBuffer);
+        return stored;
+    }
+
+    /**
+     * Saves the given {@code message} in this handler to be sent when possible.
      * If there is no space for the all the message to be sent, it is stored only
      * the amount of space that is allowed in.
      * <p>
@@ -336,6 +391,7 @@ import java.nio.channels.SocketChannel;
      * @param message The message to be sent.
      * @return How many bytes could be saved in this handler, or -1 if the handler had an invalidated key.
      */
+    @Deprecated
     /* package */ int writeMessage(byte[] message) {
         if (message == null) {
             throw new IllegalArgumentException();
@@ -363,7 +419,7 @@ import java.nio.channels.SocketChannel;
             message = aux;
             writtenBytes = remainingSpace;
         }
-        outputBuffer.put(message); // Stores the message in the output buffer.
+//        outputBuffer.put(message); // Stores the message in the output buffer.
         enableWriting();
         return writtenBytes;
     }
@@ -443,7 +499,7 @@ import java.nio.channels.SocketChannel;
             handleClose(this.key); // TODO: close peer also
         }
         if (readBytes > 0) {
-            if(logger.isTraceEnabled()) {
+            if (logger.isTraceEnabled()) {
                 logger.trace("<-- {}", new String(inputBuffer.array(), 0, readBytes));
             }
             processReadMessage(inputBuffer.array(), inputBuffer.position());
@@ -466,6 +522,17 @@ import java.nio.channels.SocketChannel;
             throw new IllegalArgumentException();
         }
 
+        ByteBuffer outputBuffer = buffers.pollFirst();
+        if (outputBuffer == null) {
+            disableWriting(); // No data to be sent, so handler must disable its writing key.
+            if (mustClose) {
+                // If reached this point, no data must be sent, but still the key is being selected as writable
+                // That means that the handler must be closed.
+                handleClose(this.key);
+            }
+            return; // No message to be sent
+        }
+
         outputBuffer.flip(); // Makes the buffer's limit be set to its position, and it position, to 0
         int writtenBytes = 0;
         SocketChannel channel = (SocketChannel) this.key.channel();
@@ -474,21 +541,24 @@ import java.nio.channels.SocketChannel;
         } catch (IOException e) {
             handleClose(this.key);
         }
-        if (!outputBuffer.hasRemaining()) {
-            // Disables writing if there is no more data to write
-            disableWriting();
-            if (mustClose) {
-                // If this handler mustClose field is true, it means that it has been requested to close
-                // Up to this point, all stored data was already sent, so it's ready to be closed.
-                handleClose(this.key);
+        if (outputBuffer.hasRemaining()) {
+            outputBuffer.compact(); // Moves position to limit - position and limit to the capacity
+            buffers.offerFirst(outputBuffer); // Returns the buffer to de deque
+        } else {
+            ByteBuffersManager.returnByteBuffer(outputBuffer); // Buffer has been completely used.
+            if (buffers.isEmpty()) {
+                // No more data to be written
+                disableWriting();
+                if (mustClose) {
+                    // If this handler mustClose field is true, it means that it has been requested to close
+                    // Up to this point, all stored data was already sent, so it's ready to be closed.
+                    handleClose(this.key);
+                }
             }
         }
-        if(writtenBytes > 0 && logger.isTraceEnabled()) {
+        if (writtenBytes > 0 && logger.isTraceEnabled()) {
             logger.trace("--> {}", new String(outputBuffer.array(), 0, writtenBytes));
         }
-        // Makes the buffer's position be set to limit - position, and its limit, to its capacity
-        // If no data remaining, it just set the position to 0 and the limit to its capacity.
-        outputBuffer.compact();
 
         metricsProvider.addSentBytes(writtenBytes);
 
@@ -514,6 +584,55 @@ import java.nio.channels.SocketChannel;
             return false;
         }
         return true;
+    }
+
+
+    /**
+     * This class is in charge of retrieving and storing instances of {@link ByteBuffer}.
+     */
+    private static class ByteBuffersManager {
+        /**
+         * A stack that contains non-used {@link ByteBuffer}s. It allows to re-use buffers.
+         */
+        private static final Stack<ByteBuffer> buffersStack = new Stack<>();
+
+
+        /**
+         * Gets a {@link ByteBuffer} from the buffers stack.
+         *
+         * @return An unused buffer.
+         */
+        private static ByteBuffer getByteBuffer() {
+
+            if (buffersStack.isEmpty()) {
+                return ByteBuffer.allocate(BUFFER_SIZE);
+            }
+            ByteBuffer buffer = buffersStack.pop();
+            buffer.clear();
+            return buffer;
+        }
+
+        /**
+         * Stores the given {@link ByteBuffer} in the buffers stack.
+         * It will clear the buffer, so it will lose all its information.
+         *
+         * @param buffer The buffer to be stored.
+         */
+        private static void returnByteBuffer(ByteBuffer buffer) {
+            if (buffer == null) {
+                throw new IllegalArgumentException();
+            }
+            buffersStack.push(buffer);
+        }
+
+        /**
+         * Returns the capacity of the buffers given by this manager.
+         *
+         * @return The capacity of the buffers given by this manager.
+         */
+        private static int buffersSize() {
+            return BUFFER_SIZE;
+        }
     }
 
 

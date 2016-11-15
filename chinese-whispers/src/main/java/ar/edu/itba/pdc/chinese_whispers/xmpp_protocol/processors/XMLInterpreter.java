@@ -2,6 +2,7 @@ package ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.processors;
 
 import ar.edu.itba.pdc.chinese_whispers.application.LogHelper;
 import ar.edu.itba.pdc.chinese_whispers.application.MetricsManager;
+import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.handlers.XMPPReadWriteHandler;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.ApplicationProcessor;
 import ar.edu.itba.pdc.chinese_whispers.xmpp_protocol.interfaces.OutputConsumer;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -27,6 +28,10 @@ public class XMLInterpreter extends BaseXMLInterpreter {
      */
     private final ApplicationProcessor applicationProcessor;
 
+    /**
+     * The {@link XMPPReadWriteHandler} that owns this handler.
+     */
+    private final XMPPReadWriteHandler ownerHandler;
 
     private Logger logger;
 
@@ -36,10 +41,12 @@ public class XMLInterpreter extends BaseXMLInterpreter {
      * @param applicationProcessor Object that will perform data processing.
      * @param outputConsumer       The object that will consume output (i.e. parsed) data.
      */
-    public XMLInterpreter(ApplicationProcessor applicationProcessor, OutputConsumer outputConsumer) {
+    public XMLInterpreter(ApplicationProcessor applicationProcessor, OutputConsumer outputConsumer,
+                          XMPPReadWriteHandler ownerHandler) {
         super(outputConsumer);
         this.applicationProcessor = applicationProcessor;
         logger = LogHelper.getLogger(getClass());
+        this.ownerHandler = ownerHandler;
     }
 
 
@@ -117,7 +124,7 @@ public class XMLInterpreter extends BaseXMLInterpreter {
                         readXML.append(">");
                     } else {
                         if (parser.getLocalName().equals("message")) {
-                            String silencedError = generateErrorMessage(); //TODO send silenced error
+                            ownerHandler.notifyStanzaError(generateErrorMessage());
                             MetricsManager.getInstance().addNumSilencedMessages(1); //TODO user producer
                         }
                     }

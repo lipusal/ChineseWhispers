@@ -22,8 +22,19 @@ public class StanzaErrorsManager extends ErrorsManager {
         addErrorMessage(XMPPErrors.SILENCED_USER, SILENCED_USER);
     }
 
-    private StanzaErrorsManager getInstance() {
+    public static StanzaErrorsManager getInstance() {
         return singleton;
+    }
+
+    /**
+     * Posts the given {@code error} to the given {@link XMPPHandler}.
+     * This method allows to send own generated error messages.
+     *
+     * @param handler The handler that reached an error situation.
+     * @param error   The error message.
+     */
+    public void notifyError(XMPPHandler handler, String error) {
+        doNotify(handler, error.getBytes());
     }
 
     @Override

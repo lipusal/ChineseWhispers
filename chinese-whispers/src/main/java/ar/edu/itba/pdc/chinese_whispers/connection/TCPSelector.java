@@ -33,7 +33,6 @@ public final class TCPSelector {
      */
     private static final int MAX_CONNECTION_TRIES = 10;
 
-
     /**
      * The selector to perform IO operations.
      */
